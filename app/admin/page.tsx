@@ -189,7 +189,7 @@ export default function AiSpecialistsAdminPage() {
 
       <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
         {/* Primary sidebar */}
-        <aside
+                <aside
           style={{
             width: "220px",
             borderRight: "1px solid #111827",
@@ -203,28 +203,33 @@ export default function AiSpecialistsAdminPage() {
             Navigation
           </div>
           {[
-            { id: "inbox", label: "Inbox" },
-            { id: "triage", label: "Triage & Routing" },
-            { id: "specialists", label: "AI Specialists", active: true },
-            { id: "settings", label: "Settings" },
+            { id: "inbox", label: "Inbox", href: "#" },
+            { id: "triage", label: "Triage & Routing", href: "#" },
+            { id: "specialists", label: "AI Specialists", href: "/admin", active: true },
+            { id: "logs", label: "Logs", href: "/admin/logs" },
+            { id: "settings", label: "Settings", href: "#" },
           ].map((item) => (
-            <button
+            <a
               key={item.id}
-              style={{
-                textAlign: "left",
-                padding: "8px 10px",
-                borderRadius: "8px",
-                border: "none",
-                cursor: "pointer",
-                fontSize: "13px",
-                background: item.active ? "#111827" : "transparent",
-                color: item.active ? "#e5e7eb" : "#9ca3af",
-              }}
+              href={item.href}
+              style={{ textDecoration: "none" }}
             >
-              {item.label}
-            </button>
+              <div
+                style={{
+                  padding: "8px 10px",
+                  borderRadius: "8px",
+                  cursor: item.href === "#" ? "default" : "pointer",
+                  fontSize: "13px",
+                  background: item.active ? "#111827" : "transparent",
+                  color: item.active ? "#e5e7eb" : "#9ca3af",
+                }}
+              >
+                {item.label}
+              </div>
+            </a>
           ))}
         </aside>
+
 
         {/* Specialists sidebar + main content */}
         <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
