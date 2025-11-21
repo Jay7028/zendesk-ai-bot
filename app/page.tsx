@@ -1,66 +1,152 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+"use client";
+
+import { useState } from "react";
 
 export default function Home() {
+  const [message, setMessage] = useState("");
+  const [reply, setReply] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleSend() {
+    setError("");
+    setReply("");
+    if (!message.trim()) {
+      setError("Type a customer message first.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const res = await fetch("/api/test-ai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "Something went wrong.");
+        return;
+      }
+
+      setReply(data.reply || "(No reply returned)");
+    } catch (e: any) {
+      setError("Request failed. Check console / network.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <main
+      style={{
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+        background: "#0f172a",
+        color: "#e5e7eb",
+      }}
+    >
+      <div
+        style={{
+          width: "100%",
+          maxWidth: "800px",
+          background: "#020617",
+          borderRadius: "12px",
+          padding: "24px",
+          boxShadow: "0 20px 40px rgba(0,0,0,0.4)",
+          border: "1px solid #1f2937",
+        }}
+      >
+        <h1 style={{ fontSize: "24px", marginBottom: "8px" }}>
+          Zendesk AI Email Bot – Test Console
+        </h1>
+        <p style={{ marginBottom: "16px", color: "#9ca3af", fontSize: "14px" }}>
+          Type a customer email message below and I&apos;ll show you the AI-generated reply.
+        </p>
+
+        <label style={{ display: "block", marginBottom: "8px", fontSize: "14px" }}>
+          Customer message
+        </label>
+        <textarea
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          rows={5}
+          style={{
+            width: "100%",
+            resize: "vertical",
+            padding: "10px",
+            borderRadius: "8px",
+            border: "1px solid #374151",
+            background: "#020617",
+            color: "#e5e7eb",
+            fontSize: "14px",
+            marginBottom: "12px",
+          }}
+          placeholder="Hi, my parcel is 3 days late. Can you check the status?..."
         />
-        <div className={styles.intro}>
-          <h1>To get started, edit the page.tsx file.</h1>
-          <p>
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+
+        {error && (
+          <div
+            style={{
+              marginBottom: "12px",
+              padding: "8px 10px",
+              borderRadius: "6px",
+              background: "#450a0a",
+              color: "#fecaca",
+              fontSize: "13px",
+            }}
           >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className={styles.secondary}
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+            {error}
+          </div>
+        )}
+
+        <button
+          onClick={handleSend}
+          disabled={loading}
+          style={{
+            padding: "10px 18px",
+            borderRadius: "999px",
+            border: "none",
+            cursor: loading ? "default" : "pointer",
+            background: loading ? "#4b5563" : "#22c55e",
+            color: "#020617",
+            fontWeight: 600,
+            fontSize: "14px",
+            marginBottom: "16px",
+          }}
+        >
+          {loading ? "Thinking..." : "Generate Reply"}
+        </button>
+
+        {reply && (
+          <div
+            style={{
+              marginTop: "8px",
+              borderTop: "1px solid #1f2937",
+              paddingTop: "16px",
+            }}
           >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+            <h2 style={{ fontSize: "16px", marginBottom: "8px" }}>AI Reply</h2>
+            <div
+              style={{
+                whiteSpace: "pre-wrap",
+                background: "#020617",
+                borderRadius: "8px",
+                padding: "12px",
+                border: "1px solid #1f2937",
+                fontSize: "14px",
+              }}
+            >
+              {reply}
+            </div>
+          </div>
+        )}
+      </div>
+    </main>
   );
 }
