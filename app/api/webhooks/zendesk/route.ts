@@ -116,6 +116,34 @@ If information is missing, ask for the needed details instead of guessing.
       );
     }
 
+    // 3) Log this run to /api/logs via HTTP (same as the debug button)
+    try {
+      const origin = req.nextUrl.origin;
+      const logRes = await fetch(new URL("/api/logs", origin), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          zendeskTicketId: ticketId.toString(),
+          specialistId: "unknown",        // later: real specialist ID
+          specialistName: "unknown",      // later: real specialist name
+          inputSummary: String(latestComment).slice(0, 200),
+          knowledgeSources: [],           // later: KB IDs / names
+          outputSummary: aiReply.slice(0, 200),
+          status: "success",
+        }),
+      });
+
+      if (!logRes.ok) {
+        console.error(
+          "Log POST failed:",
+          logRes.status,
+          await logRes.text()
+        );
+      }
+    } catch (e) {
+      console.error("Failed to log run", e);
+    }
+
     return NextResponse.json({
       status: "ok",
       ticketId,

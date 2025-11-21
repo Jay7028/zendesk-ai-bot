@@ -153,6 +153,39 @@ export default function AiSpecialistsAdminPage() {
           Environment: <span style={{ color: "#22c55e" }}>Development</span>
         </div>
       </header>
+            {/* TEMP: debug button to create a dummy log entry */}
+      <div style={{ padding: "8px 24px", borderBottom: "1px solid #111827" }}>
+        <button
+          onClick={async () => {
+            await fetch("/api/logs", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                zendeskTicketId: "test-ticket-123",
+                specialistId: "test-specialist",
+                specialistName: "Test Specialist",
+                inputSummary: "This is a dummy test log created from admin UI.",
+                knowledgeSources: ["dummy_source"],
+                outputSummary: "Dummy output.",
+                status: "success",
+              }),
+            });
+            alert("Dummy log created (if API is working).");
+          }}
+          style={{
+            padding: "6px 12px",
+            borderRadius: "999px",
+            border: "1px solid #374151",
+            background: "#020617",
+            color: "#e5e7eb",
+            fontSize: "12px",
+            cursor: "pointer",
+          }}
+        >
+          Create dummy log (debug)
+        </button>
+      </div>
+
 
       <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
         {/* Primary sidebar */}
