@@ -260,7 +260,7 @@ export async function POST(req: NextRequest) {
         },
         body: JSON.stringify({
           ticket: {
-            additional_tags: ["bot-handover"],
+            tags: ["bot-handover"],
           },
         }),
       });
@@ -275,6 +275,16 @@ export async function POST(req: NextRequest) {
         });
       } else {
         const respText = await handoverRes.text();
+        let tagsSnippet = respText.slice(0, 200);
+        try {
+          const parsed = JSON.parse(respText);
+          const tags = parsed?.ticket?.tags;
+          if (Array.isArray(tags)) {
+            tagsSnippet = `Tags after update: ${tags.join(", ")}`;
+          }
+        } catch {
+          // ignore parse errors, keep snippet
+        }
         await logTicketEvent(origin, {
           ticketId,
           eventType: "handover",
@@ -282,7 +292,7 @@ export async function POST(req: NextRequest) {
             confidence < CONFIDENCE_THRESHOLD
               ? "Low confidence; tagged bot-handover"
               : "No specialist matched; tagged bot-handover",
-          detail: `Confidence ${confidence.toFixed(2)}, intent ${matchedIntent?.name ?? "unknown"} • Zendesk response: ${respText.slice(0, 200)}`,
+          detail: `Confidence ${confidence.toFixed(2)}, intent ${matchedIntent?.name ?? "unknown"} • Zendesk response: ${tagsSnippet}`,
         });
       }
 
