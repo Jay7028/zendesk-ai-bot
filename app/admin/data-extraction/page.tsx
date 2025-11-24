@@ -210,7 +210,6 @@ export default function DataExtractionPage() {
               borderRadius: "12px",
               padding: "12px",
               background: "#ffffff",
-              overflowY: "auto",
               boxShadow: "0 1px 4px rgba(15,23,42,0.06)",
               overflowY: "auto",
             }}
