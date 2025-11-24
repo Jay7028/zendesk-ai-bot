@@ -56,6 +56,31 @@ async function logRun(
   }
 }
 
+async function logTicketEvent(
+  origin: string,
+  payload: {
+    ticketId: string | number;
+    eventType: string;
+    summary: string;
+    detail?: string;
+  }
+) {
+  try {
+    await fetch(new URL("/api/ticket-events", origin), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ticketId: payload.ticketId.toString(),
+        eventType: payload.eventType,
+        summary: payload.summary,
+        detail: payload.detail ?? "",
+      }),
+    });
+  } catch (e) {
+    console.error("Failed to log ticket event", e);
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -89,7 +114,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Load intents and specialists
     const [{ data: intentRows, error: intentsError }, { data: specRows, error: specsError }] =
       await Promise.all([
         supabaseAdmin.from("intents").select("*"),
@@ -106,9 +130,9 @@ export async function POST(req: NextRequest) {
 
     const intents: IntentRow[] = intentRows ?? [];
     const specialists: SpecialistRow[] = specRows ?? [];
+    const origin = req.nextUrl.origin;
 
     if (!intents.length || !specialists.length) {
-      const origin = req.nextUrl.origin;
       await logRun(origin, {
         ticketId,
         specialistId: null,
@@ -118,6 +142,12 @@ export async function POST(req: NextRequest) {
         inputSummary: String(latestComment).slice(0, 200),
         outputSummary: "No intents or specialists configured.",
         status: "fallback",
+      });
+      await logTicketEvent(origin, {
+        ticketId,
+        eventType: "error",
+        summary: "No intents/specialists configured",
+        detail: "Nothing to route against.",
       });
       return NextResponse.json(
         { error: "No intents or specialists configured" },
@@ -133,7 +163,7 @@ export async function POST(req: NextRequest) {
       {
         role: "system",
         content:
-          "You are an intent classifier. Choose the single best intent_id for the user message from the provided list. Respond ONLY with a JSON object like {\"intent_id\":\"<id-or-unknown>\"}. If none fit, use \"unknown\".",
+          'You are an intent classifier. Choose the single best intent_id for the user message from the provided list. Respond ONLY with a JSON object like {"intent_id":"<id-or-unknown>"}. If none fit, use "unknown".',
       },
       {
         role: "user",
@@ -158,7 +188,6 @@ export async function POST(req: NextRequest) {
     if (!classifyRes.ok) {
       const text = await classifyRes.text();
       console.error("OpenAI classify error (webhook):", text);
-      const origin = req.nextUrl.origin;
       await logRun(origin, {
         ticketId,
         specialistId: null,
@@ -168,6 +197,12 @@ export async function POST(req: NextRequest) {
         inputSummary: String(latestComment).slice(0, 200),
         outputSummary: `Intent classification failed: ${text.slice(0, 180)}`,
         status: "fallback",
+      });
+      await logTicketEvent(origin, {
+        ticketId,
+        eventType: "error",
+        summary: "Intent classification failed",
+        detail: text.slice(0, 200),
       });
       return NextResponse.json(
         { error: "OpenAI intent classify error", details: text },
@@ -192,7 +227,13 @@ export async function POST(req: NextRequest) {
     const matchedSpecialist =
       specialists.find((s) => s.id === matchedIntent?.specialist_id) ?? null;
 
-    // If no specialist mapped, tag for handover and exit early
+    await logTicketEvent(origin, {
+      ticketId,
+      eventType: "intent_detected",
+      summary: `Intent: ${matchedIntent?.name ?? "unknown"}`,
+      detail: `Specialist mapped: ${matchedSpecialist?.name ?? "none"}`,
+    });
+
     if (!matchedSpecialist) {
       const authString = Buffer.from(
         `${zendeskEmail}/token:${zendeskToken}`
@@ -217,7 +258,7 @@ export async function POST(req: NextRequest) {
         }),
       });
 
-      await logRun(req.nextUrl.origin, {
+      await logRun(origin, {
         ticketId,
         specialistId: null,
         specialistName: null,
@@ -226,6 +267,12 @@ export async function POST(req: NextRequest) {
         inputSummary: String(latestComment).slice(0, 200),
         outputSummary: "No specialist matched; handed to human.",
         status: "fallback",
+      });
+      await logTicketEvent(origin, {
+        ticketId,
+        eventType: "handover",
+        summary: "No specialist matched; tagged bot-handover",
+        detail: "",
       });
 
       return NextResponse.json({
@@ -264,7 +311,7 @@ export async function POST(req: NextRequest) {
     if (!openaiRes.ok) {
       const text = await openaiRes.text();
       console.error("OpenAI error (webhook):", text);
-      await logRun(req.nextUrl.origin, {
+      await logRun(origin, {
         ticketId,
         specialistId: matchedSpecialist.id,
         specialistName: matchedSpecialist.name,
@@ -273,6 +320,12 @@ export async function POST(req: NextRequest) {
         inputSummary: String(latestComment).slice(0, 200),
         outputSummary: `Reply generation failed: ${text.slice(0, 180)}`,
         status: "fallback",
+      });
+      await logTicketEvent(origin, {
+        ticketId,
+        eventType: "error",
+        summary: "Reply generation failed",
+        detail: text.slice(0, 200),
       });
       return NextResponse.json(
         { error: "OpenAI API error", details: text },
@@ -311,7 +364,7 @@ export async function POST(req: NextRequest) {
     if (!zendeskRes.ok) {
       const text = await zendeskRes.text();
       console.error("Zendesk API error:", text);
-      await logRun(req.nextUrl.origin, {
+      await logRun(origin, {
         ticketId,
         specialistId: matchedSpecialist.id,
         specialistName: matchedSpecialist.name,
@@ -321,41 +374,34 @@ export async function POST(req: NextRequest) {
         outputSummary: `Zendesk API error: ${text.slice(0, 180)}`,
         status: "fallback",
       });
+      await logTicketEvent(origin, {
+        ticketId,
+        eventType: "error",
+        summary: "Zendesk API error",
+        detail: text.slice(0, 200),
+      });
       return NextResponse.json(
         { error: "Zendesk API error", details: text },
         { status: 500 }
       );
     }
 
-    // 3) Log this run to /api/logs via HTTP (same as the debug button)
-    try {
-      const origin = req.nextUrl.origin;
-      const logRes = await fetch(new URL("/api/logs", origin), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          zendeskTicketId: ticketId.toString(),
-          specialistId: matchedSpecialist.id,
-          specialistName: matchedSpecialist.name,
-          intentId: matchedIntent?.id ?? null,
-          intentName: matchedIntent?.name ?? null,
-          inputSummary: String(latestComment).slice(0, 200),
-          knowledgeSources: [],
-          outputSummary: aiReply.slice(0, 200),
-          status: "success",
-        }),
-      });
-
-      if (!logRes.ok) {
-        console.error(
-          "Log POST failed:",
-          logRes.status,
-          await logRes.text()
-        );
-      }
-    } catch (e) {
-      console.error("Failed to log run", e);
-    }
+    await logRun(origin, {
+      ticketId,
+      specialistId: matchedSpecialist.id,
+      specialistName: matchedSpecialist.name,
+      intentId: matchedIntent?.id ?? null,
+      intentName: matchedIntent?.name ?? null,
+      inputSummary: String(latestComment).slice(0, 200),
+      outputSummary: aiReply.slice(0, 200),
+      status: "success",
+    });
+    await logTicketEvent(origin, {
+      ticketId,
+      eventType: "reply_sent",
+      summary: "Reply sent to Zendesk",
+      detail: `Specialist: ${matchedSpecialist.name}; Intent: ${matchedIntent?.name ?? "unknown"}`,
+    });
 
     return NextResponse.json({
       status: "ok",

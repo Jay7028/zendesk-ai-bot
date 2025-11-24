@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type LogStatus = "success" | "fallback" | "escalated";
 
-interface LogEntry {
+type LogEntry = {
   id: string;
   timestamp: string;
   zendeskTicketId: string;
@@ -16,29 +16,90 @@ interface LogEntry {
   knowledgeSources: string[];
   outputSummary: string;
   status: LogStatus;
-}
+};
+
+type TicketEvent = {
+  id: string;
+  ticketId: string;
+  eventType: string;
+  summary: string;
+  detail: string;
+  createdAt: string;
+};
 
 export default function LogsPage() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [events, setEvents] = useState<TicketEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedTicket, setSelectedTicket] = useState<string | null>(null);
 
   useEffect(() => {
-    async function loadLogs() {
+    async function loadData() {
       try {
         setIsLoading(true);
-        const res = await fetch("/api/logs");
-        if (!res.ok) throw new Error("Failed to load logs");
-        const data: LogEntry[] = await res.json();
+        const [logRes, eventRes] = await Promise.all([
+          fetch("/api/logs"),
+          fetch("/api/ticket-events"),
+        ]);
+        if (!logRes.ok) throw new Error("Failed to load logs");
+        if (!eventRes.ok) throw new Error("Failed to load ticket events");
+        const data: LogEntry[] = await logRes.json();
+        const eventData: TicketEvent[] = await eventRes.json();
         setLogs(data);
+        setEvents(eventData);
+        if (data[0]) setSelectedTicket(data[0].zendeskTicketId);
       } catch (e: any) {
         setError(e.message ?? "Unexpected error");
       } finally {
         setIsLoading(false);
       }
     }
-    loadLogs();
+    loadData();
   }, []);
+
+  const tickets = useMemo(() => {
+    const map = new Map<
+      string,
+      { ticketId: string; lastStatus: string; lastTime: number; count: number }
+    >();
+    const add = (ticketId: string, status: string, time: number) => {
+      const existing = map.get(ticketId);
+      if (!existing || existing.lastTime < time) {
+        map.set(ticketId, { ticketId, lastStatus: status, lastTime: time, count: (existing?.count ?? 0) + 1 });
+      } else {
+        map.set(ticketId, {
+          ticketId,
+          lastStatus: existing.lastStatus,
+          lastTime: existing.lastTime,
+          count: (existing?.count ?? 0) + 1,
+        });
+      }
+    };
+    logs.forEach((l) => add(l.zendeskTicketId, l.status, new Date(l.timestamp).getTime()));
+    events.forEach((ev) => add(ev.ticketId, ev.eventType, new Date(ev.createdAt).getTime()));
+    return Array.from(map.values()).sort((a, b) => b.lastTime - a.lastTime);
+  }, [logs, events]);
+
+  const timeline = useMemo(() => {
+    if (!selectedTicket) return [];
+    const filteredEvents = events
+      .filter((ev) => ev.ticketId === selectedTicket)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    const filteredLogs = logs
+      .filter((l) => l.zendeskTicketId === selectedTicket)
+      .map((l) => ({
+        id: `log-${l.id}`,
+        ticketId: l.zendeskTicketId,
+        eventType: l.status,
+        summary: `Specialist: ${l.specialistName} (${l.specialistId})${l.intentName ? ` • Intent: ${l.intentName}` : ""}`,
+        detail: `Input: ${l.inputSummary}\nOutput: ${l.outputSummary}`,
+        createdAt: l.timestamp,
+      }));
+    return [...filteredEvents, ...filteredLogs].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+  }, [events, logs, selectedTicket]);
 
   return (
     <div
@@ -65,9 +126,9 @@ export default function LogsPage() {
         }}
       >
         <div>
-          <div style={{ fontSize: "20px", fontWeight: 600 }}>AI Run Logs</div>
+          <div style={{ fontSize: "20px", fontWeight: 600 }}>Ticket Activity</div>
           <div style={{ fontSize: "12px", color: "#9ca3af" }}>
-            View recent AI email runs from Zendesk.
+            See intents, specialist replies, handovers, and errors per ticket.
           </div>
         </div>
         <div style={{ fontSize: "12px", color: "#9ca3af" }}>
@@ -123,7 +184,7 @@ export default function LogsPage() {
           ))}
         </aside>
 
-        {/* Main logs content */}
+        {/* Main content */}
         <main
           style={{
             flex: 1,
@@ -131,20 +192,6 @@ export default function LogsPage() {
             overflowY: "auto",
           }}
         >
-          <h1 style={{ fontSize: "18px", fontWeight: 600, marginBottom: 4 }}>
-            Run Logs
-          </h1>
-          <p
-            style={{
-              fontSize: "12px",
-              color: "#9ca3af",
-              marginBottom: 16,
-            }}
-          >
-            Newest runs first. Use this to see which specialist responded and
-            what the model produced.
-          </p>
-
           {isLoading && (
             <div style={{ fontSize: 12, color: "#9ca3af" }}>Loading logs…</div>
           )}
@@ -154,105 +201,122 @@ export default function LogsPage() {
             </div>
           )}
 
-          {!isLoading && logs.length === 0 && (
-            <div style={{ fontSize: 13, color: "#9ca3af" }}>
-              No logs yet. Trigger the bot from Zendesk or use the debug button
-              on /admin.
-            </div>
-          )}
-
-          {logs.length > 0 && (
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "280px 1fr",
+              gap: 12,
+              minHeight: "60vh",
+            }}
+          >
             <div
               style={{
-                marginTop: 8,
-                borderRadius: "12px",
                 border: "1px solid #1f2937",
-                overflow: "hidden",
+                borderRadius: "12px",
+                padding: "12px",
+                background: "#0b1220",
+                overflowY: "auto",
               }}
             >
-              <table
-                style={{
-                  width: "100%",
-                  borderCollapse: "collapse",
-                  fontSize: "12px",
-                }}
-              >
-                <thead
-                  style={{
-                    backgroundColor: "#020617",
-                    borderBottom: "1px solid #1f2937",
-                  }}
-                >
-                  <tr>
-                    <th style={{ textAlign: "left", padding: "8px" }}>Time</th>
-                    <th style={{ textAlign: "left", padding: "8px" }}>
-                      Ticket ID
-                    </th>
-                    <th style={{ textAlign: "left", padding: "8px" }}>
-                      Specialist / Intent
-                    </th>
-                    <th style={{ textAlign: "left", padding: "8px" }}>
-                      Status
-                    </th>
-                    <th style={{ textAlign: "left", padding: "8px" }}>
-                      Input summary
-                    </th>
-                    <th style={{ textAlign: "left", padding: "8px" }}>
-                      Output summary
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {logs.map((log) => (
-                    <tr
-                      key={log.id}
-                      style={{ borderTop: "1px solid #1f2937" }}
+              <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>
+                Tickets
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {tickets.map((t) => {
+                  const isSelected = t.ticketId === selectedTicket;
+                  return (
+                    <button
+                      key={t.ticketId}
+                      onClick={() => setSelectedTicket(t.ticketId)}
+                      style={{
+                        textAlign: "left",
+                        padding: "8px 10px",
+                        borderRadius: "8px",
+                        border: isSelected
+                          ? "1px solid #22c55e"
+                          : "1px solid #1f2937",
+                        background: isSelected ? "#111827" : "#020617",
+                        color: "#e5e7eb",
+                        cursor: "pointer",
+                      }}
                     >
-                      <td style={{ padding: "6px 8px", whiteSpace: "nowrap" }}>
-                        {new Date(log.timestamp).toLocaleString()}
-                      </td>
-                      <td style={{ padding: "6px 8px" }}>
-                        {log.zendeskTicketId}
-                      </td>
-                      <td style={{ padding: "6px 8px" }}>
-                        <div>
-                          {log.specialistName}{" "}
-                          <span style={{ color: "#9ca3af" }}>
-                            ({log.specialistId})
-                          </span>
-                        </div>
-                        {log.intentName && (
-                          <div style={{ fontSize: 11, color: "#9ca3af" }}>
-                            Intent: {log.intentName}{" "}
-                            {log.intentId && <span>({log.intentId})</span>}
-                          </div>
-                        )}
-                      </td>
-                      <td style={{ padding: "6px 8px" }}>
-                        <span
-                          style={{
-                            padding: "2px 8px",
-                            borderRadius: "999px",
-                            border: "1px solid #374151",
-                            fontSize: "11px",
-                            textTransform: "capitalize",
-                          }}
-                        >
-                          {log.status}
-                        </span>
-                      </td>
-                      <td style={{ padding: "6px 8px", maxWidth: 260 }}>
-                        {log.inputSummary}
-                      </td>
-                      <td style={{ padding: "6px 8px", maxWidth: 260 }}>
-                        {log.outputSummary}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      <div style={{ fontSize: 13, fontWeight: 500 }}>
+                        {t.ticketId}
+                      </div>
+                      <div style={{ fontSize: 11, color: "#9ca3af" }}>
+                        {t.lastStatus} • {t.count} events
+                      </div>
+                    </button>
+                  );
+                })}
+                {tickets.length === 0 && !isLoading && (
+                  <div style={{ fontSize: 12, color: "#9ca3af" }}>
+                    No tickets yet.
+                  </div>
+                )}
+              </div>
             </div>
-          )}
+
+            <div
+              style={{
+                border: "1px solid #1f2937",
+                borderRadius: "12px",
+                padding: "12px",
+                background: "#020617",
+                overflowY: "auto",
+              }}
+            >
+              {!selectedTicket && (
+                <div style={{ fontSize: 13, color: "#9ca3af" }}>
+                  Select a ticket to view activity.
+                </div>
+              )}
+              {selectedTicket && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  <div style={{ fontSize: 14, fontWeight: 600 }}>
+                    Ticket {selectedTicket}
+                  </div>
+                  {timeline.length === 0 && (
+                    <div style={{ fontSize: 12, color: "#9ca3af" }}>
+                      No events for this ticket yet.
+                    </div>
+                  )}
+                  {timeline.map((ev) => (
+                    <div
+                      key={ev.id}
+                      style={{
+                        border: "1px solid #1f2937",
+                        borderRadius: "8px",
+                        padding: "8px",
+                        background: "#0b1220",
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          fontSize: 12,
+                          marginBottom: 4,
+                          color: "#9ca3af",
+                        }}
+                      >
+                        <span>{ev.eventType}</span>
+                        <span>{new Date(ev.createdAt).toLocaleString()}</span>
+                      </div>
+                      <div style={{ fontSize: 13, color: "#e5e7eb" }}>
+                        {ev.summary}
+                      </div>
+                      {ev.detail && (
+                        <div style={{ fontSize: 12, color: "#9ca3af", whiteSpace: "pre-wrap" }}>
+                          {ev.detail}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         </main>
       </div>
     </div>
