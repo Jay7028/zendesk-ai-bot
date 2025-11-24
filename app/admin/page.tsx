@@ -674,32 +674,48 @@ export default function AiSpecialistsAdminPage() {
                         >
                           Personality & tone
                         </div>
-                        <textarea
-                          value={selectedSpecialist.personalityNotes}
-                          onChange={(e) =>
-                            updateSelectedSpecialist({
-                              personalityNotes: e.target.value,
-                            })
-                          }
-                          rows={8}
-                          style={{
-                            width: "100%",
-                            resize: "vertical",
-                            borderRadius: "8px",
-                            border: "1px solid #e5e7eb",
-                            background: "#f9fafb",
-                            color: "#111827",
-                            padding: "8px",
-                            fontSize: "12px",
-                            marginBottom: 8,
-                          }}
-                        />
-                        <div
-                          style={{ fontSize: "11px", color: "#9ca3af" }}
-                        >
-                          Later this will feed into the system prompt for this
-                          specialist.
-                        </div>
+                        {(() => {
+                          const toneStops = [
+                            { value: 0, label: "Formal" },
+                            { value: 25, label: "Professional" },
+                            { value: 50, label: "Neutral" },
+                            { value: 75, label: "Casual" },
+                            { value: 100, label: "Best friend" },
+                          ];
+                          const currentStop =
+                            toneStops.find((t) => t.label === selectedSpecialist.personalityNotes) ||
+                            toneStops[2];
+                          return (
+                            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                              <input
+                                type="range"
+                                min={0}
+                                max={100}
+                                step={25}
+                                value={currentStop.value}
+                                onChange={(e) => {
+                                  const v = Number(e.target.value);
+                                  const match = toneStops.find((t) => t.value === v) ?? toneStops[2];
+                                  updateSelectedSpecialist({ personalityNotes: match.label });
+                                }}
+                                style={{ width: "100%" }}
+                              />
+                              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#6b7280" }}>
+                                {toneStops.map((t) => (
+                                  <span key={t.value} style={{ textAlign: "center", width: "20%" }}>
+                                    {t.label}
+                                  </span>
+                                ))}
+                              </div>
+                              <div style={{ fontSize: 12, fontWeight: 600 }}>
+                                Selected tone: {currentStop.label}
+                              </div>
+                              <div style={{ fontSize: "11px", color: "#9ca3af" }}>
+                                This controls how friendly vs formal the assistant should sound.
+                              </div>
+                            </div>
+                          );
+                        })()}
                       </div>
                     )}
 
