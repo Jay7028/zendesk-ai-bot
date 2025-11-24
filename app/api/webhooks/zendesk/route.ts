@@ -362,6 +362,12 @@ export async function POST(req: NextRequest) {
         }
         await logTicketEvent(origin, {
           ticketId,
+          eventType: "zendesk_update",
+          summary: "Tag added: bot-handover",
+          detail: tagsSnippet,
+        });
+        await logTicketEvent(origin, {
+          ticketId,
           eventType: "handover",
           summary:
             confidence < CONFIDENCE_THRESHOLD
@@ -511,6 +517,12 @@ export async function POST(req: NextRequest) {
       eventType: "reply_sent",
       summary: "Reply sent to Zendesk",
       detail: `Specialist: ${matchedSpecialist.name}; Intent: ${matchedIntent?.name ?? "unknown"}`,
+    });
+    await logTicketEvent(origin, {
+      ticketId,
+      eventType: "zendesk_update",
+      summary: "Public reply posted to Zendesk",
+      detail: aiReply.slice(0, 240),
     });
 
     return NextResponse.json({
