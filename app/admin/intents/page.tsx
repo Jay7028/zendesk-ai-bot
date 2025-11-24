@@ -26,7 +26,7 @@ export default function IntentsPage() {
   >({});
   const [newIntentName, setNewIntentName] = useState("");
   const [newIntentDescription, setNewIntentDescription] = useState("");
-  const [newIntentSpecialistId, setNewIntentSpecialistId] = useState("");
+  const [newIntentSpecialistId, setNewIntentSpecialistId] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadData() {
@@ -72,7 +72,7 @@ export default function IntentsPage() {
     const description =
       newIntentDescription.trim() ||
       (trimmedMessage ? `Created from tester input: ${trimmedMessage}` : "Added from intent tester (no match).");
-    const specialistId = newIntentSpecialistId || "";
+    const specialistId = newIntentSpecialistId ?? null;
 
     try {
       setIsSaving(true);
@@ -100,7 +100,7 @@ export default function IntentsPage() {
     const draft: Partial<IntentConfig> = {
       name: "New Intent",
       description: "Describe when this intent should match.",
-      specialistId: "",
+      specialistId: null,
     };
     try {
       setIsSaving(true);
@@ -172,7 +172,7 @@ export default function IntentsPage() {
     const edits = suggestionEdits[s.id] || {};
     const name = edits.name?.trim() || s.suggestedName;
     const description = edits.description?.trim() || s.suggestedDescription;
-    const specialistId = suggestionSpecialist[s.id] || "";
+    const specialistId = suggestionSpecialist[s.id] || null;
     try {
       setIsSaving(true);
       setError(null);
@@ -450,8 +450,8 @@ export default function IntentsPage() {
                     <div>
                       <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 4 }}>Route to specialist</div>
                       <select
-                        value={newIntentSpecialistId}
-                        onChange={(e) => setNewIntentSpecialistId(e.target.value)}
+                        value={newIntentSpecialistId ?? ""}
+                        onChange={(e) => setNewIntentSpecialistId(e.target.value || null)}
                         style={{
                           width: "100%",
                           borderRadius: "8px",
@@ -687,7 +687,9 @@ export default function IntentsPage() {
                       <select
                         value={selectedIntent.specialistId ?? ""}
                         onChange={(e) =>
-                          updateSelectedIntent({ specialistId: e.target.value || null })
+                          updateSelectedIntent({
+                            specialistId: e.target.value ? e.target.value : null,
+                          })
                         }
                         style={{
                           width: "100%",
