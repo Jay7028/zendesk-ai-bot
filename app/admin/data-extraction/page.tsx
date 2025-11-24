@@ -161,14 +161,11 @@ export default function DataExtractionPage() {
             Navigation
           </div>
           {[
-            { id: "inbox", label: "Inbox", href: "#" },
-            { id: "triage", label: "Triage & Routing", href: "#" },
             { id: "specialists", label: "AI Specialists", href: "/admin" },
             { id: "intents", label: "Intents & Routing", href: "/admin/intents" },
             { id: "data-extraction", label: "Data Extraction", href: "/admin/data-extraction", active: true },
             { id: "integrations", label: "Integrations", href: "/admin/integrations" },
             { id: "logs", label: "Logs", href: "/admin/logs" },
-            { id: "settings", label: "Settings", href: "#" },
           ].map((item) => (
             <a
               key={item.id}

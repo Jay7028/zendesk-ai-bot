@@ -234,16 +234,13 @@ export default function AiSpecialistsAdminPage() {
           <div style={{ fontSize: "12px", color: "#6b7280", marginBottom: 8, fontWeight: 600 }}>
             Navigation
           </div>
-          {[
-            { id: "inbox", label: "Inbox", href: "#" },
-            { id: "triage", label: "Triage & Routing", href: "#" },
-            { id: "specialists", label: "AI Specialists", href: "/admin", active: true },
-            { id: "intents", label: "Intents & Routing", href: "/admin/intents" },
-            { id: "data-extraction", label: "Data Extraction", href: "/admin/data-extraction" },
-            { id: "integrations", label: "Integrations", href: "/admin/integrations" },
-            { id: "logs", label: "Logs", href: "/admin/logs" },
-            { id: "settings", label: "Settings", href: "#" },
-          ].map((item) => (
+            {[
+              { id: "specialists", label: "AI Specialists", href: "/admin", active: true },
+              { id: "intents", label: "Intents & Routing", href: "/admin/intents" },
+              { id: "data-extraction", label: "Data Extraction", href: "/admin/data-extraction" },
+              { id: "integrations", label: "Integrations", href: "/admin/integrations" },
+              { id: "logs", label: "Logs", href: "/admin/logs" },
+            ].map((item) => (
             <a
               key={item.id}
               href={item.href}

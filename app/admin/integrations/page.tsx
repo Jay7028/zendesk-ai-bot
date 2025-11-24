@@ -161,14 +161,11 @@ export default function IntegrationsPage() {
             Navigation
           </div>
           {[
-            { id: "inbox", label: "Inbox", href: "#" },
-            { id: "triage", label: "Triage & Routing", href: "#" },
             { id: "specialists", label: "AI Specialists", href: "/admin" },
             { id: "intents", label: "Intents & Routing", href: "/admin/intents" },
             { id: "data-extraction", label: "Data Extraction", href: "/admin/data-extraction" },
             { id: "integrations", label: "Integrations", href: "/admin/integrations", active: true },
             { id: "logs", label: "Logs", href: "/admin/logs" },
-            { id: "settings", label: "Settings", href: "#" },
           ].map((item) => (
             <a key={item.id} href={item.href} style={{ textDecoration: "none" }}>
               <div
