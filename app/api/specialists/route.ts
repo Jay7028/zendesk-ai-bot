@@ -34,6 +34,19 @@ function camelToDb(body: Partial<SpecialistConfig>) {
   };
 }
 
+async function logAdminEvent(summary: string, detail?: string) {
+  try {
+    await supabaseAdmin.from("ticket_events").insert({
+      ticket_id: "admin",
+      event_type: "admin_change",
+      summary,
+      detail: detail ?? "",
+    });
+  } catch (e) {
+    console.error("Failed to log admin event", e);
+  }
+}
+
 export async function GET() {
   const { data, error } = await supabaseAdmin.from("specialists").select("*");
 
@@ -83,5 +96,6 @@ export async function POST(request: Request) {
     );
   }
 
+  await logAdminEvent(`Created specialist "${data.name}"`, `id: ${data.id}`);
   return NextResponse.json(dbToCamel(data), { status: 201 });
 }

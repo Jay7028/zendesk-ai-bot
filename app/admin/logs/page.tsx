@@ -33,6 +33,9 @@ export default function LogsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedTicket, setSelectedTicket] = useState<string | null>(null);
+  const [typeFilter, setTypeFilter] = useState<"all" | "tickets" | "admin">("all");
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
 
   useEffect(() => {
     async function loadData() {
@@ -76,15 +79,44 @@ export default function LogsPage() {
         });
       }
     };
-    logs.forEach((l) => add(l.zendeskTicketId, l.status, new Date(l.timestamp).getTime()));
-    events.forEach((ev) => add(ev.ticketId, ev.eventType, new Date(ev.createdAt).getTime()));
-    return Array.from(map.values()).sort((a, b) => b.lastTime - a.lastTime);
-  }, [logs, events]);
+
+    const applyDateFilter = (dateStr: string) => {
+      const ts = new Date(dateStr).getTime();
+      const startOk = !startDate || ts >= new Date(startDate).getTime();
+      const endOk = !endDate || ts <= new Date(endDate).getTime() + 24 * 60 * 60 * 1000;
+      return startOk && endOk;
+    };
+
+    logs.forEach((l) => {
+      if (!applyDateFilter(l.timestamp)) return;
+      add(l.zendeskTicketId, l.status, new Date(l.timestamp).getTime());
+    });
+    events.forEach((ev) => {
+      if (!applyDateFilter(ev.createdAt)) return;
+      add(ev.ticketId, ev.eventType, new Date(ev.createdAt).getTime());
+    });
+
+    const filtered = Array.from(map.values()).filter((item) => {
+      if (typeFilter === "admin") return item.ticketId === "admin";
+      if (typeFilter === "tickets") return item.ticketId !== "admin";
+      return true;
+    });
+
+    return filtered.sort((a, b) => b.lastTime - a.lastTime);
+  }, [logs, events, typeFilter, startDate, endDate]);
 
   const timeline = useMemo(() => {
     if (!selectedTicket) return [];
     const filteredEvents = events
       .filter((ev) => ev.ticketId === selectedTicket)
+      .filter((ev) => {
+        const ts = new Date(ev.createdAt).getTime();
+        const startOk = !startDate || ts >= new Date(startDate).getTime();
+        const endOk = !endDate || ts <= new Date(endDate).getTime() + 24 * 60 * 60 * 1000;
+        if (typeFilter === "admin" && ev.ticketId !== "admin") return false;
+        if (typeFilter === "tickets" && ev.ticketId === "admin") return false;
+        return startOk && endOk;
+      })
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     const filteredLogs = logs
       .filter((l) => l.zendeskTicketId === selectedTicket)
@@ -95,7 +127,15 @@ export default function LogsPage() {
         summary: `Specialist: ${l.specialistName} (${l.specialistId})${l.intentName ? ` | Intent: ${l.intentName}` : ""}`,
         detail: `Input: ${l.inputSummary}\nOutput: ${l.outputSummary}`,
         createdAt: l.timestamp,
-      }));
+      }))
+      .filter((l) => {
+        const ts = new Date(l.createdAt).getTime();
+        const startOk = !startDate || ts >= new Date(startDate).getTime();
+        const endOk = !endDate || ts <= new Date(endDate).getTime() + 24 * 60 * 60 * 1000;
+        if (typeFilter === "admin" && l.ticketId !== "admin") return false;
+        if (typeFilter === "tickets" && l.ticketId === "admin") return false;
+        return startOk && endOk;
+      });
     return [...filteredEvents, ...filteredLogs].sort(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
@@ -207,6 +247,60 @@ export default function LogsPage() {
               {error}
             </div>
           )}
+
+          <div style={{ display: "flex", gap: 12, marginBottom: 12, alignItems: "flex-end" }}>
+            <div>
+              <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 4 }}>Type</div>
+              <select
+                value={typeFilter}
+                onChange={(e) => setTypeFilter(e.target.value as any)}
+                style={{
+                  borderRadius: "8px",
+                  border: "1px solid #e5e7eb",
+                  background: "#ffffff",
+                  color: "#111827",
+                  padding: "8px",
+                  fontSize: "12px",
+                }}
+              >
+                <option value="all">All</option>
+                <option value="tickets">Tickets only</option>
+                <option value="admin">Admin changes</option>
+              </select>
+            </div>
+            <div>
+              <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 4 }}>Start date</div>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                style={{
+                  borderRadius: "8px",
+                  border: "1px solid #e5e7eb",
+                  background: "#ffffff",
+                  color: "#111827",
+                  padding: "8px",
+                  fontSize: "12px",
+                }}
+              />
+            </div>
+            <div>
+              <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 4 }}>End date</div>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                style={{
+                  borderRadius: "8px",
+                  border: "1px solid #e5e7eb",
+                  background: "#ffffff",
+                  color: "#111827",
+                  padding: "8px",
+                  fontSize: "12px",
+                }}
+              />
+            </div>
+          </div>
 
           <div
             style={{

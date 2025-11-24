@@ -34,6 +34,19 @@ function camelToDb(body: Partial<SpecialistConfig>) {
   };
 }
 
+async function logAdminEvent(summary: string, detail?: string) {
+  try {
+    await supabaseAdmin.from("ticket_events").insert({
+      ticket_id: "admin",
+      event_type: "admin_change",
+      summary,
+      detail: detail ?? "",
+    });
+  } catch (e) {
+    console.error("Failed to log admin event", e);
+  }
+}
+
 // Note: params is now a Promise, so we await it inside the handler.
 
 export async function GET(
@@ -78,6 +91,7 @@ export async function PUT(
     );
   }
 
+  await logAdminEvent(`Updated specialist "${data.name}"`, `id: ${data.id}`);
   return NextResponse.json(dbToCamel(data));
 }
 
@@ -100,5 +114,6 @@ export async function DELETE(
     );
   }
 
+  await logAdminEvent(`Deleted specialist "${id}"`);
   return NextResponse.json({ success: true });
 }
