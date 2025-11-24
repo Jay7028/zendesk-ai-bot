@@ -33,10 +33,25 @@ export async function GET() {
 
 export async function POST(request: Request) {
   const body = (await request.json()) as Partial<IntentConfig>;
+  let specialistId = body.specialistId ?? null;
+
+  // If no specialist provided, try to use a Default Specialist if it exists.
+  if (!specialistId) {
+    const { data: specData } = await supabaseAdmin
+      .from("specialists")
+      .select("id")
+      .eq("name", "Default Specialist")
+      .limit(1)
+      .single();
+    if (specData?.id) {
+      specialistId = specData.id;
+    }
+  }
+
   const dbRecord = camelToDb({
     name: body.name ?? "New Intent",
     description: body.description ?? "",
-    specialistId: body.specialistId ?? "",
+    specialistId,
   });
 
   if (!body.id) {
