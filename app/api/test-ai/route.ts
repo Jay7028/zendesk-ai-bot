@@ -19,13 +19,22 @@ type IntentRow = {
   id: string;
   name: string;
   description: string;
-  specialist_id: string;
+  specialist_id: string | null;
 };
+
+type Message = { role: "user" | "assistant"; content: string };
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const userMessage = body.message || "No message provided";
+    const messages: Message[] = Array.isArray(body.messages)
+      ? body.messages
+      : body.message
+      ? [{ role: "user", content: body.message }]
+      : [];
+
+    const latestUser = [...messages].reverse().find((m) => m.role === "user");
+    const userMessage = latestUser?.content?.trim() || "No message provided";
 
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
@@ -51,6 +60,8 @@ export async function POST(req: NextRequest) {
 
     const intents: IntentRow[] = intentRows ?? [];
     const specialists: SpecialistRow[] = specRows ?? [];
+
+    const actions: string[] = [];
 
     const intentListForPrompt = intents
       .map((i) => `- ${i.id}: ${i.name} — ${i.description}`)
@@ -119,18 +130,32 @@ export async function POST(req: NextRequest) {
         ? specialists.find((s) => s.id === matchedIntent.specialist_id) ?? null
         : null;
 
-    const replyPrompt = [
+    actions.push(
+      `Classified intent: ${matchedIntent?.name ?? "unknown"} (confidence ${confidence.toFixed(
+        2
+      )})`
+    );
+    if (matchedSpecialist) {
+      actions.push(`Routed to specialist: ${matchedSpecialist.name}`);
+    } else {
+      actions.push("No specialist matched (unknown or low confidence)");
+    }
+
+    const replyMessages: { role: "system" | "user" | "assistant"; content: string }[] = [
       {
         role: "system",
         content: matchedSpecialist
           ? `You are a helpful customer service email assistant.\nSpecialist: ${matchedSpecialist.name}\nDescription: ${matchedSpecialist.description}\nKnowledge: ${matchedSpecialist.knowledge_base_notes}\nEscalation rules: ${matchedSpecialist.escalation_rules}\nPersonality: ${matchedSpecialist.personality_notes}\nRequired fields: ${matchedSpecialist.required_fields?.join(", ") || "none"}`
           : "You are a helpful customer service email assistant.",
       },
-      {
-        role: "user",
-        content: `Customer message: "${userMessage}". Write a clear, polite email reply. If information is missing, ask for it.`,
-      },
     ];
+
+    messages.forEach((m) => {
+      replyMessages.push({ role: m.role, content: m.content });
+    });
+    if (replyMessages[replyMessages.length - 1]?.role !== "user") {
+      replyMessages.push({ role: "user", content: userMessage });
+    }
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -140,7 +165,7 @@ export async function POST(req: NextRequest) {
       },
       body: JSON.stringify({
         model: "gpt-4.1-mini",
-        messages: replyPrompt,
+        messages: replyMessages,
         temperature: 0.3,
       }),
     });
@@ -157,12 +182,15 @@ export async function POST(req: NextRequest) {
     const data = await response.json();
     const reply = data.choices?.[0]?.message?.content?.trim() || "";
 
+    actions.push("Generated reply");
+
     return NextResponse.json({
       reply,
       intentId: matchedIntent?.id ?? null,
       intentName: matchedIntent?.name ?? null,
       specialistId: matchedSpecialist?.id ?? null,
       specialistName: matchedSpecialist?.name ?? null,
+      actions,
     });
   } catch (err: any) {
     console.error("Error in /api/test-ai:", err);
