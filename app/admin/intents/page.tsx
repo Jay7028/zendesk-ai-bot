@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { IntentConfig } from "../../api/intents/types";
 import type { SpecialistConfig } from "../../api/specialists/data";
+import type { IntentSuggestion } from "../../api/intent-suggestions/types";
 
 export default function IntentsPage() {
   const [intents, setIntents] = useState<IntentConfig[]>([]);
@@ -18,21 +19,27 @@ export default function IntentsPage() {
     raw: string | null;
     error?: string | null;
   } | null>(null);
+  const [suggestions, setSuggestions] = useState<IntentSuggestion[]>([]);
+  const [suggestionSpecialist, setSuggestionSpecialist] = useState<Record<string, string>>({});
 
   useEffect(() => {
     async function loadData() {
       try {
         setIsLoading(true);
-        const [intentRes, specRes] = await Promise.all([
+        const [intentRes, specRes, suggestionsRes] = await Promise.all([
           fetch("/api/intents"),
           fetch("/api/specialists"),
+          fetch("/api/intent-suggestions"),
         ]);
         if (!intentRes.ok) throw new Error("Failed to load intents");
         if (!specRes.ok) throw new Error("Failed to load specialists");
+        if (!suggestionsRes.ok) throw new Error("Failed to load intent suggestions");
         const intentData: IntentConfig[] = await intentRes.json();
         const specData: SpecialistConfig[] = await specRes.json();
+        const suggestionData: IntentSuggestion[] = await suggestionsRes.json();
         setIntents(intentData);
         setSpecialists(specData);
+        setSuggestions(suggestionData);
         if (intentData[0]) setSelectedIntentId(intentData[0].id);
       } catch (e: any) {
         setError(e.message ?? "Unexpected error");
@@ -121,6 +128,43 @@ export default function IntentsPage() {
       setError(e.message ?? "Unexpected error while deleting intent");
     } finally {
       setIsSaving(false);
+    }
+  }
+
+  async function handleCreateIntentFromSuggestion(s: IntentSuggestion) {
+    const specialistId = suggestionSpecialist[s.id] || specialists[0]?.id || "";
+    try {
+      setIsSaving(true);
+      setError(null);
+      const res = await fetch("/api/intents", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: s.suggestedName,
+          description: s.suggestedDescription,
+          specialistId,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to create intent");
+      const created: IntentConfig = await res.json();
+      setIntents((prev) => [...prev, created]);
+      setSelectedIntentId(created.id);
+      // remove suggestion
+      await fetch(`/api/intent-suggestions/${s.id}`, { method: "DELETE" });
+      setSuggestions((prev) => prev.filter((x) => x.id !== s.id));
+    } catch (e: any) {
+      setError(e.message ?? "Unexpected error while creating from suggestion");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function handleDismissSuggestion(id: string) {
+    try {
+      await fetch(`/api/intent-suggestions/${id}`, { method: "DELETE" });
+      setSuggestions((prev) => prev.filter((x) => x.id !== id));
+    } catch (e) {
+      console.error("Failed to dismiss suggestion", e);
     }
   }
 
@@ -256,6 +300,111 @@ export default function IntentsPage() {
             overflowY: "auto",
           }}
         >
+          {/* Intent suggestions */}
+          <section
+            style={{
+              borderRadius: "12px",
+              border: "1px solid #1f2937",
+              background: "#0b1220",
+              padding: "14px",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 600 }}>Intent suggestions from handovers</div>
+                <div style={{ fontSize: 12, color: "#9ca3af" }}>
+                  Low-confidence tickets that can be turned into new intents.
+                </div>
+              </div>
+            </div>
+            {suggestions.length === 0 && (
+              <div style={{ marginTop: 8, fontSize: 12, color: "#9ca3af" }}>
+                No suggestions yet.
+              </div>
+            )}
+            {suggestions.length > 0 && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8 }}>
+                {suggestions.map((s) => (
+                  <div
+                    key={s.id}
+                    style={{
+                      border: "1px solid #1f2937",
+                      borderRadius: "10px",
+                      padding: "10px",
+                      background: "#020617",
+                    }}
+                  >
+                    <div style={{ fontSize: 13, fontWeight: 600 }}>
+                      {s.suggestedName} <span style={{ color: "#9ca3af" }}>({s.ticketId})</span>
+                    </div>
+                    <div style={{ fontSize: 12, color: "#9ca3af", marginBottom: 6 }}>
+                      Confidence: {s.confidence.toFixed(2)}
+                    </div>
+                    <div style={{ fontSize: 12, color: "#e5e7eb", whiteSpace: "pre-wrap", marginBottom: 6 }}>
+                      {s.suggestedDescription || "No description provided"}
+                    </div>
+                    <div style={{ fontSize: 11, color: "#9ca3af", marginBottom: 6 }}>
+                      Message: {s.messageSnippet}
+                    </div>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                      <select
+                        value={suggestionSpecialist[s.id] || specialists[0]?.id || ""}
+                        onChange={(e) =>
+                          setSuggestionSpecialist((prev) => ({ ...prev, [s.id]: e.target.value }))
+                        }
+                        style={{
+                          borderRadius: "8px",
+                          border: "1px solid #374151",
+                          background: "#020617",
+                          color: "#e5e7eb",
+                          padding: "6px",
+                          fontSize: "12px",
+                        }}
+                      >
+                        {specialists.map((spec) => (
+                          <option key={spec.id} value={spec.id}>
+                            {spec.name}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        onClick={() => handleCreateIntentFromSuggestion(s)}
+                        disabled={isSaving}
+                        style={{
+                          padding: "6px 12px",
+                          borderRadius: "999px",
+                          border: "none",
+                          cursor: isSaving ? "default" : "pointer",
+                          background: "#22c55e",
+                          color: "#020617",
+                          fontSize: "12px",
+                          fontWeight: 600,
+                          opacity: isSaving ? 0.7 : 1,
+                        }}
+                      >
+                        Add as intent
+                      </button>
+                      <button
+                        onClick={() => handleDismissSuggestion(s.id)}
+                        style={{
+                          padding: "6px 12px",
+                          borderRadius: "999px",
+                          border: "1px solid #ef4444",
+                          background: "transparent",
+                          color: "#ef4444",
+                          fontSize: "12px",
+                          cursor: "pointer",
+                        }}
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
           {/* Intent tester */}
           <section
             style={{

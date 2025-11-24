@@ -81,6 +81,74 @@ async function logTicketEvent(
   }
 }
 
+async function saveIntentSuggestion(
+  origin: string,
+  message: string,
+  ticketId: string | number,
+  confidence: number,
+  openaiKey: string
+) {
+  let suggestedName = "Unknown intent";
+  let suggestedDescription = "";
+
+  try {
+    const suggestRes = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${openaiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "gpt-4.1-mini",
+        messages: [
+          {
+            role: "system",
+            content:
+              "You propose an intent name and one-line description for a customer message. Keep it concise.",
+          },
+          {
+            role: "user",
+            content: `Message:\n"""\n${message}\n"""\nReturn JSON: {"name":"<intent-name>","description":"<one line>"}`,
+          },
+        ],
+        response_format: { type: "json_object" },
+        temperature: 0.2,
+      }),
+    });
+
+    if (suggestRes.ok) {
+      const json = await suggestRes.json();
+      const parsed =
+        (() => {
+          try {
+            return JSON.parse(json.choices?.[0]?.message?.content || "{}");
+          } catch {
+            return {};
+          }
+        })() as { name?: string; description?: string };
+      suggestedName = parsed.name || suggestedName;
+      suggestedDescription = parsed.description || suggestedDescription;
+    } else {
+      const text = await suggestRes.text();
+      console.error("Intent suggestion error:", text);
+    }
+  } catch (e) {
+    console.error("Intent suggestion exception:", e);
+  }
+
+  await fetch(new URL("/api/intent-suggestions", origin), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      ticketId: ticketId.toString(),
+      messageSnippet: String(message).slice(0, 500),
+      suggestedName,
+      suggestedDescription,
+      confidence,
+    }),
+  });
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -246,6 +314,13 @@ export async function POST(req: NextRequest) {
     });
 
     if (!matchedIntent || !matchedSpecialist || confidence < CONFIDENCE_THRESHOLD) {
+      await saveIntentSuggestion(
+        origin,
+        latestComment,
+        ticketId,
+        confidence,
+        openaiKey
+      );
       const authString = Buffer.from(
         `${zendeskEmail}/token:${zendeskToken}`
       ).toString("base64");
