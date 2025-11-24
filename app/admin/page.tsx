@@ -119,6 +119,35 @@ export default function AiSpecialistsAdminPage() {
     }
   }
 
+  async function handleDeleteSelectedSpecialist() {
+    if (!selectedSpecialist) return;
+    const confirmed = window.confirm(
+      `Delete "${selectedSpecialist.name}"? This cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    try {
+      setIsSaving(true);
+      setError(null);
+
+      const res = await fetch(`/api/specialists/${selectedSpecialist.id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to delete specialist");
+
+      setSpecialists((prev) => {
+        const remaining = prev.filter((s) => s.id !== selectedSpecialist.id);
+        setSelectedSpecialistId(remaining[0]?.id);
+        return remaining;
+      });
+      setActiveTab("data");
+    } catch (e: any) {
+      setError(e.message ?? "Unexpected error while deleting");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
   return (
     <div
       style={{
@@ -153,7 +182,8 @@ export default function AiSpecialistsAdminPage() {
           Environment: <span style={{ color: "#22c55e" }}>Development</span>
         </div>
       </header>
-            {/* TEMP: debug button to create a dummy log entry */}
+
+      {/* TEMP: debug button to create a dummy log entry */}
       <div style={{ padding: "8px 24px", borderBottom: "1px solid #111827" }}>
         <button
           onClick={async () => {
@@ -186,10 +216,9 @@ export default function AiSpecialistsAdminPage() {
         </button>
       </div>
 
-
       <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
         {/* Primary sidebar */}
-                <aside
+        <aside
           style={{
             width: "220px",
             borderRight: "1px solid #111827",
@@ -206,6 +235,7 @@ export default function AiSpecialistsAdminPage() {
             { id: "inbox", label: "Inbox", href: "#" },
             { id: "triage", label: "Triage & Routing", href: "#" },
             { id: "specialists", label: "AI Specialists", href: "/admin", active: true },
+            { id: "intents", label: "Intents & Routing", href: "/admin/intents" },
             { id: "logs", label: "Logs", href: "/admin/logs" },
             { id: "settings", label: "Settings", href: "#" },
           ].map((item) => (
@@ -229,7 +259,6 @@ export default function AiSpecialistsAdminPage() {
             </a>
           ))}
         </aside>
-
 
         {/* Specialists sidebar + main content */}
         <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
@@ -303,7 +332,7 @@ export default function AiSpecialistsAdminPage() {
                     </span>
                     <span
                       style={{ fontSize: "11px", color: "#9ca3af" }}
-                    >{`${spec.docsCount} docs • ${spec.rulesCount} rules`}</span>
+                    >{`${spec.docsCount} docs · ${spec.rulesCount} rules`}</span>
                     <span
                       style={{
                         fontSize: "10px",
@@ -355,79 +384,99 @@ export default function AiSpecialistsAdminPage() {
 
             {selectedSpecialist && (
               <>
-                            {/* Specialist header */}
-            <section
-              style={{
-                borderRadius: "12px",
-                border: "1px solid #1f2937",
-                padding: "16px",
-                background:
-                  "radial-gradient(circle at top left, #22c55e11, #020617)",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "flex-start",
-                gap: 16,
-              }}
-            >
-              <div>
-                <input
-                  value={selectedSpecialist.name}
-                  onChange={(e) =>
-                    updateSelectedSpecialist({ name: e.target.value })
-                  }
+                {/* Specialist header */}
+                <section
                   style={{
-                    fontSize: "18px",
-                    fontWeight: 600,
-                    marginBottom: 4,
-                    background: "transparent",
-                    border: "1px solid #374151",
-                    borderRadius: "6px",
-                    padding: "4px 8px",
-                    color: "#e5e7eb",
+                    borderRadius: "12px",
+                    border: "1px solid #1f2937",
+                    padding: "16px",
+                    background:
+                      "radial-gradient(circle at top left, #22c55e11, #020617)",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "flex-start",
+                    gap: 16,
                   }}
-                />
-                <textarea
-                  value={selectedSpecialist.description}
-                  onChange={(e) =>
-                    updateSelectedSpecialist({ description: e.target.value })
-                  }
-                  rows={2}
-                  style={{
-                    width: "100%",
-                    fontSize: "13px",
-                    color: "#e5e7eb",
-                    marginBottom: 4,
-                    background: "#020617",
-                    border: "1px solid #374151",
-                    borderRadius: "6px",
-                    padding: "4px 8px",
-                    resize: "vertical",
-                  }}
-                />
-                <div style={{ fontSize: "12px", color: "#9ca3af" }}>
-                  {selectedSpecialist.docsCount} training docs •{" "}
-                  {selectedSpecialist.rulesCount} rules
-                </div>
-              </div>
-              <button
-                onClick={() => toggleSpecialistActive(selectedSpecialist.id)}
-                style={{
-                  fontSize: "12px",
-                  padding: "6px 14px",
-                  borderRadius: "999px",
-                  border: "none",
-                  cursor: "pointer",
-                  background: selectedSpecialist.active
-                    ? "#22c55e"
-                    : "#4b5563",
-                  color: "#020617",
-                  fontWeight: 600,
-                }}
-              >
-                {selectedSpecialist.active ? "Active" : "Inactive"}
-              </button>
-            </section>
-
+                >
+                  <div>
+                    <input
+                      value={selectedSpecialist.name}
+                      onChange={(e) =>
+                        updateSelectedSpecialist({ name: e.target.value })
+                      }
+                      style={{
+                        fontSize: "18px",
+                        fontWeight: 600,
+                        marginBottom: 4,
+                        background: "transparent",
+                        border: "1px solid #374151",
+                        borderRadius: "6px",
+                        padding: "4px 8px",
+                        color: "#e5e7eb",
+                      }}
+                    />
+                    <textarea
+                      value={selectedSpecialist.description}
+                      onChange={(e) =>
+                        updateSelectedSpecialist({ description: e.target.value })
+                      }
+                      rows={2}
+                      style={{
+                        width: "100%",
+                        fontSize: "13px",
+                        color: "#e5e7eb",
+                        marginBottom: 4,
+                        background: "#020617",
+                        border: "1px solid #374151",
+                        borderRadius: "6px",
+                        padding: "4px 8px",
+                        resize: "vertical",
+                      }}
+                    />
+                    <div style={{ fontSize: "12px", color: "#9ca3af" }}>
+                      {selectedSpecialist.docsCount} training docs ·{" "}
+                      {selectedSpecialist.rulesCount} rules
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button
+                      onClick={() => toggleSpecialistActive(selectedSpecialist.id)}
+                      disabled={isSaving}
+                      style={{
+                        fontSize: "12px",
+                        padding: "6px 14px",
+                        borderRadius: "999px",
+                        border: "none",
+                        cursor: isSaving ? "default" : "pointer",
+                        background: selectedSpecialist.active
+                          ? "#22c55e"
+                          : "#4b5563",
+                        color: "#020617",
+                        fontWeight: 600,
+                        opacity: isSaving ? 0.7 : 1,
+                      }}
+                    >
+                      {selectedSpecialist.active ? "Active" : "Inactive"}
+                    </button>
+                    <button
+                      onClick={handleDeleteSelectedSpecialist}
+                      disabled={isSaving}
+                      style={{
+                        fontSize: "12px",
+                        padding: "6px 14px",
+                        borderRadius: "999px",
+                        border: "1px solid #ef4444",
+                        background: "transparent",
+                        color: "#ef4444",
+                        cursor: isSaving ? "default" : "pointer",
+                        fontWeight: 600,
+                        opacity: isSaving ? 0.7 : 1,
+                      }}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </section>
 
                 {/* Tabs */}
                 <section

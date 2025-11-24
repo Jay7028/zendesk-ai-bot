@@ -92,6 +92,7 @@ export default function LogsPage() {
             { id: "inbox", label: "Inbox", href: "#" },
             { id: "triage", label: "Triage & Routing", href: "#" },
             { id: "specialists", label: "AI Specialists", href: "/admin" },
+            { id: "intents", label: "Intents & Routing", href: "/admin/intents" },
             { id: "logs", label: "Logs", href: "/admin/logs", active: true },
             { id: "settings", label: "Settings", href: "#" },
           ].map((item) => (
