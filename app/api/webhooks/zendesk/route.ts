@@ -271,9 +271,10 @@ export async function POST(req: NextRequest) {
           ticketId,
           eventType: "error",
           summary: "Failed to tag bot-handover",
-          detail: text.slice(0, 200),
+          detail: text.slice(0, 400),
         });
       } else {
+        const respText = await handoverRes.text();
         await logTicketEvent(origin, {
           ticketId,
           eventType: "handover",
@@ -281,7 +282,7 @@ export async function POST(req: NextRequest) {
             confidence < CONFIDENCE_THRESHOLD
               ? "Low confidence; tagged bot-handover"
               : "No specialist matched; tagged bot-handover",
-          detail: `Confidence ${confidence.toFixed(2)}, intent ${matchedIntent?.name ?? "unknown"}`,
+          detail: `Confidence ${confidence.toFixed(2)}, intent ${matchedIntent?.name ?? "unknown"} • Zendesk response: ${respText.slice(0, 200)}`,
         });
       }
 
