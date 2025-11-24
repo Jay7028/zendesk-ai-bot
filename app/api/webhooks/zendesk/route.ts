@@ -252,7 +252,7 @@ export async function POST(req: NextRequest) {
 
       const zendeskUrl = `https://${zendeskSubdomain}.zendesk.com/api/v2/tickets/${ticketId}.json`;
 
-      await fetch(zendeskUrl, {
+      const handoverRes = await fetch(zendeskUrl, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -264,6 +264,26 @@ export async function POST(req: NextRequest) {
           },
         }),
       });
+
+      if (!handoverRes.ok) {
+        const text = await handoverRes.text();
+        await logTicketEvent(origin, {
+          ticketId,
+          eventType: "error",
+          summary: "Failed to tag bot-handover",
+          detail: text.slice(0, 200),
+        });
+      } else {
+        await logTicketEvent(origin, {
+          ticketId,
+          eventType: "handover",
+          summary:
+            confidence < CONFIDENCE_THRESHOLD
+              ? "Low confidence; tagged bot-handover"
+              : "No specialist matched; tagged bot-handover",
+          detail: `Confidence ${confidence.toFixed(2)}, intent ${matchedIntent?.name ?? "unknown"}`,
+        });
+      }
 
       await logRun(origin, {
         ticketId,
@@ -277,15 +297,6 @@ export async function POST(req: NextRequest) {
             ? "Low confidence intent match; handed to human."
             : "No specialist matched; handed to human.",
         status: "fallback",
-      });
-      await logTicketEvent(origin, {
-        ticketId,
-        eventType: "handover",
-        summary:
-          confidence < CONFIDENCE_THRESHOLD
-            ? "Low confidence; tagged bot-handover"
-            : "No specialist matched; tagged bot-handover",
-        detail: `Confidence ${confidence.toFixed(2)}, intent ${matchedIntent?.name ?? "unknown"}`,
       });
 
       return NextResponse.json({
