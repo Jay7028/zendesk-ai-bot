@@ -72,7 +72,7 @@ export default function IntentsPage() {
     const description =
       newIntentDescription.trim() ||
       (trimmedMessage ? `Created from tester input: ${trimmedMessage}` : "Added from intent tester (no match).");
-    const specialistId = newIntentSpecialistId;
+    const specialistId = newIntentSpecialistId || undefined;
 
     try {
       setIsSaving(true);
@@ -100,7 +100,7 @@ export default function IntentsPage() {
     const draft: Partial<IntentConfig> = {
       name: "New Intent",
       description: "Describe when this intent should match.",
-      specialistId: "",
+      specialistId: undefined,
     };
     try {
       setIsSaving(true);
@@ -172,7 +172,7 @@ export default function IntentsPage() {
     const edits = suggestionEdits[s.id] || {};
     const name = edits.name?.trim() || s.suggestedName;
     const description = edits.description?.trim() || s.suggestedDescription;
-    const specialistId = suggestionSpecialist[s.id] || "";
+    const specialistId = suggestionSpecialist[s.id] || undefined;
     try {
       setIsSaving(true);
       setError(null);
