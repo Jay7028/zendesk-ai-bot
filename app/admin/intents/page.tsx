@@ -214,33 +214,35 @@ export default function IntentsPage() {
         minHeight: "100vh",
         display: "flex",
         flexDirection: "column",
-        background: "#020617",
-        color: "#e5e7eb",
+        background: "#f5f7fb",
+        color: "#111827",
         fontFamily:
-          "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+          "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
       }}
     >
       <header
         style={{
           padding: "12px 24px",
-          borderBottom: "1px solid #111827",
+          borderBottom: "1px solid #e5e7eb",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          background:
-            "radial-gradient(circle at top left, #22c55e22, transparent 60%)",
+          background: "#ffffff",
+          position: "sticky",
+          top: 0,
+          zIndex: 10,
         }}
       >
         <div>
-          <div style={{ fontSize: "20px", fontWeight: 600 }}>
+          <div style={{ fontSize: "20px", fontWeight: 700 }}>
             Intents & Routing
           </div>
-          <div style={{ fontSize: "12px", color: "#9ca3af" }}>
+          <div style={{ fontSize: "12px", color: "#6b7280" }}>
             Map customer intent to the right specialist.
           </div>
         </div>
-        <div style={{ fontSize: "12px", color: "#9ca3af" }}>
-          Environment: <span style={{ color: "#22c55e" }}>Development</span>
+        <div style={{ fontSize: "12px", color: "#6b7280" }}>
+          Environment: <span style={{ color: "#22c55e", fontWeight: 600 }}>Development</span>
         </div>
       </header>
 
@@ -249,14 +251,15 @@ export default function IntentsPage() {
         <aside
           style={{
             width: "220px",
-            borderRight: "1px solid #111827",
+            borderRight: "1px solid #e5e7eb",
             padding: "16px 12px",
             display: "flex",
             flexDirection: "column",
             gap: 8,
+            background: "#f9fafb",
           }}
         >
-          <div style={{ fontSize: "12px", color: "#9ca3af", marginBottom: 8 }}>
+          <div style={{ fontSize: "12px", color: "#6b7280", marginBottom: 8, fontWeight: 600 }}>
             Navigation
           </div>
           {[
@@ -273,12 +276,14 @@ export default function IntentsPage() {
             >
               <div
                 style={{
-                  padding: "8px 10px",
-                  borderRadius: "8px",
+                  padding: "10px 12px",
+                  borderRadius: "10px",
                   cursor: item.href === "#" ? "default" : "pointer",
                   fontSize: "13px",
-                  background: item.active ? "#111827" : "transparent",
-                  color: item.active ? "#e5e7eb" : "#9ca3af",
+                  background: item.active ? "#eef2ff" : "transparent",
+                  color: item.active ? "#1f2937" : "#6b7280",
+                  fontWeight: item.active ? 600 : 500,
+                  border: item.active ? "1px solid #c7d2fe" : "1px solid transparent",
                 }}
               >
                 {item.label}
@@ -295,15 +300,17 @@ export default function IntentsPage() {
             flexDirection: "column",
             gap: 16,
             overflowY: "auto",
+            background: "#f5f7fb",
           }}
         >
           {/* Intent suggestions */}
           <section
             style={{
               borderRadius: "12px",
-              border: "1px solid #1f2937",
-              background: "#0b1220",
+              border: "1px solid #e5e7eb",
+              background: "#ffffff",
               padding: "14px",
+              boxShadow: "0 4px 12px rgba(15,23,42,0.05)",
             }}
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -456,10 +463,12 @@ export default function IntentsPage() {
               <div style={{ marginTop: 8, fontSize: 12, color: testResult.error ? "#f97316" : "#9ca3af" }}>
                 {testResult.error && <div>Error: {testResult.error}</div>}
                 {!testResult.error && (
-                  <div>
-                    Matched intent: {testResult.intentName ?? "unknown"}{" "}
-                    {testResult.intentId && <span style={{ color: "#e5e7eb" }}>({testResult.intentId})</span>}
-                  </div>
+                    <div>
+                      Matched intent: {testResult.intentName ?? "unknown"}{" "}
+                      {testResult.intentId && (
+                        <span style={{ color: "#374151" }}>({testResult.intentId})</span>
+                      )}
+                    </div>
                 )}
               </div>
             )}
