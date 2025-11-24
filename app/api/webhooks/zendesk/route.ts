@@ -22,6 +22,34 @@ type IntentRow = {
   specialist_id: string;
 };
 
+async function tagHandover(
+  ticketId: string | number,
+  zendeskSubdomain: string,
+  zendeskEmail: string,
+  zendeskToken: string
+) {
+  const authString = Buffer.from(
+    `${zendeskEmail}/token:${zendeskToken}`
+  ).toString("base64");
+
+  const zendeskUrl = `https://${zendeskSubdomain}.zendesk.com/api/v2/tickets/${ticketId}.json`;
+
+  const handoverRes = await fetch(zendeskUrl, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Basic ${authString}`,
+    },
+    body: JSON.stringify({
+      ticket: {
+        tags: ["bot-handover"],
+      },
+    }),
+  });
+
+  return { handoverRes, zendeskUrl };
+}
+
 async function logRun(
   origin: string,
   payload: {
@@ -312,6 +340,91 @@ export async function POST(req: NextRequest) {
       summary: `Intent: ${matchedIntent?.name ?? "unknown"}`,
       detail: `Confidence: ${confidence.toFixed(2)} • Specialist: ${matchedSpecialist?.name ?? "none"}`,
     });
+
+    // Escalation rules: if triggered, handover and skip bot reply
+    if (matchedSpecialist?.escalation_rules?.trim()) {
+      let escalationTriggered = false;
+      let escalationReason = "";
+      try {
+        const escRes = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${openaiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "gpt-4.1-mini",
+            messages: [
+              {
+                role: "system",
+                content:
+                  'You are an escalation checker. Given rules and a customer message, decide if escalation is required. Respond ONLY with JSON {"escalate":true|false,"reason":"short"}.',
+              },
+              {
+                role: "user",
+                content: `Escalation rules:\n${matchedSpecialist.escalation_rules}\n\nCustomer message:\n${latestComment}`,
+              },
+            ],
+            response_format: { type: "json_object" },
+            temperature: 0,
+          }),
+        });
+        if (escRes.ok) {
+          const escJson = await escRes.json();
+          const parsed =
+            (() => {
+              try {
+                return JSON.parse(escJson.choices?.[0]?.message?.content || "{}");
+              } catch {
+                return {};
+              }
+            })() as { escalate?: boolean; reason?: string };
+          escalationTriggered = !!parsed.escalate;
+          escalationReason = parsed.reason || "Escalation rule triggered";
+        }
+      } catch (e) {
+        console.error("Escalation check failed", e);
+      }
+
+      if (escalationTriggered) {
+        const { handoverRes } = await tagHandover(ticketId, zendeskSubdomain, zendeskEmail, zendeskToken);
+        if (!handoverRes.ok) {
+          const text = await handoverRes.text();
+          await logTicketEvent(origin, {
+            ticketId,
+            eventType: "error",
+            summary: "Failed to tag bot-handover (escalation)",
+            detail: text.slice(0, 400),
+          });
+        }
+
+        await logTicketEvent(origin, {
+          ticketId,
+          eventType: "handover",
+          summary: "Escalation rule triggered",
+          detail: escalationReason.slice(0, 400),
+        });
+
+        await logRun(origin, {
+          ticketId,
+          specialistId: matchedSpecialist?.id ?? null,
+          specialistName: matchedSpecialist?.name ?? null,
+          intentId: matchedIntent?.id ?? null,
+          intentName: matchedIntent?.name ?? null,
+          inputSummary: String(latestComment).slice(0, 200),
+          outputSummary: escalationReason.slice(0, 200),
+          status: "escalated",
+        });
+
+        return NextResponse.json({
+          status: "handover",
+          ticketId,
+          intentId: matchedIntent?.id ?? null,
+          specialistId: matchedSpecialist?.id ?? null,
+          reason: escalationReason,
+        });
+      }
+    }
 
     if (!matchedIntent || !matchedSpecialist || confidence < CONFIDENCE_THRESHOLD) {
       await saveIntentSuggestion(
