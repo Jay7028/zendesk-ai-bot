@@ -317,6 +317,7 @@ export default function IntentsPage() {
             { id: "data-extraction", label: "Data Extraction", href: "/admin/data-extraction" },
             { id: "integrations", label: "Integrations", href: "/admin/integrations" },
             { id: "logs", label: "Logs", href: "/admin/logs" },
+            { id: "test-ai", label: "Test AI", href: "/test-ai" },
           ].map((item) => (
             <a
               key={item.id}

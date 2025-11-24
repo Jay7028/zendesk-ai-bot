@@ -169,6 +169,7 @@ export default function IntegrationsPage() {
             { id: "data-extraction", label: "Data Extraction", href: "/admin/data-extraction" },
             { id: "integrations", label: "Integrations", href: "/admin/integrations", active: true },
             { id: "logs", label: "Logs", href: "/admin/logs" },
+            { id: "test-ai", label: "Test AI", href: "/test-ai" },
           ].map((item) => (
             <a key={item.id} href={item.href} style={{ textDecoration: "none" }}>
               <div

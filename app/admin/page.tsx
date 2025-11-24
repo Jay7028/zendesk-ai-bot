@@ -202,12 +202,13 @@ export default function AiSpecialistsAdminPage() {
             Navigation
           </div>
             {[
-              { id: "specialists", label: "AI Specialists", href: "/admin", active: true },
-              { id: "intents", label: "Intents & Routing", href: "/admin/intents" },
-              { id: "data-extraction", label: "Data Extraction", href: "/admin/data-extraction" },
-              { id: "integrations", label: "Integrations", href: "/admin/integrations" },
-              { id: "logs", label: "Logs", href: "/admin/logs" },
-            ].map((item) => (
+            { id: "specialists", label: "AI Specialists", href: "/admin", active: true },
+            { id: "intents", label: "Intents & Routing", href: "/admin/intents" },
+            { id: "data-extraction", label: "Data Extraction", href: "/admin/data-extraction" },
+            { id: "integrations", label: "Integrations", href: "/admin/integrations" },
+            { id: "logs", label: "Logs", href: "/admin/logs" },
+            { id: "test-ai", label: "Test AI", href: "/test-ai" },
+          ].map((item) => (
             <a
               key={item.id}
               href={item.href}

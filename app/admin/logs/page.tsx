@@ -160,6 +160,7 @@ export default function LogsPage() {
             { id: "data-extraction", label: "Data Extraction", href: "/admin/data-extraction" },
             { id: "integrations", label: "Integrations", href: "/admin/integrations" },
             { id: "logs", label: "Logs", href: "/admin/logs", active: true },
+            { id: "test-ai", label: "Test AI", href: "/test-ai" },
           ].map((item) => (
             <a
               key={item.id}
