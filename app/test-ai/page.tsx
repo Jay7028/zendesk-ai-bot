@@ -9,6 +9,8 @@ type TestResult = {
   specialistId: string | null;
   specialistName: string | null;
   actions: string[];
+  ticketId: string;
+  inputSummary: string;
 };
 
 type LogEntry = {
@@ -18,6 +20,8 @@ type LogEntry = {
   specialistName?: string | null;
   status: string;
   timestamp: string;
+  inputSummary?: string;
+  outputSummary?: string;
 };
 
 export default function TestAIPage() {
@@ -30,6 +34,30 @@ export default function TestAIPage() {
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<LogEntry[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
+
+  function handleSelectHistory(entry: LogEntry) {
+    setSelectedTicketId(entry.zendeskTicketId);
+    const convo: { role: "user" | "assistant"; content: string }[] = [];
+    if (entry.inputSummary) {
+      convo.push({ role: "user", content: entry.inputSummary });
+    }
+    if (entry.outputSummary) {
+      convo.push({ role: "assistant", content: entry.outputSummary });
+    }
+    setMessages(convo);
+    setMessage("");
+    setResult({
+      reply: entry.outputSummary ?? "",
+      intentId: null,
+      intentName: entry.intentName ?? null,
+      specialistId: null,
+      specialistName: entry.specialistName ?? null,
+      actions: [],
+      ticketId: entry.zendeskTicketId,
+      inputSummary: entry.inputSummary ?? "",
+    });
+  }
 
   async function loadHistory() {
     try {
@@ -46,6 +74,8 @@ export default function TestAIPage() {
           specialistName: l.specialistName ?? null,
           status: l.status ?? "unknown",
           timestamp: l.timestamp ?? l.created_at ?? "",
+          inputSummary: l.inputSummary ?? "",
+          outputSummary: l.outputSummary ?? "",
         }))
         .sort(
           (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
@@ -79,6 +109,7 @@ export default function TestAIPage() {
         setError(data.error || "Test failed");
         return;
       }
+      setSelectedTicketId(data.ticketId);
       setMessages([...nextMessages, { role: "assistant", content: data.reply }]);
       setResult(data);
     } catch (e: any) {
@@ -252,14 +283,17 @@ export default function TestAIPage() {
                 </div>
               )}
               {history.map((h) => (
-                <div
+                <button
                   key={h.id}
+                  onClick={() => handleSelectHistory(h)}
                   style={{
+                    textAlign: "left",
                     border: "1px solid #e5e7eb",
                     borderRadius: "8px",
                     padding: "8px",
-                    background: "#f9fafb",
+                    background: selectedTicketId === h.zendeskTicketId ? "#eef2ff" : "#f9fafb",
                     fontSize: 12,
+                    cursor: "pointer",
                   }}
                 >
                   <div style={{ fontWeight: 600, color: "#111827" }}>{h.zendeskTicketId}</div>
@@ -272,7 +306,7 @@ export default function TestAIPage() {
                   <div style={{ color: "#9ca3af", fontSize: 11 }}>
                     {h.timestamp ? new Date(h.timestamp).toLocaleString() : ""}
                   </div>
-                </div>
+                </button>
               ))}
             </div>
             {result && (

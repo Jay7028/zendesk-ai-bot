@@ -24,8 +24,6 @@ type IntentRow = {
 
 type Message = { role: "user" | "assistant"; content: string };
 
-let testCounter = 1;
-
 async function logRun(origin: string, payload: {
   ticketId: string;
   specialistId: string | null;
@@ -98,6 +96,7 @@ export async function POST(req: NextRequest) {
         { status: 500 }
       );
     }
+    const ticketId: string = body.ticketId || `test-${Date.now()}`;
 
     const [{ data: intentRows, error: intentsError }, { data: specRows, error: specsError }] =
       await Promise.all([
@@ -117,7 +116,6 @@ export async function POST(req: NextRequest) {
     const specialists: SpecialistRow[] = specRows ?? [];
 
     const actions: string[] = [];
-    const ticketId = `test-${testCounter++}`;
     const origin = req.nextUrl.origin;
 
     const intentListForPrompt = intents
@@ -272,6 +270,8 @@ export async function POST(req: NextRequest) {
       specialistId: matchedSpecialist?.id ?? null,
       specialistName: matchedSpecialist?.name ?? null,
       actions,
+      ticketId,
+      inputSummary: userMessage,
     });
   } catch (err: any) {
     console.error("Error in /api/test-ai:", err);
