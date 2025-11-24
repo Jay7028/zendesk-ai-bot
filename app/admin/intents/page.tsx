@@ -220,6 +220,7 @@ export default function IntentsPage() {
             { id: "triage", label: "Triage & Routing", href: "#" },
             { id: "specialists", label: "AI Specialists", href: "/admin" },
             { id: "intents", label: "Intents & Routing", href: "/admin/intents", active: true },
+            { id: "data-extraction", label: "Data Extraction", href: "/admin/data-extraction" },
             { id: "logs", label: "Logs", href: "/admin/logs" },
             { id: "settings", label: "Settings", href: "#" },
           ].map((item) => (
