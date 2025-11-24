@@ -261,10 +261,6 @@ export async function POST(req: NextRequest) {
         body: JSON.stringify({
           ticket: {
             additional_tags: ["bot-handover"],
-            comment: {
-              body: "No specialist matched this intent. Routing to a human.",
-              public: true,
-            },
           },
         }),
       });
