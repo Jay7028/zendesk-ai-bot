@@ -208,7 +208,6 @@ export default function IntegrationsPage() {
               background: "#ffffff",
               overflowY: "auto",
               boxShadow: "0 1px 4px rgba(15,23,42,0.06)",
-              overflowY: "auto",
             }}
           >
             <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>
