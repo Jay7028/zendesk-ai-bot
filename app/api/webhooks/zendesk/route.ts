@@ -154,6 +154,28 @@ export async function POST(req: NextRequest) {
         }),
       });
 
+      // Log handover
+      try {
+        const origin = req.nextUrl.origin;
+        await fetch(new URL("/api/logs", origin), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            zendeskTicketId: ticketId.toString(),
+            specialistId: "unknown",
+            specialistName: "unknown",
+            intentId: matchedIntent?.id ?? null,
+            intentName: matchedIntent?.name ?? null,
+            inputSummary: String(latestComment).slice(0, 200),
+            knowledgeSources: [],
+            outputSummary: "No specialist matched; handed to human.",
+            status: "fallback",
+          }),
+        });
+      } catch (e) {
+        console.error("Failed to log handover run", e);
+      }
+
       return NextResponse.json({
         status: "handover",
         ticketId,
@@ -243,6 +265,8 @@ export async function POST(req: NextRequest) {
           zendeskTicketId: ticketId.toString(),
           specialistId: matchedSpecialist.id,
           specialistName: matchedSpecialist.name,
+          intentId: matchedIntent?.id ?? null,
+          intentName: matchedIntent?.name ?? null,
           inputSummary: String(latestComment).slice(0, 200),
           knowledgeSources: [],
           outputSummary: aiReply.slice(0, 200),

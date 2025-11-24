@@ -10,6 +10,8 @@ interface LogEntry {
   zendeskTicketId: string;
   specialistId: string;
   specialistName: string;
+  intentId?: string | null;
+  intentName?: string | null;
   inputSummary: string;
   knowledgeSources: string[];
   outputSummary: string;
@@ -185,7 +187,7 @@ export default function LogsPage() {
                       Ticket ID
                     </th>
                     <th style={{ textAlign: "left", padding: "8px" }}>
-                      Specialist
+                      Specialist / Intent
                     </th>
                     <th style={{ textAlign: "left", padding: "8px" }}>
                       Status
@@ -211,10 +213,18 @@ export default function LogsPage() {
                         {log.zendeskTicketId}
                       </td>
                       <td style={{ padding: "6px 8px" }}>
-                        {log.specialistName}{" "}
-                        <span style={{ color: "#9ca3af" }}>
-                          ({log.specialistId})
-                        </span>
+                        <div>
+                          {log.specialistName}{" "}
+                          <span style={{ color: "#9ca3af" }}>
+                            ({log.specialistId})
+                          </span>
+                        </div>
+                        {log.intentName && (
+                          <div style={{ fontSize: 11, color: "#9ca3af" }}>
+                            Intent: {log.intentName}{" "}
+                            {log.intentId && <span>({log.intentId})</span>}
+                          </div>
+                        )}
                       </td>
                       <td style={{ padding: "6px 8px" }}>
                         <span

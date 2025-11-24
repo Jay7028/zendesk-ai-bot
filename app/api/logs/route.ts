@@ -7,6 +7,8 @@ type DbLog = {
   zendesk_ticket_id: string;
   specialist_id: string;
   specialist_name: string;
+  intent_id?: string | null;
+  intent_name?: string | null;
   input_summary: string;
   knowledge_sources: string[];
   output_summary: string;
@@ -17,6 +19,8 @@ type LogPayload = {
   zendeskTicketId: string;
   specialistId: string;
   specialistName: string;
+  intentId?: string | null;
+  intentName?: string | null;
   inputSummary: string;
   knowledgeSources: string[];
   outputSummary: string;
@@ -30,6 +34,8 @@ function dbToCamel(row: DbLog) {
     zendeskTicketId: row.zendesk_ticket_id,
     specialistId: row.specialist_id,
     specialistName: row.specialist_name,
+    intentId: row.intent_id ?? null,
+    intentName: row.intent_name ?? null,
     inputSummary: row.input_summary,
     knowledgeSources: row.knowledge_sources ?? [],
     outputSummary: row.output_summary,
@@ -42,6 +48,8 @@ function camelToDb(body: LogPayload) {
     zendesk_ticket_id: body.zendeskTicketId,
     specialist_id: body.specialistId,
     specialist_name: body.specialistName,
+    intent_id: body.intentId ?? null,
+    intent_name: body.intentName ?? null,
     input_summary: body.inputSummary,
     knowledge_sources: body.knowledgeSources ?? [],
     output_summary: body.outputSummary,
