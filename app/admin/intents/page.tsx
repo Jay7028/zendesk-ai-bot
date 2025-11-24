@@ -21,6 +21,9 @@ export default function IntentsPage() {
   } | null>(null);
   const [suggestions, setSuggestions] = useState<IntentSuggestion[]>([]);
   const [suggestionSpecialist, setSuggestionSpecialist] = useState<Record<string, string>>({});
+  const [newIntentName, setNewIntentName] = useState("");
+  const [newIntentDescription, setNewIntentDescription] = useState("");
+  const [newIntentSpecialistId, setNewIntentSpecialistId] = useState("");
 
   useEffect(() => {
     async function loadData() {
@@ -41,6 +44,7 @@ export default function IntentsPage() {
         setSpecialists(specData);
         setSuggestions(suggestionData);
         if (intentData[0]) setSelectedIntentId(intentData[0].id);
+        if (specData[0]) setNewIntentSpecialistId(specData[0].id);
       } catch (e: any) {
         setError(e.message ?? "Unexpected error");
       } finally {
@@ -57,6 +61,41 @@ export default function IntentsPage() {
     setIntents((prev) =>
       prev.map((i) => (i.id === selectedIntent.id ? { ...i, ...partial } : i))
     );
+  }
+
+  async function handleCreateIntentFromTestFallback() {
+    const trimmedMessage = testMessage.trim();
+    const name =
+      newIntentName.trim() || (trimmedMessage ? `New intent: ${trimmedMessage.slice(0, 40)}` : "New Intent");
+    const description =
+      newIntentDescription.trim() ||
+      (trimmedMessage ? `Created from tester input: ${trimmedMessage}` : "Added from intent tester (no match).");
+    const specialistId = newIntentSpecialistId || specialists[0]?.id || "";
+    if (!specialistId) {
+      setError("Select a specialist for the new intent.");
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      setError(null);
+      const res = await fetch("/api/intents", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, description, specialistId }),
+      });
+      if (!res.ok) throw new Error("Failed to create intent");
+      const created: IntentConfig = await res.json();
+      setIntents((prev) => [...prev, created]);
+      setSelectedIntentId(created.id);
+      setTestResult(null);
+      setNewIntentName("");
+      setNewIntentDescription("");
+    } catch (e: any) {
+      setError(e.message ?? "Unexpected error while creating intent");
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   async function handleCreateIntent() {
@@ -196,6 +235,15 @@ export default function IntentsPage() {
         raw: data.raw ?? null,
         error: null,
       });
+      const trimmedMessage = testMessage.trim();
+      if ((!data.intentName || data.intentId === "unknown") && trimmedMessage) {
+        if (!newIntentName.trim()) {
+          setNewIntentName(`New intent: ${trimmedMessage.slice(0, 40)}`);
+        }
+        if (!newIntentDescription.trim()) {
+          setNewIntentDescription(trimmedMessage);
+        }
+      }
     } catch (e: any) {
       setTestResult({
         intentId: null,
@@ -303,113 +351,6 @@ export default function IntentsPage() {
             background: "#f5f7fb",
           }}
         >
-          {/* Intent suggestions */}
-          <section
-            style={{
-              borderRadius: "12px",
-              border: "1px solid #e5e7eb",
-              background: "#ffffff",
-              padding: "14px",
-              boxShadow: "0 4px 12px rgba(15,23,42,0.05)",
-            }}
-          >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div>
-                <div style={{ fontSize: 15, fontWeight: 600 }}>Intent suggestions from handovers</div>
-                <div style={{ fontSize: 12, color: "#9ca3af" }}>
-                  Low-confidence tickets that can be turned into new intents.
-                </div>
-              </div>
-            </div>
-            {suggestions.length === 0 && (
-              <div style={{ marginTop: 8, fontSize: 12, color: "#9ca3af" }}>
-                No suggestions yet.
-              </div>
-            )}
-            {suggestions.length > 0 && (
-              <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8 }}>
-                {suggestions.map((s) => (
-                  <div
-                    key={s.id}
-                    style={{
-                      border: "1px solid #e5e7eb",
-                      borderRadius: "10px",
-                      padding: "12px",
-                      background: "#ffffff",
-                      boxShadow: "0 1px 4px rgba(15,23,42,0.06)",
-                    }}
-                  >
-                    <div style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>
-                      {s.suggestedName} <span style={{ color: "#6b7280" }}>({s.ticketId})</span>
-                    </div>
-                    <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 6 }}>
-                      Confidence: {s.confidence.toFixed(2)}
-                    </div>
-                    <div style={{ fontSize: 12, color: "#374151", whiteSpace: "pre-wrap", marginBottom: 6 }}>
-                      {s.suggestedDescription || "No description provided"}
-                    </div>
-                    <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 6 }}>
-                      Message: {s.messageSnippet}
-                    </div>
-                    <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                      <select
-                        value={suggestionSpecialist[s.id] || specialists[0]?.id || ""}
-                        onChange={(e) =>
-                          setSuggestionSpecialist((prev) => ({ ...prev, [s.id]: e.target.value }))
-                        }
-                        style={{
-                          borderRadius: "8px",
-                          border: "1px solid #e5e7eb",
-                          background: "#f9fafb",
-                          color: "#111827",
-                          padding: "6px",
-                          fontSize: "12px",
-                        }}
-                      >
-                        {specialists.map((spec) => (
-                          <option key={spec.id} value={spec.id}>
-                            {spec.name}
-                          </option>
-                        ))}
-                      </select>
-                      <button
-                        onClick={() => handleCreateIntentFromSuggestion(s)}
-                        disabled={isSaving}
-                        style={{
-                          padding: "6px 12px",
-                          borderRadius: "999px",
-                          border: "none",
-                          cursor: isSaving ? "default" : "pointer",
-                          background: "#6366f1",
-                          color: "#ffffff",
-                          fontSize: "12px",
-                          fontWeight: 600,
-                          opacity: isSaving ? 0.7 : 1,
-                        }}
-                      >
-                        Add as intent
-                      </button>
-                      <button
-                        onClick={() => handleDismissSuggestion(s.id)}
-                        style={{
-                          padding: "6px 12px",
-                          borderRadius: "999px",
-                          border: "1px solid #ef4444",
-                          background: "#fff5f5",
-                          color: "#b91c1c",
-                          fontSize: "12px",
-                          cursor: "pointer",
-                        }}
-                      >
-                        Dismiss
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
-
           {/* Intent tester */}
           <section
             style={{
@@ -472,6 +413,101 @@ export default function IntentsPage() {
                       )}
                     </div>
                 )}
+              </div>
+            )}
+            {testResult && !testResult.error && (!testResult.intentName || testResult.intentId === "unknown") && (
+              <div
+                style={{
+                  marginTop: 12,
+                  border: "1px solid #e5e7eb",
+                  borderRadius: "10px",
+                  padding: "12px",
+                  background: "#f9fafb",
+                }}
+              >
+                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>
+                  No intent detected — create a new one from this message
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+                  <div>
+                    <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 4 }}>Intent name</div>
+                    <input
+                      value={newIntentName}
+                      onChange={(e) => setNewIntentName(e.target.value)}
+                      placeholder="New intent name"
+                      style={{
+                        width: "100%",
+                        borderRadius: "8px",
+                        border: "1px solid #e5e7eb",
+                        background: "#ffffff",
+                        color: "#111827",
+                        padding: "8px",
+                        fontSize: "13px",
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 4 }}>Route to specialist</div>
+                    <select
+                      value={newIntentSpecialistId}
+                      onChange={(e) => setNewIntentSpecialistId(e.target.value)}
+                      style={{
+                        width: "100%",
+                        borderRadius: "8px",
+                        border: "1px solid #e5e7eb",
+                        background: "#ffffff",
+                        color: "#111827",
+                        padding: "8px",
+                        fontSize: "12px",
+                      }}
+                    >
+                      <option value="">-- Select specialist --</option>
+                      {specialists.map((spec) => (
+                        <option key={spec.id} value={spec.id}>
+                          {spec.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div style={{ marginBottom: 8 }}>
+                  <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 4 }}>
+                    Description / when it should trigger
+                  </div>
+                  <textarea
+                    value={newIntentDescription}
+                    onChange={(e) => setNewIntentDescription(e.target.value)}
+                    rows={2}
+                    placeholder="Describe when this intent should match"
+                    style={{
+                      width: "100%",
+                      borderRadius: "8px",
+                      border: "1px solid #e5e7eb",
+                      background: "#ffffff",
+                      color: "#111827",
+                      padding: "8px",
+                      fontSize: "12px",
+                      resize: "vertical",
+                    }}
+                  />
+                </div>
+                <button
+                  onClick={handleCreateIntentFromTestFallback}
+                  disabled={isSaving}
+                  style={{
+                    padding: "8px 12px",
+                    borderRadius: "999px",
+                    border: "none",
+                    background: "#6366f1",
+                    color: "#ffffff",
+                    fontSize: "12px",
+                    fontWeight: 600,
+                    cursor: isSaving ? "default" : "pointer",
+                    opacity: isSaving ? 0.7 : 1,
+                  }}
+                >
+                  Add new intent
+                </button>
               </div>
             )}
           </section>
@@ -718,6 +754,113 @@ export default function IntentsPage() {
                 )}
               </div>
             </div>
+          </section>
+
+          {/* Intent suggestions (moved to bottom) */}
+          <section
+            style={{
+              borderRadius: "12px",
+              border: "1px solid #e5e7eb",
+              background: "#ffffff",
+              padding: "14px",
+              boxShadow: "0 4px 12px rgba(15,23,42,0.05)",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 600 }}>Intent suggestions from handovers</div>
+                <div style={{ fontSize: 12, color: "#9ca3af" }}>
+                  Low-confidence tickets that can be turned into new intents.
+                </div>
+              </div>
+            </div>
+            {suggestions.length === 0 && (
+              <div style={{ marginTop: 8, fontSize: 12, color: "#9ca3af" }}>
+                No suggestions yet.
+              </div>
+            )}
+            {suggestions.length > 0 && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8 }}>
+                {suggestions.map((s) => (
+                  <div
+                    key={s.id}
+                    style={{
+                      border: "1px solid #e5e7eb",
+                      borderRadius: "10px",
+                      padding: "12px",
+                      background: "#ffffff",
+                      boxShadow: "0 1px 4px rgba(15,23,42,0.06)",
+                    }}
+                  >
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>
+                      {s.suggestedName} <span style={{ color: "#6b7280" }}>({s.ticketId})</span>
+                    </div>
+                    <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 6 }}>
+                      Confidence: {s.confidence.toFixed(2)}
+                    </div>
+                    <div style={{ fontSize: 12, color: "#374151", whiteSpace: "pre-wrap", marginBottom: 6 }}>
+                      {s.suggestedDescription || "No description provided"}
+                    </div>
+                    <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 6 }}>
+                      Message: {s.messageSnippet}
+                    </div>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                      <select
+                        value={suggestionSpecialist[s.id] || specialists[0]?.id || ""}
+                        onChange={(e) =>
+                          setSuggestionSpecialist((prev) => ({ ...prev, [s.id]: e.target.value }))
+                        }
+                        style={{
+                          borderRadius: "8px",
+                          border: "1px solid #e5e7eb",
+                          background: "#f9fafb",
+                          color: "#111827",
+                          padding: "6px",
+                          fontSize: "12px",
+                        }}
+                      >
+                        {specialists.map((spec) => (
+                          <option key={spec.id} value={spec.id}>
+                            {spec.name}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        onClick={() => handleCreateIntentFromSuggestion(s)}
+                        disabled={isSaving}
+                        style={{
+                          padding: "6px 12px",
+                          borderRadius: "999px",
+                          border: "none",
+                          cursor: isSaving ? "default" : "pointer",
+                          background: "#6366f1",
+                          color: "#ffffff",
+                          fontSize: "12px",
+                          fontWeight: 600,
+                          opacity: isSaving ? 0.7 : 1,
+                        }}
+                      >
+                        Add as intent
+                      </button>
+                      <button
+                        onClick={() => handleDismissSuggestion(s.id)}
+                        style={{
+                          padding: "6px 12px",
+                          borderRadius: "999px",
+                          border: "1px solid #ef4444",
+                          background: "#fff5f5",
+                          color: "#b91c1c",
+                          fontSize: "12px",
+                          cursor: "pointer",
+                        }}
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </section>
         </main>
       </div>
