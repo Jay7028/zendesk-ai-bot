@@ -117,31 +117,33 @@ export default function DataExtractionPage() {
         minHeight: "100vh",
         display: "flex",
         flexDirection: "column",
-        background: "#020617",
-        color: "#e5e7eb",
+        background: "#f5f7fb",
+        color: "#111827",
         fontFamily:
-          "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+          "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
       }}
     >
       <header
         style={{
           padding: "12px 24px",
-          borderBottom: "1px solid #111827",
+          borderBottom: "1px solid #e5e7eb",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          background:
-            "radial-gradient(circle at top left, #22c55e22, transparent 60%)",
+          background: "#ffffff",
+          position: "sticky",
+          top: 0,
+          zIndex: 10,
         }}
       >
         <div>
-          <div style={{ fontSize: "20px", fontWeight: 600 }}>Data Extraction</div>
-          <div style={{ fontSize: "12px", color: "#9ca3af" }}>
+          <div style={{ fontSize: "20px", fontWeight: 700 }}>Data Extraction</div>
+          <div style={{ fontSize: "12px", color: "#6b7280" }}>
             Define the fields to extract (e.g., email, tracking number, address).
           </div>
         </div>
-        <div style={{ fontSize: "12px", color: "#9ca3af" }}>
-          Environment: <span style={{ color: "#22c55e" }}>Development</span>
+        <div style={{ fontSize: "12px", color: "#6b7280" }}>
+          Environment: <span style={{ color: "#22c55e", fontWeight: 600 }}>Development</span>
         </div>
       </header>
 
@@ -150,14 +152,15 @@ export default function DataExtractionPage() {
         <aside
           style={{
             width: "220px",
-            borderRight: "1px solid #111827",
+            borderRight: "1px solid #e5e7eb",
             padding: "16px 12px",
             display: "flex",
             flexDirection: "column",
             gap: 8,
+            background: "#f9fafb",
           }}
         >
-          <div style={{ fontSize: "12px", color: "#9ca3af", marginBottom: 8 }}>
+          <div style={{ fontSize: "12px", color: "#6b7280", marginBottom: 8, fontWeight: 600 }}>
             Navigation
           </div>
           {[
@@ -174,12 +177,14 @@ export default function DataExtractionPage() {
             >
               <div
                 style={{
-                  padding: "8px 10px",
-                  borderRadius: "8px",
+                  padding: "10px 12px",
+                  borderRadius: "10px",
                   cursor: item.href === "#" ? "default" : "pointer",
                   fontSize: "13px",
-                  background: item.active ? "#111827" : "transparent",
-                  color: item.active ? "#e5e7eb" : "#9ca3af",
+                  background: item.active ? "#eef2ff" : "transparent",
+                  color: item.active ? "#1f2937" : "#6b7280",
+                  fontWeight: item.active ? 600 : 500,
+                  border: item.active ? "1px solid #c7d2fe" : "1px solid transparent",
                 }}
               >
                 {item.label}
@@ -196,25 +201,28 @@ export default function DataExtractionPage() {
             gridTemplateColumns: "280px 1fr",
             gap: 16,
             overflow: "hidden",
+            background: "#f5f7fb",
           }}
         >
           <div
             style={{
-              border: "1px solid #1f2937",
+              border: "1px solid #e5e7eb",
               borderRadius: "12px",
               padding: "12px",
-              background: "#0b1220",
+              background: "#ffffff",
+              overflowY: "auto",
+              boxShadow: "0 1px 4px rgba(15,23,42,0.06)",
               overflowY: "auto",
             }}
           >
             <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>
               Fields
             </div>
-            <div style={{ fontSize: 12, color: "#9ca3af", marginBottom: 12 }}>
+            <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 12 }}>
               Define what to extract and show an example.
             </div>
             {isLoading && (
-              <div style={{ fontSize: 12, color: "#9ca3af" }}>
+              <div style={{ fontSize: 12, color: "#6b7280" }}>
                 Loading fields…
               </div>
             )}
@@ -232,27 +240,30 @@ export default function DataExtractionPage() {
                     onClick={() => setSelectedId(field.id)}
                     style={{
                       textAlign: "left",
-                      padding: "8px 10px",
-                      borderRadius: "8px",
+                      padding: "10px 12px",
+                      borderRadius: "10px",
                       border: isSelected
-                        ? "1px solid #22c55e"
-                        : "1px solid #1f2937",
-                      background: isSelected ? "#111827" : "#020617",
-                      color: "#e5e7eb",
+                        ? "1px solid #c7d2fe"
+                        : "1px solid #e5e7eb",
+                      background: isSelected ? "#eef2ff" : "#ffffff",
+                      color: "#111827",
                       cursor: "pointer",
+                      boxShadow: isSelected
+                        ? "0 4px 10px rgba(99,102,241,0.1)"
+                        : "0 1px 4px rgba(15,23,42,0.06)",
                     }}
                   >
                     <div style={{ fontSize: 13, fontWeight: 500 }}>
                       {field.label} {field.required ? "(required)" : ""}
                     </div>
-                    <div style={{ fontSize: 11, color: "#9ca3af" }}>
+                    <div style={{ fontSize: 11, color: "#6b7280" }}>
                       {field.name}
                     </div>
                   </button>
                 );
               })}
               {fields.length === 0 && !isLoading && (
-                <div style={{ fontSize: 12, color: "#9ca3af" }}>
+                <div style={{ fontSize: 12, color: "#6b7280" }}>
                   No fields yet. Create one to start extracting data.
                 </div>
               )}
@@ -261,13 +272,13 @@ export default function DataExtractionPage() {
                 disabled={isSaving}
                 style={{
                   marginTop: 8,
-                  padding: "10px 12px",
-                  borderRadius: "10px",
-                  border: "1px dashed #374151",
-                  background: "transparent",
+                  padding: "12px 14px",
+                  borderRadius: "12px",
+                  border: "1px dashed #d1d5db",
+                  background: "#ffffff",
                   cursor: isSaving ? "default" : "pointer",
                   fontSize: "13px",
-                  color: "#9ca3af",
+                  color: "#6b7280",
                   opacity: isSaving ? 0.7 : 1,
                 }}
               >
@@ -278,15 +289,16 @@ export default function DataExtractionPage() {
 
           <div
             style={{
-              border: "1px solid #1f2937",
+              border: "1px solid #e5e7eb",
               borderRadius: "12px",
               padding: "14px",
-              background: "#020617",
+              background: "#ffffff",
               overflowY: "auto",
+              boxShadow: "0 4px 12px rgba(15,23,42,0.05)",
             }}
           >
             {!selected && (
-              <div style={{ fontSize: 13, color: "#9ca3af" }}>
+              <div style={{ fontSize: 13, color: "#6b7280" }}>
                 Select a field to edit.
               </div>
             )}
@@ -300,9 +312,9 @@ export default function DataExtractionPage() {
                     style={{
                       width: "100%",
                       borderRadius: "8px",
-                      border: "1px solid #374151",
-                      background: "#020617",
-                      color: "#e5e7eb",
+                      border: "1px solid #e5e7eb",
+                      background: "#f9fafb",
+                      color: "#111827",
                       padding: "8px",
                       fontSize: "13px",
                     }}
@@ -320,9 +332,9 @@ export default function DataExtractionPage() {
                     style={{
                       width: "100%",
                       borderRadius: "8px",
-                      border: "1px solid #374151",
-                      background: "#020617",
-                      color: "#e5e7eb",
+                      border: "1px solid #e5e7eb",
+                      background: "#f9fafb",
+                      color: "#111827",
                       padding: "8px",
                       fontSize: "13px",
                     }}
@@ -339,9 +351,9 @@ export default function DataExtractionPage() {
                     style={{
                       width: "100%",
                       borderRadius: "8px",
-                      border: "1px solid #374151",
-                      background: "#020617",
-                      color: "#e5e7eb",
+                      border: "1px solid #e5e7eb",
+                      background: "#f9fafb",
+                      color: "#111827",
                       padding: "8px",
                       fontSize: "12px",
                       resize: "vertical",
@@ -359,9 +371,9 @@ export default function DataExtractionPage() {
                     style={{
                       width: "100%",
                       borderRadius: "8px",
-                      border: "1px solid #374151",
-                      background: "#020617",
-                      color: "#e5e7eb",
+                      border: "1px solid #e5e7eb",
+                      background: "#f9fafb",
+                      color: "#111827",
                       padding: "8px",
                       fontSize: "13px",
                     }}
@@ -387,8 +399,8 @@ export default function DataExtractionPage() {
                       borderRadius: "999px",
                       border: "none",
                       cursor: isSaving ? "default" : "pointer",
-                      background: "#22c55e",
-                      color: "#020617",
+                      background: "#6366f1",
+                      color: "#ffffff",
                       fontSize: "12px",
                       fontWeight: 600,
                       opacity: isSaving ? 0.7 : 1,
@@ -403,8 +415,8 @@ export default function DataExtractionPage() {
                       padding: "8px 14px",
                       borderRadius: "999px",
                       border: "1px solid #ef4444",
-                      background: "transparent",
-                      color: "#ef4444",
+                      background: "#fff5f5",
+                      color: "#b91c1c",
                       cursor: isSaving ? "default" : "pointer",
                       fontSize: "12px",
                       fontWeight: 600,

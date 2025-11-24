@@ -332,22 +332,23 @@ export default function IntentsPage() {
                   <div
                     key={s.id}
                     style={{
-                      border: "1px solid #1f2937",
+                      border: "1px solid #e5e7eb",
                       borderRadius: "10px",
-                      padding: "10px",
-                      background: "#020617",
+                      padding: "12px",
+                      background: "#ffffff",
+                      boxShadow: "0 1px 4px rgba(15,23,42,0.06)",
                     }}
                   >
-                    <div style={{ fontSize: 13, fontWeight: 600 }}>
-                      {s.suggestedName} <span style={{ color: "#9ca3af" }}>({s.ticketId})</span>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>
+                      {s.suggestedName} <span style={{ color: "#6b7280" }}>({s.ticketId})</span>
                     </div>
-                    <div style={{ fontSize: 12, color: "#9ca3af", marginBottom: 6 }}>
+                    <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 6 }}>
                       Confidence: {s.confidence.toFixed(2)}
                     </div>
-                    <div style={{ fontSize: 12, color: "#e5e7eb", whiteSpace: "pre-wrap", marginBottom: 6 }}>
+                    <div style={{ fontSize: 12, color: "#374151", whiteSpace: "pre-wrap", marginBottom: 6 }}>
                       {s.suggestedDescription || "No description provided"}
                     </div>
-                    <div style={{ fontSize: 11, color: "#9ca3af", marginBottom: 6 }}>
+                    <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 6 }}>
                       Message: {s.messageSnippet}
                     </div>
                     <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
@@ -358,9 +359,9 @@ export default function IntentsPage() {
                         }
                         style={{
                           borderRadius: "8px",
-                          border: "1px solid #374151",
-                          background: "#020617",
-                          color: "#e5e7eb",
+                          border: "1px solid #e5e7eb",
+                          background: "#f9fafb",
+                          color: "#111827",
                           padding: "6px",
                           fontSize: "12px",
                         }}
@@ -379,8 +380,8 @@ export default function IntentsPage() {
                           borderRadius: "999px",
                           border: "none",
                           cursor: isSaving ? "default" : "pointer",
-                          background: "#22c55e",
-                          color: "#020617",
+                          background: "#6366f1",
+                          color: "#ffffff",
                           fontSize: "12px",
                           fontWeight: 600,
                           opacity: isSaving ? 0.7 : 1,
@@ -394,8 +395,8 @@ export default function IntentsPage() {
                           padding: "6px 12px",
                           borderRadius: "999px",
                           border: "1px solid #ef4444",
-                          background: "transparent",
-                          color: "#ef4444",
+                          background: "#fff5f5",
+                          color: "#b91c1c",
                           fontSize: "12px",
                           cursor: "pointer",
                         }}
@@ -413,9 +414,10 @@ export default function IntentsPage() {
           <section
             style={{
               borderRadius: "12px",
-              border: "1px solid #1f2937",
-              background: "#0b1220",
+              border: "1px solid #e5e7eb",
+              background: "#ffffff",
               padding: "14px",
+              boxShadow: "0 4px 12px rgba(15,23,42,0.05)",
             }}
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -434,9 +436,9 @@ export default function IntentsPage() {
                 style={{
                   flex: 1,
                   borderRadius: "8px",
-                  border: "1px solid #374151",
-                  background: "#020617",
-                  color: "#e5e7eb",
+                  border: "1px solid #e5e7eb",
+                  background: "#f9fafb",
+                  color: "#111827",
                   padding: "8px",
                   fontSize: "13px",
                 }}
@@ -448,8 +450,8 @@ export default function IntentsPage() {
                   padding: "8px 12px",
                   borderRadius: "999px",
                   border: "none",
-                  background: "#22c55e",
-                  color: "#020617",
+                  background: "#6366f1",
+                  color: "#ffffff",
                   fontSize: "12px",
                   fontWeight: 600,
                   cursor: isSaving ? "default" : "pointer",
@@ -477,9 +479,10 @@ export default function IntentsPage() {
           <section
             style={{
               borderRadius: "12px",
-              border: "1px solid #1f2937",
-              background: "#020617",
+              border: "1px solid #e5e7eb",
+              background: "#ffffff",
               padding: "16px",
+              boxShadow: "0 4px 12px rgba(15,23,42,0.05)",
             }}
           >
             <div
@@ -492,7 +495,7 @@ export default function IntentsPage() {
             >
               <div>
                 <div style={{ fontSize: 16, fontWeight: 600 }}>Intents</div>
-                <div style={{ fontSize: 12, color: "#9ca3af" }}>
+                <div style={{ fontSize: 12, color: "#6b7280" }}>
                   Detect customer intent and route to a specialist.
                 </div>
               </div>
@@ -502,11 +505,12 @@ export default function IntentsPage() {
                 style={{
                   padding: "8px 12px",
                   borderRadius: "999px",
-                  border: "1px solid #374151",
-                  background: "transparent",
-                  color: "#e5e7eb",
+                  border: "1px solid #c7d2fe",
+                  background: "#eef2ff",
+                  color: "#1f2937",
                   fontSize: "12px",
                   cursor: isSaving ? "default" : "pointer",
+                  fontWeight: 600,
                   opacity: isSaving ? 0.7 : 1,
                 }}
               >
@@ -523,10 +527,11 @@ export default function IntentsPage() {
             >
               <div
                 style={{
-                  border: "1px solid #1f2937",
+                  border: "1px solid #e5e7eb",
                   borderRadius: "10px",
                   padding: 12,
-                  background: "#0b1220",
+                  background: "#ffffff",
+                  boxShadow: "0 1px 4px rgba(15,23,42,0.06)",
                 }}
               >
                 <div
@@ -545,51 +550,56 @@ export default function IntentsPage() {
                       <button
                         key={intent.id}
                         onClick={() => setSelectedIntentId(intent.id)}
-                        style={{
-                          textAlign: "left",
-                          padding: "8px 10px",
-                          borderRadius: "8px",
-                          border: isSelected
-                            ? "1px solid #22c55e"
-                            : "1px solid #1f2937",
-                          background: isSelected ? "#111827" : "#020617",
-                          color: "#e5e7eb",
-                          cursor: "pointer",
-                        }}
-                      >
-                        <div style={{ fontSize: 13, fontWeight: 500 }}>
-                          {intent.name}
-                        </div>
-                        <div
-                          style={{ fontSize: 11, color: "#9ca3af" }}
-                        >
-                          {intent.description || "No description yet"}
-                        </div>
-                      </button>
-                    );
-                  })}
-                  {intents.length === 0 && (
-                    <div style={{ fontSize: 12, color: "#9ca3af" }}>
-                      No intents yet. Create one to start routing.
+                    style={{
+                      textAlign: "left",
+                      padding: "10px 12px",
+                      borderRadius: "10px",
+                      border: isSelected
+                        ? "1px solid #c7d2fe"
+                        : "1px solid #e5e7eb",
+                      background: isSelected ? "#eef2ff" : "#ffffff",
+                      color: "#111827",
+                      cursor: "pointer",
+                      boxShadow: isSelected
+                        ? "0 4px 10px rgba(99,102,241,0.1)"
+                        : "0 1px 4px rgba(15,23,42,0.06)",
+                    }}
+                  >
+                    <div style={{ fontSize: 13, fontWeight: 500 }}>
+                      {intent.name}
                     </div>
-                  )}
+                    <div
+                      style={{ fontSize: 11, color: "#6b7280" }}
+                    >
+                      {intent.description || "No description yet"}
+                    </div>
+                  </button>
+                );
+              })}
+              {intents.length === 0 && (
+                <div style={{ fontSize: 12, color: "#6b7280" }}>
+                  No intents yet. Create one to start routing.
                 </div>
+              )}
+            </div>
+          </div>
+
+          <div
+            style={{
+              border: "1px solid #e5e7eb",
+              borderRadius: "10px",
+              padding: 12,
+              background: "#ffffff",
+              boxShadow: "0 1px 4px rgba(15,23,42,0.06)",
+            }}
+          >
+            {!selectedIntent && (
+              <div style={{ fontSize: 13, color: "#6b7280" }}>
+                Select an intent to edit.
               </div>
+            )}
 
-              <div
-                style={{
-                  border: "1px solid #1f2937",
-                  borderRadius: "10px",
-                  padding: 12,
-                }}
-              >
-                {!selectedIntent && (
-                  <div style={{ fontSize: 13, color: "#9ca3af" }}>
-                    Select an intent to edit.
-                  </div>
-                )}
-
-                {selectedIntent && (
+            {selectedIntent && (
                   <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                     <div>
                       <div style={{ fontSize: 13, marginBottom: 4 }}>
@@ -603,9 +613,9 @@ export default function IntentsPage() {
                         style={{
                           width: "100%",
                           borderRadius: "8px",
-                          border: "1px solid #374151",
-                          background: "#020617",
-                          color: "#e5e7eb",
+                          border: "1px solid #e5e7eb",
+                          background: "#f9fafb",
+                          color: "#111827",
                           padding: "8px",
                           fontSize: "13px",
                         }}
@@ -624,9 +634,9 @@ export default function IntentsPage() {
                         style={{
                           width: "100%",
                           borderRadius: "8px",
-                          border: "1px solid #374151",
-                          background: "#020617",
-                          color: "#e5e7eb",
+                          border: "1px solid #e5e7eb",
+                          background: "#f9fafb",
+                          color: "#111827",
                           padding: "8px",
                           fontSize: "12px",
                           resize: "vertical",
@@ -645,9 +655,9 @@ export default function IntentsPage() {
                         style={{
                           width: "100%",
                           borderRadius: "8px",
-                          border: "1px solid #374151",
-                          background: "#020617",
-                          color: "#e5e7eb",
+                          border: "1px solid #e5e7eb",
+                          background: "#f9fafb",
+                          color: "#111827",
                           padding: "8px",
                           fontSize: "12px",
                         }}
@@ -677,8 +687,8 @@ export default function IntentsPage() {
                           borderRadius: "999px",
                           border: "none",
                           cursor: isSaving ? "default" : "pointer",
-                          background: "#22c55e",
-                          color: "#020617",
+                          background: "#6366f1",
+                          color: "#ffffff",
                           fontSize: "12px",
                           fontWeight: 600,
                           opacity: isSaving ? 0.7 : 1,
@@ -693,8 +703,8 @@ export default function IntentsPage() {
                           padding: "8px 14px",
                           borderRadius: "999px",
                           border: "1px solid #ef4444",
-                          background: "transparent",
-                          color: "#ef4444",
+                          background: "#fff5f5",
+                          color: "#b91c1c",
                           cursor: isSaving ? "default" : "pointer",
                           fontSize: "12px",
                           fontWeight: 600,

@@ -118,31 +118,33 @@ export default function IntegrationsPage() {
         minHeight: "100vh",
         display: "flex",
         flexDirection: "column",
-        background: "#020617",
-        color: "#e5e7eb",
+        background: "#f5f7fb",
+        color: "#111827",
         fontFamily:
-          "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+          "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
       }}
     >
       <header
         style={{
           padding: "12px 24px",
-          borderBottom: "1px solid #111827",
+          borderBottom: "1px solid #e5e7eb",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          background:
-            "radial-gradient(circle at top left, #22c55e22, transparent 60%)",
+          background: "#ffffff",
+          position: "sticky",
+          top: 0,
+          zIndex: 10,
         }}
       >
         <div>
-          <div style={{ fontSize: "20px", fontWeight: 600 }}>Integrations</div>
-          <div style={{ fontSize: "12px", color: "#9ca3af" }}>
+          <div style={{ fontSize: "20px", fontWeight: 700 }}>Integrations</div>
+          <div style={{ fontSize: "12px", color: "#6b7280" }}>
             Manage API keys and endpoints (OpenAI, Zendesk, etc.). Note: store secrets securely.
           </div>
         </div>
-        <div style={{ fontSize: "12px", color: "#9ca3af" }}>
-          Environment: <span style={{ color: "#22c55e" }}>Development</span>
+        <div style={{ fontSize: "12px", color: "#6b7280" }}>
+          Environment: <span style={{ color: "#22c55e", fontWeight: 600 }}>Development</span>
         </div>
       </header>
 
@@ -150,14 +152,15 @@ export default function IntegrationsPage() {
         <aside
           style={{
             width: "220px",
-            borderRight: "1px solid #111827",
+            borderRight: "1px solid #e5e7eb",
             padding: "16px 12px",
             display: "flex",
             flexDirection: "column",
             gap: 8,
+            background: "#f9fafb",
           }}
         >
-          <div style={{ fontSize: "12px", color: "#9ca3af", marginBottom: 8 }}>
+          <div style={{ fontSize: "12px", color: "#6b7280", marginBottom: 8, fontWeight: 600 }}>
             Navigation
           </div>
           {[
@@ -170,12 +173,14 @@ export default function IntegrationsPage() {
             <a key={item.id} href={item.href} style={{ textDecoration: "none" }}>
               <div
                 style={{
-                  padding: "8px 10px",
-                  borderRadius: "8px",
+                  padding: "10px 12px",
+                  borderRadius: "10px",
                   cursor: item.href === "#" ? "default" : "pointer",
                   fontSize: "13px",
-                  background: item.active ? "#111827" : "transparent",
-                  color: item.active ? "#e5e7eb" : "#9ca3af",
+                  background: item.active ? "#eef2ff" : "transparent",
+                  color: item.active ? "#1f2937" : "#6b7280",
+                  fontWeight: item.active ? 600 : 500,
+                  border: item.active ? "1px solid #c7d2fe" : "1px solid transparent",
                 }}
               >
                 {item.label}
@@ -192,25 +197,28 @@ export default function IntegrationsPage() {
             gridTemplateColumns: "280px 1fr",
             gap: 16,
             overflow: "hidden",
+            background: "#f5f7fb",
           }}
         >
           <div
             style={{
-              border: "1px solid #1f2937",
+              border: "1px solid #e5e7eb",
               borderRadius: "12px",
               padding: "12px",
-              background: "#0b1220",
+              background: "#ffffff",
+              overflowY: "auto",
+              boxShadow: "0 1px 4px rgba(15,23,42,0.06)",
               overflowY: "auto",
             }}
           >
             <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>
               Integrations
             </div>
-            <div style={{ fontSize: 12, color: "#9ca3af", marginBottom: 12 }}>
+            <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 12 }}>
               Store API base URLs and keys (e.g., OpenAI, Zendesk). Avoid production secrets in client-side code.
             </div>
             {isLoading && (
-              <div style={{ fontSize: 12, color: "#9ca3af" }}>
+              <div style={{ fontSize: 12, color: "#6b7280" }}>
                 Loading integrations…
               </div>
             )}
@@ -228,14 +236,17 @@ export default function IntegrationsPage() {
                     onClick={() => setSelectedId(item.id)}
                     style={{
                       textAlign: "left",
-                      padding: "8px 10px",
-                      borderRadius: "8px",
+                      padding: "10px 12px",
+                      borderRadius: "10px",
                       border: isSelected
-                        ? "1px solid #22c55e"
-                        : "1px solid #1f2937",
-                      background: isSelected ? "#111827" : "#020617",
-                      color: "#e5e7eb",
+                        ? "1px solid #c7d2fe"
+                        : "1px solid #e5e7eb",
+                      background: isSelected ? "#eef2ff" : "#ffffff",
+                      color: "#111827",
                       cursor: "pointer",
+                      boxShadow: isSelected
+                        ? "0 4px 10px rgba(99,102,241,0.1)"
+                        : "0 1px 4px rgba(15,23,42,0.06)",
                     }}
                   >
                     <div style={{ fontSize: 13, fontWeight: 500 }}>
@@ -257,13 +268,13 @@ export default function IntegrationsPage() {
                 disabled={isSaving}
                 style={{
                   marginTop: 8,
-                  padding: "10px 12px",
-                  borderRadius: "10px",
-                  border: "1px dashed #374151",
-                  background: "transparent",
+                  padding: "12px 14px",
+                  borderRadius: "12px",
+                  border: "1px dashed #d1d5db",
+                  background: "#ffffff",
                   cursor: isSaving ? "default" : "pointer",
                   fontSize: "13px",
-                  color: "#9ca3af",
+                  color: "#6b7280",
                   opacity: isSaving ? 0.7 : 1,
                 }}
               >
