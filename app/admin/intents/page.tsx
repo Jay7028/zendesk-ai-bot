@@ -27,6 +27,7 @@ export default function IntentsPage() {
   const [newIntentName, setNewIntentName] = useState("");
   const [newIntentDescription, setNewIntentDescription] = useState("");
   const [newIntentSpecialistId, setNewIntentSpecialistId] = useState<string | null>(null);
+  const [defaultSpecialistId, setDefaultSpecialistId] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadData() {
@@ -46,6 +47,8 @@ export default function IntentsPage() {
         setIntents(intentData);
         setSpecialists(specData);
         setSuggestions(suggestionData);
+        const defaultSpec = specData.find((s) => s.name.toLowerCase() === "default specialist");
+        setDefaultSpecialistId(defaultSpec?.id ?? null);
         if (intentData[0]) setSelectedIntentId(intentData[0].id);
       } catch (e: any) {
         setError(e.message ?? "Unexpected error");
@@ -584,53 +587,57 @@ export default function IntentsPage() {
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                   {intents.map((intent) => {
                     const isSelected = intent.id === selectedIntentId;
+                    const hasDefaultSpecialist =
+                      defaultSpecialistId && intent.specialistId === defaultSpecialistId;
                     return (
                       <button
                         key={intent.id}
                         onClick={() => setSelectedIntentId(intent.id)}
-                    style={{
-                      textAlign: "left",
-                      padding: "10px 12px",
-                      borderRadius: "10px",
-                      border: isSelected
-                        ? "1px solid #c7d2fe"
-                        : "1px solid #e5e7eb",
-                      background: isSelected ? "#eef2ff" : "#ffffff",
-                      color: "#111827",
-                      cursor: "pointer",
-                      boxShadow: isSelected
-                        ? "0 4px 10px rgba(99,102,241,0.1)"
-                        : "0 1px 4px rgba(15,23,42,0.06)",
-                    }}
-                  >
-                    <div style={{ fontSize: 13, fontWeight: 500 }}>
-                      {intent.name}
+                        style={{
+                          textAlign: "left",
+                          padding: "10px 12px",
+                          borderRadius: "10px",
+                          border: isSelected
+                            ? "1px solid #c7d2fe"
+                            : "1px solid #e5e7eb",
+                          background: isSelected
+                            ? "#eef2ff"
+                            : hasDefaultSpecialist
+                            ? "#fff5f5"
+                            : "#ffffff",
+                          color: "#111827",
+                          cursor: "pointer",
+                          boxShadow: isSelected
+                            ? "0 4px 10px rgba(99,102,241,0.1)"
+                            : "0 1px 4px rgba(15,23,42,0.06)",
+                        }}
+                      >
+                        <div style={{ fontSize: 13, fontWeight: 500 }}>
+                          {intent.name}
+                        </div>
+                        <div style={{ fontSize: 11, color: "#6b7280" }}>
+                          {intent.description || "No description yet"}
+                        </div>
+                      </button>
+                    );
+                  })}
+                  {intents.length === 0 && (
+                    <div style={{ fontSize: 12, color: "#6b7280" }}>
+                      No intents yet. Create one to start routing.
                     </div>
-                    <div
-                      style={{ fontSize: 11, color: "#6b7280" }}
-                    >
-                      {intent.description || "No description yet"}
-                    </div>
-                  </button>
-                );
-              })}
-              {intents.length === 0 && (
-                <div style={{ fontSize: 12, color: "#6b7280" }}>
-                  No intents yet. Create one to start routing.
+                  )}
                 </div>
-              )}
-            </div>
-          </div>
+              </div>
 
-          <div
-            style={{
-              border: "1px solid #e5e7eb",
-              borderRadius: "10px",
-              padding: 12,
-              background: "#ffffff",
-              boxShadow: "0 1px 4px rgba(15,23,42,0.06)",
-            }}
-          >
+              <div
+                style={{
+                  border: "1px solid #e5e7eb",
+                  borderRadius: "10px",
+                  padding: 12,
+                  background: "#ffffff",
+                  boxShadow: "0 1px 4px rgba(15,23,42,0.06)",
+                }}
+              >
             {!selectedIntent && (
               <div style={{ fontSize: 13, color: "#6b7280" }}>
                 Select an intent to edit.
