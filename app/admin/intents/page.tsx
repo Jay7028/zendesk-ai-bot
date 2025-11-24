@@ -21,6 +21,9 @@ export default function IntentsPage() {
   } | null>(null);
   const [suggestions, setSuggestions] = useState<IntentSuggestion[]>([]);
   const [suggestionSpecialist, setSuggestionSpecialist] = useState<Record<string, string>>({});
+  const [suggestionEdits, setSuggestionEdits] = useState<
+    Record<string, { name?: string; description?: string }>
+  >({});
   const [newIntentName, setNewIntentName] = useState("");
   const [newIntentDescription, setNewIntentDescription] = useState("");
   const [newIntentSpecialistId, setNewIntentSpecialistId] = useState("");
@@ -171,6 +174,9 @@ export default function IntentsPage() {
   }
 
   async function handleCreateIntentFromSuggestion(s: IntentSuggestion) {
+    const edits = suggestionEdits[s.id] || {};
+    const name = edits.name?.trim() || s.suggestedName;
+    const description = edits.description?.trim() || s.suggestedDescription;
     const specialistId = suggestionSpecialist[s.id] || specialists[0]?.id || "";
     try {
       setIsSaving(true);
@@ -179,8 +185,8 @@ export default function IntentsPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: s.suggestedName,
-          description: s.suggestedDescription,
+          name,
+          description,
           specialistId,
         }),
       });
@@ -798,11 +804,56 @@ export default function IntentsPage() {
                     <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 6 }}>
                       Confidence: {s.confidence.toFixed(2)}
                     </div>
-                    <div style={{ fontSize: 12, color: "#374151", whiteSpace: "pre-wrap", marginBottom: 6 }}>
-                      {s.suggestedDescription || "No description provided"}
-                    </div>
-                    <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 6 }}>
-                      Message: {s.messageSnippet}
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 6, marginBottom: 6 }}>
+                      <div>
+                        <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 4 }}>Intent name</div>
+                        <input
+                          value={suggestionEdits[s.id]?.name ?? s.suggestedName}
+                          onChange={(e) =>
+                            setSuggestionEdits((prev) => ({
+                              ...prev,
+                              [s.id]: { ...prev[s.id], name: e.target.value },
+                            }))
+                          }
+                          style={{
+                            width: "100%",
+                            borderRadius: "8px",
+                            border: "1px solid #e5e7eb",
+                            background: "#f9fafb",
+                            color: "#111827",
+                            padding: "8px",
+                            fontSize: "12px",
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 4 }}>
+                          Description
+                        </div>
+                        <textarea
+                          value={suggestionEdits[s.id]?.description ?? s.suggestedDescription}
+                          onChange={(e) =>
+                            setSuggestionEdits((prev) => ({
+                              ...prev,
+                              [s.id]: { ...prev[s.id], description: e.target.value },
+                            }))
+                          }
+                          rows={2}
+                          style={{
+                            width: "100%",
+                            borderRadius: "8px",
+                            border: "1px solid #e5e7eb",
+                            background: "#f9fafb",
+                            color: "#111827",
+                            padding: "8px",
+                            fontSize: "12px",
+                            resize: "vertical",
+                          }}
+                        />
+                      </div>
+                      <div style={{ fontSize: 11, color: "#6b7280" }}>
+                        Message: {s.messageSnippet}
+                      </div>
                     </div>
                     <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                       <select
