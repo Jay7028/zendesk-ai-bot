@@ -154,37 +154,39 @@ export default function AiSpecialistsAdminPage() {
         minHeight: "100vh",
         display: "flex",
         flexDirection: "column",
-        background: "#020617",
-        color: "#e5e7eb",
+        background: "#f5f7fb",
+        color: "#111827",
         fontFamily:
-          "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+          "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
       }}
     >
       {/* Top bar */}
       <header
         style={{
           padding: "12px 24px",
-          borderBottom: "1px solid #111827",
+          borderBottom: "1px solid #e5e7eb",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          background:
-            "radial-gradient(circle at top left, #22c55e22, transparent 60%)",
+          background: "#ffffff",
+          position: "sticky",
+          top: 0,
+          zIndex: 10,
         }}
       >
         <div>
-          <div style={{ fontSize: "20px", fontWeight: 600 }}>AI Specialists</div>
-          <div style={{ fontSize: "12px", color: "#9ca3af" }}>
+          <div style={{ fontSize: "20px", fontWeight: 700 }}>AI Specialists</div>
+          <div style={{ fontSize: "12px", color: "#6b7280" }}>
             Manage knowledge, rules and personality for each specialist.
           </div>
         </div>
-        <div style={{ fontSize: "12px", color: "#9ca3af" }}>
-          Environment: <span style={{ color: "#22c55e" }}>Development</span>
+        <div style={{ fontSize: "12px", color: "#6b7280" }}>
+          Environment: <span style={{ color: "#22c55e", fontWeight: 600 }}>Development</span>
         </div>
       </header>
 
       {/* TEMP: debug button to create a dummy log entry */}
-      <div style={{ padding: "8px 24px", borderBottom: "1px solid #111827" }}>
+      <div style={{ padding: "8px 24px", borderBottom: "1px solid #e5e7eb" }}>
         <button
           onClick={async () => {
             await fetch("/api/logs", {
@@ -221,14 +223,15 @@ export default function AiSpecialistsAdminPage() {
         <aside
           style={{
             width: "220px",
-            borderRight: "1px solid #111827",
+            borderRight: "1px solid #e5e7eb",
             padding: "16px 12px",
             display: "flex",
             flexDirection: "column",
             gap: 8,
+            background: "#f9fafb",
           }}
         >
-          <div style={{ fontSize: "12px", color: "#9ca3af", marginBottom: 8 }}>
+          <div style={{ fontSize: "12px", color: "#6b7280", marginBottom: 8, fontWeight: 600 }}>
             Navigation
           </div>
           {[
@@ -248,12 +251,14 @@ export default function AiSpecialistsAdminPage() {
             >
               <div
                 style={{
-                  padding: "8px 10px",
-                  borderRadius: "8px",
+                  padding: "10px 12px",
+                  borderRadius: "10px",
                   cursor: item.href === "#" ? "default" : "pointer",
                   fontSize: "13px",
-                  background: item.active ? "#111827" : "transparent",
-                  color: item.active ? "#e5e7eb" : "#9ca3af",
+                  background: item.active ? "#eef2ff" : "transparent",
+                  color: item.active ? "#1f2937" : "#6b7280",
+                  fontWeight: item.active ? 600 : 500,
+                  border: item.active ? "1px solid #c7d2fe" : "1px solid transparent",
                 }}
               >
                 {item.label}
@@ -268,9 +273,10 @@ export default function AiSpecialistsAdminPage() {
           <aside
             style={{
               width: "260px",
-              borderRight: "1px solid #111827",
+              borderRight: "1px solid #e5e7eb",
               padding: "16px",
               overflowY: "auto",
+              background: "#ffffff",
             }}
           >
             <div
@@ -282,12 +288,12 @@ export default function AiSpecialistsAdminPage() {
             >
               Your Specialists
             </div>
-            <div style={{ fontSize: "12px", color: "#9ca3af", marginBottom: 12 }}>
+            <div style={{ fontSize: "12px", color: "#6b7280", marginBottom: 12 }}>
               Manage the bots that handle different scenarios.
             </div>
 
             {isLoading && (
-              <div style={{ fontSize: 12, color: "#9ca3af", marginBottom: 8 }}>
+              <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 8 }}>
                 Loading specialists…
               </div>
             )}
@@ -311,34 +317,37 @@ export default function AiSpecialistsAdminPage() {
                     }}
                     style={{
                       textAlign: "left",
-                      padding: "10px 12px",
-                      borderRadius: "10px",
+                      padding: "12px 14px",
+                      borderRadius: "12px",
                       border: isSelected
-                        ? "1px solid #22c55e"
-                        : "1px solid #1f2937",
-                      background: isSelected ? "#0b1220" : "#020617",
+                        ? "1px solid #c7d2fe"
+                        : "1px solid #e5e7eb",
+                      background: isSelected ? "#eef2ff" : "#ffffff",
                       cursor: "pointer",
                       display: "flex",
                       flexDirection: "column",
                       gap: 4,
+                      boxShadow: isSelected
+                        ? "0 4px 10px rgba(99,102,241,0.1)"
+                        : "0 1px 4px rgba(15,23,42,0.06)",
                     }}
                   >
                     <span
                       style={{
                         fontSize: "14px",
-                        fontWeight: 500,
-                        color: "#e5e7eb",
+                        fontWeight: 600,
+                        color: "#111827",
                       }}
                     >
                       {spec.name}
                     </span>
                     <span
-                      style={{ fontSize: "11px", color: "#9ca3af" }}
+                      style={{ fontSize: "11px", color: "#6b7280" }}
                     >{`${spec.docsCount} docs · ${spec.rulesCount} rules`}</span>
                     <span
                       style={{
-                        fontSize: "10px",
-                        color: spec.active ? "#22c55e" : "#f97316",
+                        fontSize: "11px",
+                        color: spec.active ? "#16a34a" : "#f59e0b",
                       }}
                     >
                       {spec.active ? "Active" : "Inactive"}
@@ -352,13 +361,13 @@ export default function AiSpecialistsAdminPage() {
                 disabled={isSaving}
                 style={{
                   marginTop: 8,
-                  padding: "10px 12px",
-                  borderRadius: "10px",
-                  border: "1px dashed #374151",
-                  background: "transparent",
+                  padding: "12px 14px",
+                  borderRadius: "12px",
+                  border: "1px dashed #d1d5db",
+                  background: "#ffffff",
                   cursor: isSaving ? "default" : "pointer",
                   fontSize: "13px",
-                  color: "#9ca3af",
+                  color: "#6b7280",
                   opacity: isSaving ? 0.7 : 1,
                 }}
               >
@@ -376,10 +385,11 @@ export default function AiSpecialistsAdminPage() {
               flexDirection: "column",
               gap: 16,
               overflowY: "auto",
+              background: "#f5f7fb",
             }}
           >
             {!selectedSpecialist && (
-              <div style={{ fontSize: 13, color: "#9ca3af" }}>
+              <div style={{ fontSize: 13, color: "#6b7280" }}>
                 No specialists available yet.
               </div>
             )}
@@ -390,14 +400,14 @@ export default function AiSpecialistsAdminPage() {
                 <section
                   style={{
                     borderRadius: "12px",
-                    border: "1px solid #1f2937",
+                    border: "1px solid #e5e7eb",
                     padding: "16px",
-                    background:
-                      "radial-gradient(circle at top left, #22c55e11, #020617)",
+                    background: "#ffffff",
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "flex-start",
                     gap: 16,
+                    boxShadow: "0 8px 20px rgba(15,23,42,0.08)",
                   }}
                 >
                   <div>
@@ -407,14 +417,14 @@ export default function AiSpecialistsAdminPage() {
                         updateSelectedSpecialist({ name: e.target.value })
                       }
                       style={{
-                        fontSize: "18px",
-                        fontWeight: 600,
+                        fontSize: "20px",
+                        fontWeight: 700,
                         marginBottom: 4,
-                        background: "transparent",
-                        border: "1px solid #374151",
-                        borderRadius: "6px",
-                        padding: "4px 8px",
-                        color: "#e5e7eb",
+                        background: "#f9fafb",
+                        border: "1px solid #e5e7eb",
+                        borderRadius: "8px",
+                        padding: "6px 10px",
+                        color: "#111827",
                       }}
                     />
                     <textarea
@@ -426,16 +436,16 @@ export default function AiSpecialistsAdminPage() {
                       style={{
                         width: "100%",
                         fontSize: "13px",
-                        color: "#e5e7eb",
+                        color: "#374151",
                         marginBottom: 4,
-                        background: "#020617",
-                        border: "1px solid #374151",
-                        borderRadius: "6px",
-                        padding: "4px 8px",
+                        background: "#f9fafb",
+                        border: "1px solid #e5e7eb",
+                        borderRadius: "8px",
+                        padding: "6px 10px",
                         resize: "vertical",
                       }}
                     />
-                    <div style={{ fontSize: "12px", color: "#9ca3af" }}>
+                    <div style={{ fontSize: "12px", color: "#6b7280" }}>
                       {selectedSpecialist.docsCount} training docs ·{" "}
                       {selectedSpecialist.rulesCount} rules
                     </div>
@@ -446,14 +456,14 @@ export default function AiSpecialistsAdminPage() {
                       disabled={isSaving}
                       style={{
                         fontSize: "12px",
-                        padding: "6px 14px",
+                        padding: "8px 16px",
                         borderRadius: "999px",
-                        border: "none",
+                        border: "1px solid transparent",
                         cursor: isSaving ? "default" : "pointer",
                         background: selectedSpecialist.active
                           ? "#22c55e"
-                          : "#4b5563",
-                        color: "#020617",
+                          : "#e5e7eb",
+                        color: selectedSpecialist.active ? "#ffffff" : "#374151",
                         fontWeight: 600,
                         opacity: isSaving ? 0.7 : 1,
                       }}
@@ -465,11 +475,11 @@ export default function AiSpecialistsAdminPage() {
                       disabled={isSaving}
                       style={{
                         fontSize: "12px",
-                        padding: "6px 14px",
+                        padding: "8px 16px",
                         borderRadius: "999px",
                         border: "1px solid #ef4444",
-                        background: "transparent",
-                        color: "#ef4444",
+                        background: "#fff5f5",
+                        color: "#b91c1c",
                         cursor: isSaving ? "default" : "pointer",
                         fontWeight: 600,
                         opacity: isSaving ? 0.7 : 1,
@@ -484,14 +494,15 @@ export default function AiSpecialistsAdminPage() {
                 <section
                   style={{
                     borderRadius: "12px",
-                    border: "1px solid #1f2937",
-                    background: "#020617",
+                    border: "1px solid #e5e7eb",
+                    background: "#ffffff",
+                    boxShadow: "0 4px 12px rgba(15,23,42,0.05)",
                   }}
                 >
                   <div
                     style={{
                       display: "flex",
-                      borderBottom: "1px solid #1f2937",
+                      borderBottom: "1px solid #e5e7eb",
                       padding: "0 16px",
                       gap: 12,
                     }}
@@ -508,17 +519,17 @@ export default function AiSpecialistsAdminPage() {
                           key={tab.key}
                           onClick={() => setActiveTab(tab.key as TabKey)}
                           style={{
-                            padding: "10px 4px",
-                            marginRight: 12,
+                            padding: "12px 10px",
+                            marginRight: 8,
                             border: "none",
                             borderBottom: isActive
-                              ? "2px solid #22c55e"
+                              ? "2px solid #6366f1"
                               : "2px solid transparent",
                             background: "transparent",
                             cursor: "pointer",
                             fontSize: "13px",
-                            color: isActive ? "#e5e7eb" : "#9ca3af",
-                            fontWeight: isActive ? 500 : 400,
+                            color: isActive ? "#111827" : "#6b7280",
+                            fontWeight: isActive ? 600 : 500,
                           }}
                         >
                           {tab.label}
@@ -559,9 +570,9 @@ export default function AiSpecialistsAdminPage() {
                               width: "100%",
                               resize: "vertical",
                               borderRadius: "8px",
-                              border: "1px solid #374151",
-                              background: "#020617",
-                              color: "#e5e7eb",
+                              border: "1px solid #e5e7eb",
+                              background: "#f9fafb",
+                              color: "#111827",
                               padding: "8px",
                               fontSize: "12px",
                             }}
@@ -587,9 +598,9 @@ export default function AiSpecialistsAdminPage() {
                             style={{
                               width: "100%",
                               borderRadius: "8px",
-                              border: "1px solid #374151",
-                              background: "#020617",
-                              color: "#e5e7eb",
+                              border: "1px solid #e5e7eb",
+                              background: "#f9fafb",
+                              color: "#111827",
                               padding: "8px",
                               fontSize: "12px",
                               marginBottom: 8,
@@ -629,9 +640,9 @@ export default function AiSpecialistsAdminPage() {
                             width: "100%",
                             resize: "vertical",
                             borderRadius: "8px",
-                            border: "1px solid #374151",
-                            background: "#020617",
-                            color: "#e5e7eb",
+                            border: "1px solid #e5e7eb",
+                            background: "#f9fafb",
+                            color: "#111827",
                             padding: "8px",
                             fontSize: "12px",
                             marginBottom: 8,
@@ -669,9 +680,9 @@ export default function AiSpecialistsAdminPage() {
                             width: "100%",
                             resize: "vertical",
                             borderRadius: "8px",
-                            border: "1px solid #374151",
-                            background: "#020617",
-                            color: "#e5e7eb",
+                            border: "1px solid #e5e7eb",
+                            background: "#f9fafb",
+                            color: "#111827",
                             padding: "8px",
                             fontSize: "12px",
                             marginBottom: 8,
@@ -710,9 +721,9 @@ export default function AiSpecialistsAdminPage() {
                             width: "100%",
                             resize: "vertical",
                             borderRadius: "8px",
-                            border: "1px solid #374151",
-                            background: "#020617",
-                            color: "#e5e7eb",
+                            border: "1px solid #e5e7eb",
+                            background: "#f9fafb",
+                            color: "#111827",
                             padding: "8px",
                             fontSize: "12px",
                             marginBottom: 8,
@@ -743,8 +754,8 @@ export default function AiSpecialistsAdminPage() {
                           borderRadius: "999px",
                           border: "none",
                           cursor: isSaving ? "default" : "pointer",
-                          background: "#22c55e",
-                          color: "#020617",
+                          background: "#6366f1",
+                          color: "#ffffff",
                           fontSize: "12px",
                           fontWeight: 600,
                           opacity: isSaving ? 0.7 : 1,
@@ -755,7 +766,7 @@ export default function AiSpecialistsAdminPage() {
                           : "Save specialist configuration"}
                       </button>
                       <div
-                        style={{ fontSize: "11px", color: "#9ca3af" }}
+                        style={{ fontSize: "11px", color: "#6b7280" }}
                       >
                         These settings drive how this specialist behaves in the
                         live Zendesk integration.
