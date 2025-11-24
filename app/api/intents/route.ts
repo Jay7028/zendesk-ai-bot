@@ -7,7 +7,7 @@ function dbToCamel(row: any): IntentConfig {
     id: row.id,
     name: row.name,
     description: row.description ?? "",
-    specialistId: row.specialist_id ?? "",
+    specialistId: row.specialist_id ?? null,
   };
 }
 
@@ -16,8 +16,7 @@ function camelToDb(body: Partial<IntentConfig>) {
     id: body.id,
     name: body.name,
     description: body.description ?? "",
-    // Store empty string when unset to avoid failing inserts if the column is non-nullable.
-    specialist_id: body.specialistId ?? "",
+    specialist_id: body.specialistId || null,
   };
 }
 

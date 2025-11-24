@@ -72,7 +72,7 @@ export default function IntentsPage() {
     const description =
       newIntentDescription.trim() ||
       (trimmedMessage ? `Created from tester input: ${trimmedMessage}` : "Added from intent tester (no match).");
-    const specialistId = newIntentSpecialistId || "";
+    const specialistId = newIntentSpecialistId || null;
 
     try {
       setIsSaving(true);
@@ -100,7 +100,7 @@ export default function IntentsPage() {
     const draft: Partial<IntentConfig> = {
       name: "New Intent",
       description: "Describe when this intent should match.",
-      specialistId: "",
+      specialistId: null,
     };
     try {
       setIsSaving(true);
@@ -172,7 +172,7 @@ export default function IntentsPage() {
     const edits = suggestionEdits[s.id] || {};
     const name = edits.name?.trim() || s.suggestedName;
     const description = edits.description?.trim() || s.suggestedDescription;
-    const specialistId = suggestionSpecialist[s.id] || "";
+    const specialistId = suggestionSpecialist[s.id] || null;
     try {
       setIsSaving(true);
       setError(null);
@@ -685,9 +685,9 @@ export default function IntentsPage() {
                         Route to specialist
                       </div>
                       <select
-                        value={selectedIntent.specialistId}
+                        value={selectedIntent.specialistId ?? ""}
                         onChange={(e) =>
-                          updateSelectedIntent({ specialistId: e.target.value })
+                          updateSelectedIntent({ specialistId: e.target.value || null })
                         }
                         style={{
                           width: "100%",
