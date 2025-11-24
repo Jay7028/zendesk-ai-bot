@@ -194,6 +194,7 @@ export async function POST(req: NextRequest) {
       actions.push(`Routed to specialist: ${matchedSpecialist.name}`);
     } else {
       actions.push("No specialist matched (unknown or low confidence)");
+      actions.push("Would tag: bot-handover");
     }
 
     await logTicketEvent(origin, {

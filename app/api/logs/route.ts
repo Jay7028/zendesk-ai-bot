@@ -94,3 +94,30 @@ export async function POST(request: Request) {
 
   return NextResponse.json(dbToCamel(data), { status: 201 });
 }
+
+export async function DELETE(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get("id");
+    if (!id) {
+      return NextResponse.json({ error: "id is required" }, { status: 400 });
+    }
+
+    const { error } = await supabaseAdmin.from("logs").delete().eq("id", id);
+    if (error) {
+      console.error("Supabase DELETE /logs error", error);
+      return NextResponse.json(
+        { error: "Failed to delete log", details: error.message },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (e: any) {
+    console.error("DELETE /logs error", e);
+    return NextResponse.json(
+      { error: "Failed to delete log", details: String(e) },
+      { status: 500 }
+    );
+  }
+}

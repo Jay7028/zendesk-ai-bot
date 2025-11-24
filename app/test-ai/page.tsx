@@ -22,6 +22,7 @@ type LogEntry = {
   timestamp: string;
   inputSummary?: string;
   outputSummary?: string;
+  canDelete?: boolean;
 };
 
 export default function TestAIPage() {
@@ -59,6 +60,20 @@ export default function TestAIPage() {
     });
   }
 
+  async function handleDeleteHistory(entry: LogEntry) {
+    try {
+      await fetch(`/api/logs?id=${entry.id}`, { method: "DELETE" });
+      setHistory((prev) => prev.filter((h) => h.id !== entry.id));
+      if (selectedTicketId === entry.zendeskTicketId) {
+        setSelectedTicketId(null);
+        setMessages([]);
+        setResult(null);
+      }
+    } catch (e) {
+      console.error("Failed to delete history", e);
+    }
+  }
+
   async function loadHistory() {
     try {
       setIsLoadingHistory(true);
@@ -76,6 +91,7 @@ export default function TestAIPage() {
           timestamp: l.timestamp ?? l.created_at ?? "",
           inputSummary: l.inputSummary ?? "",
           outputSummary: l.outputSummary ?? "",
+          canDelete: true,
         }))
         .sort(
           (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
@@ -283,30 +299,61 @@ export default function TestAIPage() {
                 </div>
               )}
               {history.map((h) => (
-                <button
+                <div
                   key={h.id}
-                  onClick={() => handleSelectHistory(h)}
                   style={{
-                    textAlign: "left",
                     border: "1px solid #e5e7eb",
                     borderRadius: "8px",
                     padding: "8px",
                     background: selectedTicketId === h.zendeskTicketId ? "#eef2ff" : "#f9fafb",
                     fontSize: 12,
-                    cursor: "pointer",
+                    display: "flex",
+                    gap: 8,
+                    alignItems: "flex-start",
                   }}
                 >
-                  <div style={{ fontWeight: 600, color: "#111827" }}>{h.zendeskTicketId}</div>
-                  <div style={{ color: "#6b7280" }}>
-                    Intent: {h.intentName ?? "unknown"} • Specialist: {h.specialistName ?? "none"}
+                  <div style={{ flex: 1 }}>
+                    <button
+                      onClick={() => handleSelectHistory(h)}
+                      style={{
+                        textAlign: "left",
+                        border: "none",
+                        background: "transparent",
+                        padding: 0,
+                        margin: 0,
+                        cursor: "pointer",
+                        width: "100%",
+                      }}
+                    >
+                      <div style={{ fontWeight: 600, color: "#111827" }}>{h.zendeskTicketId}</div>
+                      <div style={{ color: "#6b7280" }}>
+                        Intent: {h.intentName ?? "unknown"} • Specialist: {h.specialistName ?? "none"}
+                      </div>
+                      <div style={{ color: "#6b7280" }}>
+                        Status: {h.status}
+                      </div>
+                      <div style={{ color: "#9ca3af", fontSize: 11 }}>
+                        {h.timestamp ? new Date(h.timestamp).toLocaleString() : ""}
+                      </div>
+                    </button>
                   </div>
-                  <div style={{ color: "#6b7280" }}>
-                    Status: {h.status}
-                  </div>
-                  <div style={{ color: "#9ca3af", fontSize: 11 }}>
-                    {h.timestamp ? new Date(h.timestamp).toLocaleString() : ""}
-                  </div>
-                </button>
+                  {h.canDelete && (
+                    <button
+                      onClick={() => handleDeleteHistory(h)}
+                      style={{
+                        border: "1px solid #ef4444",
+                        background: "#fff5f5",
+                        color: "#b91c1c",
+                        padding: "4px 8px",
+                        borderRadius: "6px",
+                        fontSize: 12,
+                        cursor: "pointer",
+                      }}
+                    >
+                      Delete
+                    </button>
+                  )}
+                </div>
               ))}
             </div>
             {result && (
