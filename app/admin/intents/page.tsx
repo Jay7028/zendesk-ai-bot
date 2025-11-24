@@ -47,7 +47,6 @@ export default function IntentsPage() {
         setSpecialists(specData);
         setSuggestions(suggestionData);
         if (intentData[0]) setSelectedIntentId(intentData[0].id);
-        if (specData[0]) setNewIntentSpecialistId(specData[0].id);
       } catch (e: any) {
         setError(e.message ?? "Unexpected error");
       } finally {
@@ -73,11 +72,7 @@ export default function IntentsPage() {
     const description =
       newIntentDescription.trim() ||
       (trimmedMessage ? `Created from tester input: ${trimmedMessage}` : "Added from intent tester (no match).");
-    const specialistId = newIntentSpecialistId || specialists[0]?.id || "";
-    if (!specialistId) {
-      setError("Select a specialist for the new intent.");
-      return;
-    }
+    const specialistId = newIntentSpecialistId;
 
     try {
       setIsSaving(true);
@@ -105,7 +100,7 @@ export default function IntentsPage() {
     const draft: Partial<IntentConfig> = {
       name: "New Intent",
       description: "Describe when this intent should match.",
-      specialistId: specialists[0]?.id ?? "",
+      specialistId: "",
     };
     try {
       setIsSaving(true);
@@ -177,7 +172,7 @@ export default function IntentsPage() {
     const edits = suggestionEdits[s.id] || {};
     const name = edits.name?.trim() || s.suggestedName;
     const description = edits.description?.trim() || s.suggestedDescription;
-    const specialistId = suggestionSpecialist[s.id] || specialists[0]?.id || "";
+    const specialistId = suggestionSpecialist[s.id] || "";
     try {
       setIsSaving(true);
       setError(null);
@@ -452,29 +447,29 @@ export default function IntentsPage() {
                       }}
                     />
                   </div>
-                  <div>
-                    <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 4 }}>Route to specialist</div>
-                    <select
-                      value={newIntentSpecialistId}
-                      onChange={(e) => setNewIntentSpecialistId(e.target.value)}
-                      style={{
-                        width: "100%",
-                        borderRadius: "8px",
-                        border: "1px solid #e5e7eb",
-                        background: "#ffffff",
-                        color: "#111827",
-                        padding: "8px",
-                        fontSize: "12px",
-                      }}
-                    >
-                      <option value="">-- Select specialist --</option>
-                      {specialists.map((spec) => (
-                        <option key={spec.id} value={spec.id}>
-                          {spec.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                    <div>
+                      <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 4 }}>Route to specialist</div>
+                      <select
+                        value={newIntentSpecialistId}
+                        onChange={(e) => setNewIntentSpecialistId(e.target.value)}
+                        style={{
+                          width: "100%",
+                          borderRadius: "8px",
+                          border: "1px solid #e5e7eb",
+                          background: "#ffffff",
+                          color: "#111827",
+                          padding: "8px",
+                          fontSize: "12px",
+                        }}
+                      >
+                        <option value="">-- Select specialist (optional) --</option>
+                        {specialists.map((spec) => (
+                          <option key={spec.id} value={spec.id}>
+                            {spec.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                 </div>
                 <div style={{ marginBottom: 8 }}>
                   <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 4 }}>
@@ -857,7 +852,7 @@ export default function IntentsPage() {
                     </div>
                     <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                       <select
-                        value={suggestionSpecialist[s.id] || specialists[0]?.id || ""}
+                        value={suggestionSpecialist[s.id] ?? ""}
                         onChange={(e) =>
                           setSuggestionSpecialist((prev) => ({ ...prev, [s.id]: e.target.value }))
                         }
@@ -870,6 +865,7 @@ export default function IntentsPage() {
                           fontSize: "12px",
                         }}
                       >
+                        <option value="">-- Select specialist (optional) --</option>
                         {specialists.map((spec) => (
                           <option key={spec.id} value={spec.id}>
                             {spec.name}
