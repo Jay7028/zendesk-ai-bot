@@ -24,6 +24,61 @@ type IntentRow = {
 
 type Message = { role: "user" | "assistant"; content: string };
 
+let testCounter = 1;
+
+async function logRun(origin: string, payload: {
+  ticketId: string;
+  specialistId: string | null;
+  specialistName: string | null;
+  intentId: string | null;
+  intentName: string | null;
+  inputSummary: string;
+  outputSummary: string;
+  status: "success" | "fallback" | "escalated";
+}) {
+  try {
+    await fetch(new URL("/api/logs", origin), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        zendeskTicketId: payload.ticketId,
+        specialistId: payload.specialistId ?? "unknown",
+        specialistName: payload.specialistName ?? "unknown",
+        intentId: payload.intentId,
+        intentName: payload.intentName,
+        inputSummary: payload.inputSummary,
+        knowledgeSources: [],
+        outputSummary: payload.outputSummary,
+        status: payload.status,
+      }),
+    });
+  } catch (e) {
+    console.error("Failed to log test run", e);
+  }
+}
+
+async function logTicketEvent(origin: string, payload: {
+  ticketId: string;
+  eventType: string;
+  summary: string;
+  detail?: string;
+}) {
+  try {
+    await fetch(new URL("/api/ticket-events", origin), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ticketId: payload.ticketId,
+        eventType: payload.eventType,
+        summary: payload.summary,
+        detail: payload.detail ?? "",
+      }),
+    });
+  } catch (e) {
+    console.error("Failed to log test ticket event", e);
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -62,6 +117,8 @@ export async function POST(req: NextRequest) {
     const specialists: SpecialistRow[] = specRows ?? [];
 
     const actions: string[] = [];
+    const ticketId = `test-${testCounter++}`;
+    const origin = req.nextUrl.origin;
 
     const intentListForPrompt = intents
       .map((i) => `- ${i.id}: ${i.name} — ${i.description}`)
@@ -141,6 +198,13 @@ export async function POST(req: NextRequest) {
       actions.push("No specialist matched (unknown or low confidence)");
     }
 
+    await logTicketEvent(origin, {
+      ticketId,
+      eventType: "intent_detected",
+      summary: `Intent: ${matchedIntent?.name ?? "unknown"}`,
+      detail: `Confidence: ${confidence.toFixed(2)} | Specialist: ${matchedSpecialist?.name ?? "none"}`,
+    });
+
     const replyMessages: { role: "system" | "user" | "assistant"; content: string }[] = [
       {
         role: "system",
@@ -183,6 +247,23 @@ export async function POST(req: NextRequest) {
     const reply = data.choices?.[0]?.message?.content?.trim() || "";
 
     actions.push("Generated reply");
+
+    await logRun(origin, {
+      ticketId,
+      specialistId: matchedSpecialist?.id ?? null,
+      specialistName: matchedSpecialist?.name ?? null,
+      intentId: matchedIntent?.id ?? null,
+      intentName: matchedIntent?.name ?? null,
+      inputSummary: userMessage.slice(0, 200),
+      outputSummary: reply.slice(0, 200),
+      status: "success",
+    });
+    await logTicketEvent(origin, {
+      ticketId,
+      eventType: "reply_sent",
+      summary: "Reply generated (test)",
+      detail: reply.slice(0, 240),
+    });
 
     return NextResponse.json({
       reply,
