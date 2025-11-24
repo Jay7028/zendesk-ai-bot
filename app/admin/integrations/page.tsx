@@ -1,23 +1,23 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { DataField } from "../../api/data-extraction/types";
+import type { IntegrationConfig } from "../../api/integrations/types";
 
-export default function DataExtractionPage() {
-  const [fields, setFields] = useState<DataField[]>([]);
+export default function IntegrationsPage() {
+  const [items, setItems] = useState<IntegrationConfig[]>([]);
   const [selectedId, setSelectedId] = useState<string>();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    async function loadFields() {
+    async function loadItems() {
       try {
         setIsLoading(true);
-        const res = await fetch("/api/data-extraction");
-        if (!res.ok) throw new Error("Failed to load fields");
-        const data: DataField[] = await res.json();
-        setFields(data);
+        const res = await fetch("/api/integrations");
+        if (!res.ok) throw new Error("Failed to load integrations");
+        const data: IntegrationConfig[] = await res.json();
+        setItems(data);
         if (data[0]) setSelectedId(data[0].id);
       } catch (e: any) {
         setError(e.message ?? "Unexpected error");
@@ -25,87 +25,88 @@ export default function DataExtractionPage() {
         setIsLoading(false);
       }
     }
-    loadFields();
+    loadItems();
   }, []);
 
-  const selected = fields.find((f) => f.id === selectedId) ?? null;
+  const selected = items.find((i) => i.id === selectedId) ?? null;
 
-  function updateSelected(partial: Partial<DataField>) {
+  function updateSelected(partial: Partial<IntegrationConfig>) {
     if (!selected) return;
-    setFields((prev) =>
-      prev.map((f) => (f.id === selected.id ? { ...f, ...partial } : f))
+    setItems((prev) =>
+      prev.map((i) => (i.id === selected.id ? { ...i, ...partial } : i))
     );
   }
 
-  async function handleCreateField() {
-    const draft: Partial<DataField> = {
-      name: "new_field",
-      label: "New Field",
+  async function handleCreate() {
+    const draft: Partial<IntegrationConfig> = {
+      name: "New Integration",
+      type: "custom",
       description: "",
-      example: "",
-      required: false,
+      apiKey: "",
+      baseUrl: "",
+      enabled: false,
     };
     try {
       setIsSaving(true);
       setError(null);
-      const res = await fetch("/api/data-extraction", {
+      const res = await fetch("/api/integrations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(draft),
       });
-      if (!res.ok) throw new Error("Failed to create field");
-      const created: DataField = await res.json();
-      setFields((prev) => [...prev, created]);
+      if (!res.ok) throw new Error("Failed to create integration");
+      const created: IntegrationConfig = await res.json();
+      setItems((prev) => [...prev, created]);
       setSelectedId(created.id);
     } catch (e: any) {
-      setError(e.message ?? "Unexpected error while creating field");
+      setError(e.message ?? "Unexpected error while creating");
     } finally {
       setIsSaving(false);
     }
   }
 
-  async function saveSelectedField() {
+  async function saveSelected() {
     if (!selected) return;
     try {
       setIsSaving(true);
       setError(null);
-      const res = await fetch(`/api/data-extraction/${selected.id}`, {
+      const res = await fetch(`/api/integrations/${selected.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(selected),
       });
-      if (!res.ok) throw new Error("Failed to save field");
-      const updated: DataField = await res.json();
-      setFields((prev) =>
-        prev.map((f) => (f.id === updated.id ? updated : f))
+      if (!res.ok) throw new Error("Failed to save integration");
+      const updated: IntegrationConfig = await res.json();
+      setItems((prev) =>
+        prev.map((i) => (i.id === updated.id ? updated : i))
       );
     } catch (e: any) {
-      setError(e.message ?? "Unexpected error while saving field");
+      setError(e.message ?? "Unexpected error while saving");
     } finally {
       setIsSaving(false);
     }
   }
 
-  async function handleDeleteField() {
+  async function handleDelete() {
     if (!selected) return;
     const confirmed = window.confirm(
-      `Delete field "${selected.label}"? This cannot be undone.`
+      `Delete integration "${selected.name}"? This cannot be undone.`
     );
     if (!confirmed) return;
     try {
       setIsSaving(true);
       setError(null);
-      const res = await fetch(`/api/data-extraction/${selected.id}`, {
+      const res = await fetch(`/api/integrations/${selected.id}`, {
         method: "DELETE",
       });
-      if (!res.ok) throw new Error("Failed to delete field");
-      setFields((prev) => {
-        const remaining = prev.filter((f) => f.id !== selected.id);
+      if (!res.ok) throw new Error("Failed to delete integration");
+      setItems((prev) => {
+        const remaining = prev.filter((i) => i.id !== selected.id);
         setSelectedId(remaining[0]?.id);
         return remaining;
       });
     } catch (e: any) {
-      setError(e.message ?? "Unexpected error while deleting field");
+      setError(e.message ?? "Unexpected error while deleting");
     } finally {
       setIsSaving(false);
     }
@@ -135,9 +136,9 @@ export default function DataExtractionPage() {
         }}
       >
         <div>
-          <div style={{ fontSize: "20px", fontWeight: 600 }}>Data Extraction</div>
+          <div style={{ fontSize: "20px", fontWeight: 600 }}>Integrations</div>
           <div style={{ fontSize: "12px", color: "#9ca3af" }}>
-            Define the fields to extract (e.g., email, tracking number, address).
+            Manage API keys and endpoints (OpenAI, Zendesk, etc.). Note: store secrets securely.
           </div>
         </div>
         <div style={{ fontSize: "12px", color: "#9ca3af" }}>
@@ -146,7 +147,6 @@ export default function DataExtractionPage() {
       </header>
 
       <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
-        {/* Primary sidebar */}
         <aside
           style={{
             width: "220px",
@@ -165,16 +165,12 @@ export default function DataExtractionPage() {
             { id: "triage", label: "Triage & Routing", href: "#" },
             { id: "specialists", label: "AI Specialists", href: "/admin" },
             { id: "intents", label: "Intents & Routing", href: "/admin/intents" },
-            { id: "data-extraction", label: "Data Extraction", href: "/admin/data-extraction", active: true },
-            { id: "integrations", label: "Integrations", href: "/admin/integrations" },
+            { id: "data-extraction", label: "Data Extraction", href: "/admin/data-extraction" },
+            { id: "integrations", label: "Integrations", href: "/admin/integrations", active: true },
             { id: "logs", label: "Logs", href: "/admin/logs" },
             { id: "settings", label: "Settings", href: "#" },
           ].map((item) => (
-            <a
-              key={item.id}
-              href={item.href}
-              style={{ textDecoration: "none" }}
-            >
+            <a key={item.id} href={item.href} style={{ textDecoration: "none" }}>
               <div
                 style={{
                   padding: "8px 10px",
@@ -211,14 +207,14 @@ export default function DataExtractionPage() {
             }}
           >
             <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>
-              Fields
+              Integrations
             </div>
             <div style={{ fontSize: 12, color: "#9ca3af", marginBottom: 12 }}>
-              Define what to extract and show an example.
+              Store API base URLs and keys (e.g., OpenAI, Zendesk). Avoid production secrets in client-side code.
             </div>
             {isLoading && (
               <div style={{ fontSize: 12, color: "#9ca3af" }}>
-                Loading fields…
+                Loading integrations…
               </div>
             )}
             {error && (
@@ -227,12 +223,12 @@ export default function DataExtractionPage() {
               </div>
             )}
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {fields.map((field) => {
-                const isSelected = field.id === selectedId;
+              {items.map((item) => {
+                const isSelected = item.id === selectedId;
                 return (
                   <button
-                    key={field.id}
-                    onClick={() => setSelectedId(field.id)}
+                    key={item.id}
+                    onClick={() => setSelectedId(item.id)}
                     style={{
                       textAlign: "left",
                       padding: "8px 10px",
@@ -246,21 +242,21 @@ export default function DataExtractionPage() {
                     }}
                   >
                     <div style={{ fontSize: 13, fontWeight: 500 }}>
-                      {field.label} {field.required ? "(required)" : ""}
+                      {item.name} {item.enabled ? "(enabled)" : "(disabled)"}
                     </div>
                     <div style={{ fontSize: 11, color: "#9ca3af" }}>
-                      {field.name}
+                      {item.type}
                     </div>
                   </button>
                 );
               })}
-              {fields.length === 0 && !isLoading && (
+              {items.length === 0 && !isLoading && (
                 <div style={{ fontSize: 12, color: "#9ca3af" }}>
-                  No fields yet. Create one to start extracting data.
+                  No integrations yet. Create one to get started.
                 </div>
               )}
               <button
-                onClick={handleCreateField}
+                onClick={handleCreate}
                 disabled={isSaving}
                 style={{
                   marginTop: 8,
@@ -274,7 +270,7 @@ export default function DataExtractionPage() {
                   opacity: isSaving ? 0.7 : 1,
                 }}
               >
-                + Create Field
+                + Create Integration
               </button>
             </div>
           </div>
@@ -290,16 +286,50 @@ export default function DataExtractionPage() {
           >
             {!selected && (
               <div style={{ fontSize: 13, color: "#9ca3af" }}>
-                Select a field to edit.
+                Select an integration to edit.
               </div>
             )}
             {selected && (
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 <div>
-                  <div style={{ fontSize: 13, marginBottom: 4 }}>Label</div>
+                  <div style={{ fontSize: 13, marginBottom: 4 }}>Name</div>
                   <input
-                    value={selected.label}
-                    onChange={(e) => updateSelected({ label: e.target.value })}
+                    value={selected.name}
+                    onChange={(e) => updateSelected({ name: e.target.value })}
+                    style={{
+                      width: "100%",
+                      borderRadius: "8px",
+                      border: "1px solid #374151",
+                      background: "#020617",
+                      color: "#e5e7eb",
+                      padding: "8px",
+                      fontSize: "13px",
+                    }}
+                  />
+                </div>
+                <div>
+                  <div style={{ fontSize: 13, marginBottom: 4 }}>Type</div>
+                  <input
+                    value={selected.type}
+                    onChange={(e) => updateSelected({ type: e.target.value })}
+                    placeholder="openai, zendesk, custom"
+                    style={{
+                      width: "100%",
+                      borderRadius: "8px",
+                      border: "1px solid #374151",
+                      background: "#020617",
+                      color: "#e5e7eb",
+                      padding: "8px",
+                      fontSize: "13px",
+                    }}
+                  />
+                </div>
+                <div>
+                  <div style={{ fontSize: 13, marginBottom: 4 }}>Base URL</div>
+                  <input
+                    value={selected.baseUrl}
+                    onChange={(e) => updateSelected({ baseUrl: e.target.value })}
+                    placeholder="https://api.example.com"
                     style={{
                       width: "100%",
                       borderRadius: "8px",
@@ -313,13 +343,11 @@ export default function DataExtractionPage() {
                 </div>
                 <div>
                   <div style={{ fontSize: 13, marginBottom: 4 }}>
-                    Field key (used in backend)
+                    API Key (stored in DB; prefer env vars for prod)
                   </div>
                   <input
-                    value={selected.name}
-                    onChange={(e) =>
-                      updateSelected({ name: e.target.value.trim() })
-                    }
+                    value={selected.apiKey}
+                    onChange={(e) => updateSelected({ apiKey: e.target.value })}
                     style={{
                       width: "100%",
                       borderRadius: "8px",
@@ -351,39 +379,20 @@ export default function DataExtractionPage() {
                     }}
                   />
                 </div>
-                <div>
-                  <div style={{ fontSize: 13, marginBottom: 4 }}>Example value</div>
-                  <input
-                    value={selected.example}
-                    onChange={(e) =>
-                      updateSelected({ example: e.target.value })
-                    }
-                    placeholder="e.g., order_12345"
-                    style={{
-                      width: "100%",
-                      borderRadius: "8px",
-                      border: "1px solid #374151",
-                      background: "#020617",
-                      color: "#e5e7eb",
-                      padding: "8px",
-                      fontSize: "13px",
-                    }}
-                  />
-                </div>
                 <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <input
                     type="checkbox"
-                    checked={selected.required}
+                    checked={selected.enabled}
                     onChange={(e) =>
-                      updateSelected({ required: e.target.checked })
+                      updateSelected({ enabled: e.target.checked })
                     }
                   />
-                  <span style={{ fontSize: 13 }}>Required</span>
+                  <span style={{ fontSize: 13 }}>Enabled</span>
                 </label>
 
                 <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
                   <button
-                    onClick={saveSelectedField}
+                    onClick={saveSelected}
                     disabled={isSaving}
                     style={{
                       padding: "8px 14px",
@@ -397,10 +406,10 @@ export default function DataExtractionPage() {
                       opacity: isSaving ? 0.7 : 1,
                     }}
                   >
-                    Save field
+                    Save integration
                   </button>
                   <button
-                    onClick={handleDeleteField}
+                    onClick={handleDelete}
                     disabled={isSaving}
                     style={{
                       padding: "8px 14px",
