@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type TestResult = {
   reply: string;
@@ -11,6 +11,15 @@ type TestResult = {
   actions: string[];
 };
 
+type LogEntry = {
+  id: string;
+  zendeskTicketId: string;
+  intentName?: string | null;
+  specialistName?: string | null;
+  status: string;
+  timestamp: string;
+};
+
 export default function TestAIPage() {
   const [messages, setMessages] = useState<{ role: "user" | "assistant"; content: string }[]>([]);
   const [message, setMessage] = useState(
@@ -19,6 +28,39 @@ export default function TestAIPage() {
   const [result, setResult] = useState<TestResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [history, setHistory] = useState<LogEntry[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+
+  async function loadHistory() {
+    try {
+      setIsLoadingHistory(true);
+      const res = await fetch("/api/logs");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to load history");
+      const filtered = (data as any[])
+        .filter((l) => typeof l.zendeskTicketId === "string" && l.zendeskTicketId.startsWith("test-"))
+        .map((l) => ({
+          id: l.id,
+          zendeskTicketId: l.zendeskTicketId,
+          intentName: l.intentName ?? null,
+          specialistName: l.specialistName ?? null,
+          status: l.status ?? "unknown",
+          timestamp: l.timestamp ?? l.created_at ?? "",
+        }))
+        .sort(
+          (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+        );
+      setHistory(filtered);
+    } catch (e: any) {
+      console.error("History load failed", e);
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  }
+
+  useEffect(() => {
+    loadHistory();
+  }, []);
 
   async function handleTest() {
     if (!message.trim()) return;
@@ -133,7 +175,7 @@ export default function TestAIPage() {
             flex: 1,
             padding: "16px 20px",
             display: "grid",
-            gridTemplateColumns: "280px 1fr",
+            gridTemplateColumns: "320px 1fr",
             gap: 16,
             overflowY: "auto",
           }}
@@ -176,6 +218,63 @@ export default function TestAIPage() {
                 Actions and routing steps will appear here after a test.
               </div>
             )}
+            <div
+              style={{
+                marginTop: 10,
+                borderTop: "1px solid #e5e7eb",
+                paddingTop: 10,
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <div style={{ fontSize: 13, fontWeight: 600 }}>Test history</div>
+              <button
+                onClick={loadHistory}
+                disabled={isLoadingHistory}
+                style={{
+                  padding: "6px 10px",
+                  borderRadius: "8px",
+                  border: "1px solid #e5e7eb",
+                  background: "#f9fafb",
+                  fontSize: 12,
+                  cursor: isLoadingHistory ? "default" : "pointer",
+                  opacity: isLoadingHistory ? 0.7 : 1,
+                }}
+              >
+                {isLoadingHistory ? "Refreshing..." : "Refresh"}
+              </button>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 320, overflowY: "auto" }}>
+              {history.length === 0 && (
+                <div style={{ fontSize: 12, color: "#6b7280" }}>
+                  No test runs yet.
+                </div>
+              )}
+              {history.map((h) => (
+                <div
+                  key={h.id}
+                  style={{
+                    border: "1px solid #e5e7eb",
+                    borderRadius: "8px",
+                    padding: "8px",
+                    background: "#f9fafb",
+                    fontSize: 12,
+                  }}
+                >
+                  <div style={{ fontWeight: 600, color: "#111827" }}>{h.zendeskTicketId}</div>
+                  <div style={{ color: "#6b7280" }}>
+                    Intent: {h.intentName ?? "unknown"} • Specialist: {h.specialistName ?? "none"}
+                  </div>
+                  <div style={{ color: "#6b7280" }}>
+                    Status: {h.status}
+                  </div>
+                  <div style={{ color: "#9ca3af", fontSize: 11 }}>
+                    {h.timestamp ? new Date(h.timestamp).toLocaleString() : ""}
+                  </div>
+                </div>
+              ))}
+            </div>
             {result && (
               <div
                 style={{
