@@ -133,11 +133,11 @@ export async function POST(req: NextRequest) {
       {
         role: "system",
         content:
-          "You are an intent classifier. Choose the single best intent_id for the user message from the provided list. If none fit, return \"unknown\".",
+          "You are an intent classifier. Choose the single best intent_id for the user message from the provided list. Respond ONLY with a JSON object like {\"intent_id\":\"<id-or-unknown>\"}. If none fit, use \"unknown\".",
       },
       {
         role: "user",
-        content: `User message:\n"""\n${latestComment}\n"""\n\nIntents:\n${intentListForPrompt}`,
+        content: `User message:\n"""\n${latestComment}\n"""\n\nIntents:\n${intentListForPrompt}\n\nReturn a JSON object with intent_id.`,
       },
     ];
 

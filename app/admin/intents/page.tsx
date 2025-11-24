@@ -11,6 +11,13 @@ export default function IntentsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [testMessage, setTestMessage] = useState("");
+  const [testResult, setTestResult] = useState<{
+    intentId: string | null;
+    intentName: string | null;
+    raw: string | null;
+    error?: string | null;
+  } | null>(null);
 
   useEffect(() => {
     async function loadData() {
@@ -117,6 +124,46 @@ export default function IntentsPage() {
     }
   }
 
+  async function handleTestIntent() {
+    if (!testMessage.trim()) return;
+    try {
+      setIsSaving(true);
+      setError(null);
+      setTestResult(null);
+
+      const res = await fetch("/api/intents/classify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: testMessage }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setTestResult({
+          intentId: null,
+          intentName: null,
+          raw: null,
+          error: data.error || "Intent test failed",
+        });
+        return;
+      }
+      setTestResult({
+        intentId: data.intentId ?? null,
+        intentName: data.intentName ?? null,
+        raw: data.raw ?? null,
+        error: null,
+      });
+    } catch (e: any) {
+      setTestResult({
+        intentId: null,
+        intentName: null,
+        raw: null,
+        error: e.message ?? "Unexpected error while testing intent",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
   return (
     <div
       style={{
@@ -207,6 +254,69 @@ export default function IntentsPage() {
             overflowY: "auto",
           }}
         >
+          {/* Intent tester */}
+          <section
+            style={{
+              borderRadius: "12px",
+              border: "1px solid #1f2937",
+              background: "#0b1220",
+              padding: "14px",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 600 }}>Quick intent tester</div>
+                <div style={{ fontSize: 12, color: "#9ca3af" }}>
+                  Enter a sample customer message to see which intent would match.
+                </div>
+              </div>
+            </div>
+            <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
+              <input
+                value={testMessage}
+                onChange={(e) => setTestMessage(e.target.value)}
+                placeholder="e.g., Where is my order?"
+                style={{
+                  flex: 1,
+                  borderRadius: "8px",
+                  border: "1px solid #374151",
+                  background: "#020617",
+                  color: "#e5e7eb",
+                  padding: "8px",
+                  fontSize: "13px",
+                }}
+              />
+              <button
+                onClick={handleTestIntent}
+                disabled={isSaving}
+                style={{
+                  padding: "8px 12px",
+                  borderRadius: "999px",
+                  border: "none",
+                  background: "#22c55e",
+                  color: "#020617",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  cursor: isSaving ? "default" : "pointer",
+                  opacity: isSaving ? 0.7 : 1,
+                }}
+              >
+                Test
+              </button>
+            </div>
+            {testResult && (
+              <div style={{ marginTop: 8, fontSize: 12, color: testResult.error ? "#f97316" : "#9ca3af" }}>
+                {testResult.error && <div>Error: {testResult.error}</div>}
+                {!testResult.error && (
+                  <div>
+                    Matched intent: {testResult.intentName ?? "unknown"}{" "}
+                    {testResult.intentId && <span style={{ color: "#e5e7eb" }}>({testResult.intentId})</span>}
+                  </div>
+                )}
+              </div>
+            )}
+          </section>
+
           <section
             style={{
               borderRadius: "12px",
