@@ -163,11 +163,11 @@ export async function POST(req: NextRequest) {
       {
         role: "system",
         content:
-          'You are an intent classifier. Choose the single best intent_id for the user message from the provided list. Respond ONLY with a JSON object like {"intent_id":"<id-or-unknown>"}. If none fit, use "unknown".',
+          'You are an intent classifier. Choose the single best intent_id for the user message from the provided list. Respond ONLY with a JSON object like {"intent_id":"<id-or-unknown>","confidence":0.0-1.0}. If the message does not clearly map to one intent or confidence is low, set intent_id to "unknown" and confidence to 0.',
       },
       {
         role: "user",
-        content: `User message:\n"""\n${latestComment}\n"""\n\nIntents:\n${intentListForPrompt}\n\nReturn a JSON object with intent_id.`,
+        content: `User message:\n"""\n${latestComment}\n"""\n\nIntents:\n${intentListForPrompt}\n\nReturn a JSON object with intent_id and confidence.`,
       },
     ];
 
@@ -211,30 +211,41 @@ export async function POST(req: NextRequest) {
     }
 
     const classifyJson = await classifyRes.json();
-    const intentId =
+    const parsedClassify =
       (() => {
         try {
-          const parsed = JSON.parse(
+          return JSON.parse(
             classifyJson.choices?.[0]?.message?.content || "{}"
           );
-          return parsed.intent_id as string;
         } catch {
-          return null;
+          return {};
         }
-      })() || intents[0]?.id;
+      })() as { intent_id?: string; confidence?: number };
 
-    const matchedIntent = intents.find((i) => i.id === intentId) ?? intents[0] ?? null;
+    const intentId = parsedClassify.intent_id || intents[0]?.id;
+    const confidence =
+      typeof parsedClassify.confidence === "number"
+        ? parsedClassify.confidence
+        : 0;
+    const CONFIDENCE_THRESHOLD = 0.6;
+
+    const matchedIntent =
+      confidence >= CONFIDENCE_THRESHOLD
+        ? intents.find((i) => i.id === intentId) ?? intents[0] ?? null
+        : null;
     const matchedSpecialist =
-      specialists.find((s) => s.id === matchedIntent?.specialist_id) ?? null;
+      matchedIntent && confidence >= CONFIDENCE_THRESHOLD
+        ? specialists.find((s) => s.id === matchedIntent.specialist_id) ?? null
+        : null;
 
     await logTicketEvent(origin, {
       ticketId,
       eventType: "intent_detected",
       summary: `Intent: ${matchedIntent?.name ?? "unknown"}`,
-      detail: `Specialist mapped: ${matchedSpecialist?.name ?? "none"}`,
+      detail: `Confidence: ${confidence.toFixed(2)} • Specialist: ${matchedSpecialist?.name ?? "none"}`,
     });
 
-    if (!matchedSpecialist) {
+    if (!matchedIntent || !matchedSpecialist || confidence < CONFIDENCE_THRESHOLD) {
       const authString = Buffer.from(
         `${zendeskEmail}/token:${zendeskToken}`
       ).toString("base64");
@@ -265,14 +276,20 @@ export async function POST(req: NextRequest) {
         intentId: matchedIntent?.id ?? null,
         intentName: matchedIntent?.name ?? null,
         inputSummary: String(latestComment).slice(0, 200),
-        outputSummary: "No specialist matched; handed to human.",
+        outputSummary:
+          confidence < CONFIDENCE_THRESHOLD
+            ? "Low confidence intent match; handed to human."
+            : "No specialist matched; handed to human.",
         status: "fallback",
       });
       await logTicketEvent(origin, {
         ticketId,
         eventType: "handover",
-        summary: "No specialist matched; tagged bot-handover",
-        detail: "",
+        summary:
+          confidence < CONFIDENCE_THRESHOLD
+            ? "Low confidence; tagged bot-handover"
+            : "No specialist matched; tagged bot-handover",
+        detail: `Confidence ${confidence.toFixed(2)}, intent ${matchedIntent?.name ?? "unknown"}`,
       });
 
       return NextResponse.json({

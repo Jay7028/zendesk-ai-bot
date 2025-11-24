@@ -60,11 +60,11 @@ export async function POST(req: NextRequest) {
       {
         role: "system",
         content:
-          "You are an intent classifier. Choose the single best intent_id for the user message from the provided list. Respond ONLY with a JSON object like {\"intent_id\":\"<id-or-unknown>\"}. If none fit, use \"unknown\".",
+          'You are an intent classifier. Choose the single best intent_id for the user message from the provided list. Respond ONLY with a JSON object like {"intent_id":"<id-or-unknown>","confidence":0.0-1.0}. If none fit or confidence is low, use "unknown" and confidence 0.',
       },
       {
         role: "user",
-        content: `User message:\n"""\n${userMessage}\n"""\n\nIntents:\n${intentListForPrompt}\n\nReturn a JSON object with intent_id.`,
+        content: `User message:\n"""\n${userMessage}\n"""\n\nIntents:\n${intentListForPrompt}\n\nReturn a JSON object with intent_id and confidence.`,
       },
     ];
 
@@ -92,21 +92,32 @@ export async function POST(req: NextRequest) {
     }
 
     const classifyJson = await classifyRes.json();
-    const intentId =
+    const parsedClassify =
       (() => {
         try {
-          const parsed = JSON.parse(
+          return JSON.parse(
             classifyJson.choices?.[0]?.message?.content || "{}"
           );
-          return parsed.intent_id as string;
         } catch {
-          return null;
+          return {};
         }
-      })() || intents[0]?.id;
+      })() as { intent_id?: string; confidence?: number };
 
-    const matchedIntent = intents.find((i) => i.id === intentId) ?? intents[0] ?? null;
+    const intentId = parsedClassify.intent_id || intents[0]?.id;
+    const confidence =
+      typeof parsedClassify.confidence === "number"
+        ? parsedClassify.confidence
+        : 0;
+    const CONFIDENCE_THRESHOLD = 0.6;
+
+    const matchedIntent =
+      confidence >= CONFIDENCE_THRESHOLD
+        ? intents.find((i) => i.id === intentId) ?? intents[0] ?? null
+        : null;
     const matchedSpecialist =
-      specialists.find((s) => s.id === matchedIntent?.specialist_id) ?? specialists[0] ?? null;
+      matchedIntent && confidence >= CONFIDENCE_THRESHOLD
+        ? specialists.find((s) => s.id === matchedIntent.specialist_id) ?? null
+        : null;
 
     const replyPrompt = [
       {
