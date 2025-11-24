@@ -16,7 +16,7 @@ function camelToDb(body: Partial<IntentConfig>) {
     id: body.id,
     name: body.name,
     description: body.description ?? "",
-    specialist_id: body.specialistId ? body.specialistId : null,
+    specialist_id: body.specialistId ?? "",
   };
 }
 

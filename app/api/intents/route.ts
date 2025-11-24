@@ -16,7 +16,8 @@ function camelToDb(body: Partial<IntentConfig>) {
     id: body.id,
     name: body.name,
     description: body.description ?? "",
-    specialist_id: body.specialistId ? body.specialistId : null,
+    // Store empty string when unset to avoid failing inserts if the column is non-nullable.
+    specialist_id: body.specialistId ?? "",
   };
 }
 
