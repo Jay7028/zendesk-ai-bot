@@ -92,7 +92,7 @@ export default function LogsPage() {
         id: `log-${l.id}`,
         ticketId: l.zendeskTicketId,
         eventType: l.status,
-        summary: `Specialist: ${l.specialistName} (${l.specialistId})${l.intentName ? ` • Intent: ${l.intentName}` : ""}`,
+        summary: `Specialist: ${l.specialistName} (${l.specialistId})${l.intentName ? ` | Intent: ${l.intentName}` : ""}`,
         detail: `Input: ${l.inputSummary}\nOutput: ${l.outputSummary}`,
         createdAt: l.timestamp,
       }));
@@ -107,32 +107,34 @@ export default function LogsPage() {
         minHeight: "100vh",
         display: "flex",
         flexDirection: "column",
-        background: "#020617",
-        color: "#e5e7eb",
+        background: "#f5f7fb",
+        color: "#111827",
         fontFamily:
-          "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+          "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
       }}
     >
       {/* Top bar */}
       <header
         style={{
           padding: "12px 24px",
-          borderBottom: "1px solid #111827",
+          borderBottom: "1px solid #e5e7eb",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          background:
-            "radial-gradient(circle at top left, #22c55e22, transparent 60%)",
+          background: "#ffffff",
+          position: "sticky",
+          top: 0,
+          zIndex: 10,
         }}
       >
         <div>
-          <div style={{ fontSize: "20px", fontWeight: 600 }}>Ticket Activity</div>
-          <div style={{ fontSize: "12px", color: "#9ca3af" }}>
+          <div style={{ fontSize: "20px", fontWeight: 700 }}>Ticket Activity</div>
+          <div style={{ fontSize: "12px", color: "#6b7280" }}>
             See intents, specialist replies, handovers, and errors per ticket.
           </div>
         </div>
-        <div style={{ fontSize: "12px", color: "#9ca3af" }}>
-          Environment: <span style={{ color: "#22c55e" }}>Development</span>
+        <div style={{ fontSize: "12px", color: "#6b7280" }}>
+          Environment: <span style={{ color: "#22c55e", fontWeight: 600 }}>Development</span>
         </div>
       </header>
 
@@ -141,14 +143,15 @@ export default function LogsPage() {
         <aside
           style={{
             width: "220px",
-            borderRight: "1px solid #111827",
+            borderRight: "1px solid #e5e7eb",
             padding: "16px 12px",
             display: "flex",
             flexDirection: "column",
             gap: 8,
+            background: "#f9fafb",
           }}
         >
-          <div style={{ fontSize: "12px", color: "#9ca3af", marginBottom: 8 }}>
+          <div style={{ fontSize: "12px", color: "#6b7280", marginBottom: 8, fontWeight: 600 }}>
             Navigation
           </div>
           {[
@@ -167,12 +170,14 @@ export default function LogsPage() {
             >
               <div
                 style={{
-                  padding: "8px 10px",
-                  borderRadius: "8px",
+                  padding: "10px 12px",
+                  borderRadius: "10px",
                   cursor: item.href === "#" ? "default" : "pointer",
                   fontSize: "13px",
-                  background: item.active ? "#111827" : "transparent",
-                  color: item.active ? "#e5e7eb" : "#9ca3af",
+                  background: item.active ? "#eef2ff" : "transparent",
+                  color: item.active ? "#1f2937" : "#6b7280",
+                  fontWeight: item.active ? 600 : 500,
+                  border: item.active ? "1px solid #c7d2fe" : "1px solid transparent",
                 }}
               >
                 {item.label}
@@ -185,12 +190,16 @@ export default function LogsPage() {
         <main
           style={{
             flex: 1,
-            padding: "16px 24px",
+            padding: "16px 20px",
+            display: "flex",
+            flexDirection: "column",
+            gap: 12,
             overflowY: "auto",
+            background: "#f5f7fb",
           }}
         >
           {isLoading && (
-            <div style={{ fontSize: 12, color: "#9ca3af" }}>Loading logs…</div>
+            <div style={{ fontSize: 12, color: "#6b7280" }}>Loading logs...</div>
           )}
           {error && (
             <div style={{ fontSize: 12, color: "#f97316", marginBottom: 8 }}>
@@ -202,20 +211,23 @@ export default function LogsPage() {
             style={{
               display: "grid",
               gridTemplateColumns: "280px 1fr",
-              gap: 12,
+              gap: 16,
               minHeight: "60vh",
             }}
           >
             <div
               style={{
-                border: "1px solid #1f2937",
+                border: "1px solid #e5e7eb",
                 borderRadius: "12px",
                 padding: "12px",
-                background: "#0b1220",
+                background: "#ffffff",
                 overflowY: "auto",
+                boxShadow: "0 1px 4px rgba(15,23,42,0.06)",
               }}
             >
-              <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>
+              <div
+                style={{ fontSize: 14, fontWeight: 600, marginBottom: 8, color: "#111827" }}
+              >
                 Tickets
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -227,27 +239,30 @@ export default function LogsPage() {
                       onClick={() => setSelectedTicket(t.ticketId)}
                       style={{
                         textAlign: "left",
-                        padding: "8px 10px",
-                        borderRadius: "8px",
+                        padding: "10px 12px",
+                        borderRadius: "10px",
                         border: isSelected
-                          ? "1px solid #22c55e"
-                          : "1px solid #1f2937",
-                        background: isSelected ? "#111827" : "#020617",
-                        color: "#e5e7eb",
+                          ? "1px solid #c7d2fe"
+                          : "1px solid #e5e7eb",
+                        background: isSelected ? "#eef2ff" : "#ffffff",
+                        color: "#111827",
                         cursor: "pointer",
+                        boxShadow: isSelected
+                          ? "0 4px 10px rgba(99,102,241,0.1)"
+                          : "0 1px 4px rgba(15,23,42,0.06)",
                       }}
                     >
                       <div style={{ fontSize: 13, fontWeight: 500 }}>
                         {t.ticketId}
                       </div>
-                      <div style={{ fontSize: 11, color: "#9ca3af" }}>
-                        {t.lastStatus} • {t.count} events
+                      <div style={{ fontSize: 11, color: "#6b7280" }}>
+                        Status: {t.lastStatus} - {t.count} events
                       </div>
                     </button>
                   );
                 })}
                 {tickets.length === 0 && !isLoading && (
-                  <div style={{ fontSize: 12, color: "#9ca3af" }}>
+                  <div style={{ fontSize: 12, color: "#6b7280" }}>
                     No tickets yet.
                   </div>
                 )}
@@ -256,25 +271,26 @@ export default function LogsPage() {
 
             <div
               style={{
-                border: "1px solid #1f2937",
+                border: "1px solid #e5e7eb",
                 borderRadius: "12px",
-                padding: "12px",
-                background: "#020617",
+                padding: "16px",
+                background: "#ffffff",
                 overflowY: "auto",
+                boxShadow: "0 1px 4px rgba(15,23,42,0.06)",
               }}
             >
               {!selectedTicket && (
-                <div style={{ fontSize: 13, color: "#9ca3af" }}>
+                <div style={{ fontSize: 13, color: "#6b7280" }}>
                   Select a ticket to view activity.
                 </div>
               )}
               {selectedTicket && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  <div style={{ fontSize: 15, fontWeight: 600, color: "#111827" }}>
                     Ticket {selectedTicket}
                   </div>
                   {timeline.length === 0 && (
-                    <div style={{ fontSize: 12, color: "#9ca3af" }}>
+                    <div style={{ fontSize: 12, color: "#6b7280" }}>
                       No events for this ticket yet.
                     </div>
                   )}
@@ -282,10 +298,11 @@ export default function LogsPage() {
                     <div
                       key={ev.id}
                       style={{
-                        border: "1px solid #1f2937",
-                        borderRadius: "8px",
-                        padding: "8px",
-                        background: "#0b1220",
+                        border: "1px solid #e5e7eb",
+                        borderRadius: "10px",
+                        padding: "10px",
+                        background: "#f9fafb",
+                        boxShadow: "0 1px 4px rgba(15,23,42,0.06)",
                       }}
                     >
                       <div
@@ -294,17 +311,17 @@ export default function LogsPage() {
                           justifyContent: "space-between",
                           fontSize: 12,
                           marginBottom: 4,
-                          color: "#9ca3af",
+                          color: "#6b7280",
                         }}
                       >
                         <span>{ev.eventType}</span>
                         <span>{new Date(ev.createdAt).toLocaleString()}</span>
                       </div>
-                      <div style={{ fontSize: 13, color: "#e5e7eb" }}>
+                      <div style={{ fontSize: 13, color: "#111827" }}>
                         {ev.summary}
                       </div>
                       {ev.detail && (
-                        <div style={{ fontSize: 12, color: "#9ca3af", whiteSpace: "pre-wrap" }}>
+                        <div style={{ fontSize: 12, color: "#6b7280", whiteSpace: "pre-wrap" }}>
                           {ev.detail}
                         </div>
                       )}
@@ -319,3 +336,14 @@ export default function LogsPage() {
     </div>
   );
 }
+
+
+
+
+
+
+
+
+
+
+

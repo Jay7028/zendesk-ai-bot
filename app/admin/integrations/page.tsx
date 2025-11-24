@@ -284,156 +284,186 @@ export default function IntegrationsPage() {
 
           <div
             style={{
-              border: "1px solid #1f2937",
+              border: "1px solid #e5e7eb",
               borderRadius: "12px",
-              padding: "14px",
-              background: "#020617",
+              padding: "16px",
+              background: "#ffffff",
+              boxShadow: "0 4px 12px rgba(15,23,42,0.05)",
               overflowY: "auto",
+              display: "flex",
+              flexDirection: "column",
+              gap: 12,
             }}
           >
             {!selected && (
-              <div style={{ fontSize: 13, color: "#9ca3af" }}>
+              <div style={{ fontSize: 13, color: "#6b7280" }}>
                 Select an integration to edit.
               </div>
             )}
             {selected && (
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                <div>
-                  <div style={{ fontSize: 13, marginBottom: 4 }}>Name</div>
-                  <input
-                    value={selected.name}
-                    onChange={(e) => updateSelected({ name: e.target.value })}
-                    style={{
-                      width: "100%",
-                      borderRadius: "8px",
-                      border: "1px solid #374151",
-                      background: "#020617",
-                      color: "#e5e7eb",
-                      padding: "8px",
-                      fontSize: "13px",
-                    }}
-                  />
-                </div>
-                <div>
-                  <div style={{ fontSize: 13, marginBottom: 4 }}>Type</div>
-                  <input
-                    value={selected.type}
-                    onChange={(e) => updateSelected({ type: e.target.value })}
-                    placeholder="openai, zendesk, custom"
-                    style={{
-                      width: "100%",
-                      borderRadius: "8px",
-                      border: "1px solid #374151",
-                      background: "#020617",
-                      color: "#e5e7eb",
-                      padding: "8px",
-                      fontSize: "13px",
-                    }}
-                  />
-                </div>
-                <div>
-                  <div style={{ fontSize: 13, marginBottom: 4 }}>Base URL</div>
-                  <input
-                    value={selected.baseUrl}
-                    onChange={(e) => updateSelected({ baseUrl: e.target.value })}
-                    placeholder="https://api.example.com"
-                    style={{
-                      width: "100%",
-                      borderRadius: "8px",
-                      border: "1px solid #374151",
-                      background: "#020617",
-                      color: "#e5e7eb",
-                      padding: "8px",
-                      fontSize: "13px",
-                    }}
-                  />
-                </div>
-                <div>
-                  <div style={{ fontSize: 13, marginBottom: 4 }}>
-                    API Key (stored in DB; prefer env vars for prod)
+              <>
+                <div style={{ marginBottom: 4 }}>
+                  <div style={{ fontSize: 15, fontWeight: 600, color: "#111827" }}>
+                    Integration details
                   </div>
-                  <input
-                    value={selected.apiKey}
-                    onChange={(e) => updateSelected({ apiKey: e.target.value })}
-                    style={{
-                      width: "100%",
-                      borderRadius: "8px",
-                      border: "1px solid #374151",
-                      background: "#020617",
-                      color: "#e5e7eb",
-                      padding: "8px",
-                      fontSize: "13px",
-                    }}
-                  />
+                  <div style={{ fontSize: 12, color: "#6b7280" }}>
+                    Configure endpoints and keys for this provider.
+                  </div>
                 </div>
-                <div>
-                  <div style={{ fontSize: 13, marginBottom: 4 }}>Description</div>
-                  <textarea
-                    value={selected.description}
-                    onChange={(e) =>
-                      updateSelected({ description: e.target.value })
-                    }
-                    rows={3}
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  <div>
+                    <div style={{ fontSize: 13, marginBottom: 4, color: "#374151" }}>
+                      Name
+                    </div>
+                    <input
+                      value={selected.name}
+                      onChange={(e) => updateSelected({ name: e.target.value })}
+                      style={{
+                        width: "100%",
+                        borderRadius: "8px",
+                        border: "1px solid #e5e7eb",
+                        background: "#f9fafb",
+                        color: "#111827",
+                        padding: "8px",
+                        fontSize: "13px",
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 13, marginBottom: 4, color: "#374151" }}>
+                      Type
+                    </div>
+                    <input
+                      value={selected.type}
+                      onChange={(e) => updateSelected({ type: e.target.value })}
+                      placeholder="openai, zendesk, custom"
+                      style={{
+                        width: "100%",
+                        borderRadius: "8px",
+                        border: "1px solid #e5e7eb",
+                        background: "#f9fafb",
+                        color: "#111827",
+                        padding: "8px",
+                        fontSize: "13px",
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 13, marginBottom: 4, color: "#374151" }}>
+                      Base URL
+                    </div>
+                    <input
+                      value={selected.baseUrl}
+                      onChange={(e) => updateSelected({ baseUrl: e.target.value })}
+                      placeholder="https://api.example.com"
+                      style={{
+                        width: "100%",
+                        borderRadius: "8px",
+                        border: "1px solid #e5e7eb",
+                        background: "#f9fafb",
+                        color: "#111827",
+                        padding: "8px",
+                        fontSize: "13px",
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 13, marginBottom: 4, color: "#374151" }}>
+                      API Key (stored in DB; prefer env vars for prod)
+                    </div>
+                    <input
+                      value={selected.apiKey}
+                      onChange={(e) => updateSelected({ apiKey: e.target.value })}
+                      style={{
+                        width: "100%",
+                        borderRadius: "8px",
+                        border: "1px solid #e5e7eb",
+                        background: "#f9fafb",
+                        color: "#111827",
+                        padding: "8px",
+                        fontSize: "13px",
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 13, marginBottom: 4, color: "#374151" }}>
+                      Description
+                    </div>
+                    <textarea
+                      value={selected.description}
+                      onChange={(e) =>
+                        updateSelected({ description: e.target.value })
+                      }
+                      rows={3}
+                      style={{
+                        width: "100%",
+                        borderRadius: "8px",
+                        border: "1px solid #e5e7eb",
+                        background: "#f9fafb",
+                        color: "#111827",
+                        padding: "8px",
+                        fontSize: "12px",
+                        resize: "vertical",
+                      }}
+                    />
+                  </div>
+                  <label
                     style={{
-                      width: "100%",
-                      borderRadius: "8px",
-                      border: "1px solid #374151",
-                      background: "#020617",
-                      color: "#e5e7eb",
-                      padding: "8px",
-                      fontSize: "12px",
-                      resize: "vertical",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      fontSize: 13,
+                      color: "#111827",
                     }}
-                  />
-                </div>
-                <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <input
-                    type="checkbox"
-                    checked={selected.enabled}
-                    onChange={(e) =>
-                      updateSelected({ enabled: e.target.checked })
-                    }
-                  />
-                  <span style={{ fontSize: 13 }}>Enabled</span>
-                </label>
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selected.enabled}
+                      onChange={(e) =>
+                        updateSelected({ enabled: e.target.checked })
+                      }
+                    />
+                    <span>Enabled</span>
+                  </label>
 
-                <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
-                  <button
-                    onClick={saveSelected}
-                    disabled={isSaving}
-                    style={{
-                      padding: "8px 14px",
-                      borderRadius: "999px",
-                      border: "none",
-                      cursor: isSaving ? "default" : "pointer",
-                      background: "#22c55e",
-                      color: "#020617",
-                      fontSize: "12px",
-                      fontWeight: 600,
-                      opacity: isSaving ? 0.7 : 1,
-                    }}
-                  >
-                    Save integration
-                  </button>
-                  <button
-                    onClick={handleDelete}
-                    disabled={isSaving}
-                    style={{
-                      padding: "8px 14px",
-                      borderRadius: "999px",
-                      border: "1px solid #ef4444",
-                      background: "transparent",
-                      color: "#ef4444",
-                      cursor: isSaving ? "default" : "pointer",
-                      fontSize: "12px",
-                      fontWeight: 600,
-                      opacity: isSaving ? 0.7 : 1,
-                    }}
-                  >
-                    Delete
-                  </button>
+                  <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
+                    <button
+                      onClick={saveSelected}
+                      disabled={isSaving}
+                      style={{
+                        padding: "8px 14px",
+                        borderRadius: "999px",
+                        border: "none",
+                        cursor: isSaving ? "default" : "pointer",
+                        background: "#6366f1",
+                        color: "#ffffff",
+                        fontSize: "12px",
+                        fontWeight: 600,
+                        opacity: isSaving ? 0.7 : 1,
+                      }}
+                    >
+                      Save integration
+                    </button>
+                    <button
+                      onClick={handleDelete}
+                      disabled={isSaving}
+                      style={{
+                        padding: "8px 14px",
+                        borderRadius: "999px",
+                        border: "1px solid #ef4444",
+                        background: "#fff5f5",
+                        color: "#b91c1c",
+                        cursor: isSaving ? "default" : "pointer",
+                        fontSize: "12px",
+                        fontWeight: 600,
+                        opacity: isSaving ? 0.7 : 1,
+                      }}
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
-              </div>
+              </>
             )}
           </div>
         </main>
