@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "../../lib/supabase";
+import { supabaseAdmin } from "../../../lib/supabase";
 import type { DataField } from "./types";
 
 function dbToCamel(row: any): DataField {
