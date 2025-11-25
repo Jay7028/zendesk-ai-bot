@@ -101,7 +101,10 @@ export async function trackOnce(opts: {
   }
 
   if (!uuid) {
-    const err = new Error("Parcelsapp tracking request did not return uuid");
+    const msg = initRes?.error
+      ? `Parcelsapp init error: ${initRes.error} ${initRes.description || ""}`.trim()
+      : "Parcelsapp tracking request did not return uuid";
+    const err = new Error(msg);
     (err as any)._paBody = initRes;
     throw err;
   }
