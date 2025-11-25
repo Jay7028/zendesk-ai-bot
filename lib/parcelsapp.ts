@@ -156,6 +156,8 @@ export function summarizeParcel(raw: any, trackingId: string): ParcelSummary {
     ? shipment.checkpoints
     : Array.isArray(shipment?.events)
     ? shipment.events
+    : Array.isArray(shipment?.states)
+    ? shipment.states
     : [];
 
   const lastCheckpoint = checkpoints.length ? checkpoints[checkpoints.length - 1] : null;
