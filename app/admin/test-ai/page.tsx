@@ -75,7 +75,14 @@ export default function TestAiPage() {
       const res = await fetch("/api/test-ai", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: nextMessages, ticketId: ticketId || undefined }),
+        body: JSON.stringify({
+          messages: nextMessages,
+          ticketId: ticketId || undefined,
+          previousIntentId: result?.intentId,
+          previousIntentName: result?.intentName,
+          previousSpecialistId: result?.specialistId,
+          previousSpecialistName: result?.specialistName,
+        }),
       });
       const data = await res.json();
       if (!res.ok) {

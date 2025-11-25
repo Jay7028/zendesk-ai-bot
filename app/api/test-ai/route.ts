@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "../../../lib/supabase";
-import { trackOnce, summarizeParcel, ParcelSummary } from "../../../lib/parcelsapp";
+import { trackOnce, summarizeParcel, type ParcelSummary } from "../../../lib/parcelsapp";
 
 type SpecialistRow = {
   id: string;
@@ -25,17 +25,20 @@ type IntentRow = {
 
 type Message = { role: "user" | "assistant"; content: string };
 
-async function logRun(origin: string, payload: {
-  ticketId: string;
-  specialistId: string | null;
-  specialistName: string | null;
-  intentId: string | null;
-  intentName: string | null;
-  inputSummary: string;
-  outputSummary: string;
-  status: "success" | "fallback" | "escalated";
-  knowledgeSources?: string[];
-}) {
+async function logRun(
+  origin: string,
+  payload: {
+    ticketId: string;
+    specialistId: string | null;
+    specialistName: string | null;
+    intentId: string | null;
+    intentName: string | null;
+    inputSummary: string;
+    outputSummary: string;
+    status: "success" | "fallback" | "escalated";
+    knowledgeSources?: string[];
+  }
+) {
   try {
     await fetch(new URL("/api/logs", origin), {
       method: "POST",
@@ -57,12 +60,10 @@ async function logRun(origin: string, payload: {
   }
 }
 
-async function logTicketEvent(origin: string, payload: {
-  ticketId: string;
-  eventType: string;
-  summary: string;
-  detail?: string;
-}) {
+async function logTicketEvent(
+  origin: string,
+  payload: { ticketId: string; eventType: string; summary: string; detail?: string }
+) {
   try {
     await fetch(new URL("/api/ticket-events", origin), {
       method: "POST",
@@ -93,23 +94,20 @@ export async function POST(req: NextRequest) {
       : body.message
       ? [{ role: "user", content: body.message }]
       : [];
+    const previousIntentId: string | undefined = body.previousIntentId || undefined;
+    const previousSpecialistId: string | undefined = body.previousSpecialistId || undefined;
 
-  const latestUser = [...messages].reverse().find((m) => m.role === "user");
-  const userMessage = latestUser?.content?.trim() || "No message provided";
-  const requestedTrackingNumber: string | undefined =
-    (body.trackingNumber || body.tracking_number || "").toString().trim() ||
-    undefined;
-  const requestedCourier: string | undefined =
-    (body.courierCode || body.courier_code || "").toString().trim() ||
-    undefined;
-const requestedDestination: string | undefined = undefined;
+    const latestUser = [...messages].reverse().find((m) => m.role === "user");
+    const userMessage = latestUser?.content?.trim() || "No message provided";
+    const requestedTrackingNumber: string | undefined =
+      (body.trackingNumber || body.tracking_number || "").toString().trim() || undefined;
+    const requestedCourier: string | undefined =
+      (body.courierCode || body.courier_code || "").toString().trim() || undefined;
+    const requestedDestination: string | undefined = undefined;
 
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
-      return NextResponse.json(
-        { error: "OPENAI_API_KEY not set on server" },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: "OPENAI_API_KEY not set on server" }, { status: 500 });
     }
     const ticketId: string = body.ticketId || `test-${Date.now()}`;
 
@@ -121,10 +119,7 @@ const requestedDestination: string | undefined = undefined;
 
     if (intentsError || specsError) {
       console.error("Supabase load error", intentsError || specsError);
-      return NextResponse.json(
-        { error: "Failed to load intents/specialists" },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: "Failed to load intents/specialists" }, { status: 500 });
     }
 
     const intents: IntentRow[] = intentRows ?? [];
@@ -134,7 +129,10 @@ const requestedDestination: string | undefined = undefined;
     const origin = req.nextUrl.origin;
 
     const intentListForPrompt = intents
-      .map((i) => `- ${i.id}: ${i.name} — ${i.description}`)
+      .map((i) => `- ${i.id}: ${i.name} - ${i.description}`)
+      .join("\n");
+    const conversationSummary = messages
+      .map((m) => `${m.role === "user" ? "Customer" : "Assistant"}: ${m.content}`)
       .join("\n");
 
     const classifyPrompt = [
@@ -145,7 +143,7 @@ const requestedDestination: string | undefined = undefined;
       },
       {
         role: "user",
-        content: `User message:\n"""\n${userMessage}\n"""\n\nIntents:\n${intentListForPrompt}\n\nReturn a JSON object with intent_id and confidence.`,
+        content: `Conversation so far:\n${conversationSummary}\n\nUser message to classify intent on: """${userMessage}"""\n\nIntents:\n${intentListForPrompt}\n\nReturn a JSON object with intent_id and confidence. If unsure, use "unknown" and confidence 0.`,
       },
     ];
 
@@ -166,44 +164,48 @@ const requestedDestination: string | undefined = undefined;
     if (!classifyRes.ok) {
       const text = await classifyRes.text();
       console.error("OpenAI classify error:", text);
-      return NextResponse.json(
-        { error: "OpenAI intent classify error", details: text },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: "OpenAI intent classify error", details: text }, { status: 500 });
     }
 
     const classifyJson = await classifyRes.json();
     const parsedClassify =
       (() => {
         try {
-          return JSON.parse(
-            classifyJson.choices?.[0]?.message?.content || "{}"
-          );
+          return JSON.parse(classifyJson.choices?.[0]?.message?.content || "{}");
         } catch {
           return {};
         }
       })() as { intent_id?: string; confidence?: number };
 
     const intentId = parsedClassify.intent_id || intents[0]?.id;
-    const confidence =
-      typeof parsedClassify.confidence === "number"
-        ? parsedClassify.confidence
-        : 0;
+    const confidence = typeof parsedClassify.confidence === "number" ? parsedClassify.confidence : 0;
     const CONFIDENCE_THRESHOLD = 0.6;
 
-    const matchedIntent =
+    let matchedIntent =
       confidence >= CONFIDENCE_THRESHOLD
-        ? intents.find((i) => i.id === intentId) ?? intents[0] ?? null
+        ? intents.find((i) => i.id === intentId) ?? null
         : null;
-    const matchedSpecialist =
-      matchedIntent && confidence >= CONFIDENCE_THRESHOLD
-        ? specialists.find((s) => s.id === matchedIntent.specialist_id) ?? null
-        : null;
+    const candidateSpecialistId =
+      confidence >= CONFIDENCE_THRESHOLD ? matchedIntent?.specialist_id : undefined;
+    let matchedSpecialist = candidateSpecialistId
+      ? specialists.find((s) => s.id === candidateSpecialistId) ?? null
+      : null;
+
+    if ((!matchedIntent || confidence < CONFIDENCE_THRESHOLD) && previousIntentId) {
+      const priorIntent = intents.find((i) => i.id === previousIntentId) ?? matchedIntent;
+      matchedIntent = priorIntent ?? matchedIntent;
+
+      const priorSpecId =
+        priorIntent?.specialist_id || previousSpecialistId || undefined;
+      if (priorSpecId) {
+        const priorSpec = specialists.find((s) => s.id === priorSpecId) ?? matchedSpecialist;
+        matchedSpecialist = priorSpec ?? matchedSpecialist;
+      }
+      actions.push("Low confidence; retaining prior intent/specialist for context.");
+    }
 
     actions.push(
-      `Classified intent: ${matchedIntent?.name ?? "unknown"} (confidence ${confidence.toFixed(
-        2
-      )})`
+      `Classified intent: ${matchedIntent?.name ?? "unknown"} (confidence ${confidence.toFixed(2)})`
     );
     if (matchedSpecialist) {
       actions.push(`Routed to specialist: ${matchedSpecialist.name}`);
@@ -225,18 +227,13 @@ const requestedDestination: string | undefined = undefined;
           trackingId: trackingNumber,
         });
         trackingSummary = summarizeParcel(info, trackingNumber);
-        const summaryText = `Tracking ${trackingNumber} (${trackingSummary.carrier ||
-          "unknown"}) status: ${trackingSummary.status || "unknown"}; ETA: ${trackingSummary.eta ||
-          "n/a"}; Last: ${trackingSummary.lastEvent || "n/a"}`;
+        const summaryText = `Tracking ${trackingNumber} (${trackingSummary.carrier || "unknown"}) status: ${trackingSummary.status || "unknown"}; ETA: ${trackingSummary.eta || "n/a"}; Last: ${trackingSummary.lastEvent || "n/a"}`;
         actions.push(summaryText);
         const scans = trackingSummary.scans?.slice(0, 3) || [];
         const scanText =
           scans.length > 0
             ? scans
-                .map(
-                  (s) =>
-                    `${s.time || ""} ${s.location ? `@ ${s.location}` : ""} ${s.message || ""}`.trim()
-                )
+                .map((s) => `${s.time || ""} ${s.location ? `@ ${s.location}` : ""} ${s.message || ""}`.trim())
                 .join(" | ")
             : "";
         await logTicketEvent(origin, {
@@ -246,11 +243,7 @@ const requestedDestination: string | undefined = undefined;
           detail: scans.length ? `${summaryText} | Recent: ${scanText}` : summaryText,
         });
       } catch (err: any) {
-        actions.push(
-          `Tracking lookup failed for ${trackingNumber}: ${
-            err?.message || err
-          }`
-        );
+        actions.push(`Tracking lookup failed for ${trackingNumber}: ${err?.message || err}`);
       }
     }
 
@@ -265,7 +258,7 @@ const requestedDestination: string | undefined = undefined;
       {
         role: "system",
         content: matchedSpecialist
-        ? `You are a helpful customer service email assistant.\nSpecialist: ${matchedSpecialist.name}\nDescription: ${matchedSpecialist.description}\nKnowledge (use to guide, do not quote or restate directly): ${matchedSpecialist.knowledge_base_notes}\nEscalation rules: ${matchedSpecialist.escalation_rules}\nPersonality: ${matchedSpecialist.personality_notes}\nRequired fields: ${matchedSpecialist.required_fields?.join(", ") || "none"}`
+          ? `You are a helpful customer service email assistant.\nSpecialist: ${matchedSpecialist.name}\nDescription: ${matchedSpecialist.description}\nKnowledge (use to guide, do not quote or restate directly): ${matchedSpecialist.knowledge_base_notes}\nEscalation rules: ${matchedSpecialist.escalation_rules}\nPersonality: ${matchedSpecialist.personality_notes}\nRequired fields: ${matchedSpecialist.required_fields?.join(", ") || "none"}`
           : "You are a helpful customer service email assistant.",
       },
     ];
@@ -273,18 +266,12 @@ const requestedDestination: string | undefined = undefined;
     if (trackingSummary) {
       replyMessages.unshift({
         role: "system",
-        content: `Tracking info: number ${trackingSummary.trackingId} (${trackingSummary.carrier ||
-          "unknown carrier"}); status: ${trackingSummary.status ||
-          "unknown"}; ETA: ${trackingSummary.eta || "n/a"}; Last event: ${trackingSummary.lastEvent ||
-          "n/a"}. Include this tracking update in your reply if the user asked about parcel status.`,
+        content: `Tracking info: number ${trackingSummary.trackingId} (${trackingSummary.carrier || "unknown carrier"}); status: ${trackingSummary.status || "unknown"}; ETA: ${trackingSummary.eta || "n/a"}; Last event: ${trackingSummary.lastEvent || "n/a"}. Include this tracking update in your reply if the user asked about parcel status.`,
       });
       if (trackingSummary.scans?.length) {
         const lastScans = trackingSummary.scans.slice(-3);
         const scanLines = lastScans
-          .map(
-            (s) =>
-              `${s.time || ""} ${s.location ? `@ ${s.location}` : ""} ${s.message || ""}`.trim()
-          )
+          .map((s) => `${s.time || ""} ${s.location ? `@ ${s.location}` : ""} ${s.message || ""}`.trim())
           .join(" | ");
         replyMessages.unshift({
           role: "system",
@@ -316,10 +303,7 @@ const requestedDestination: string | undefined = undefined;
     if (!response.ok) {
       const text = await response.text();
       console.error("OpenAI API error:", text);
-      return NextResponse.json(
-        { error: "OpenAI API error", details: text },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: "OpenAI API error", details: text }, { status: 500 });
     }
 
     const data = await response.json();
@@ -338,9 +322,7 @@ const requestedDestination: string | undefined = undefined;
       status: "success",
       knowledgeSources: trackingSummary
         ? [
-            `tracking ${trackingSummary.trackingId} (${trackingSummary.carrier ||
-              "unknown"}) status:${trackingSummary.status ||
-              "unknown"} eta:${trackingSummary.eta || "n/a"} last:${trackingSummary.lastEvent || "n/a"}`,
+            `tracking ${trackingSummary.trackingId} (${trackingSummary.carrier || "unknown"}) status:${trackingSummary.status || "unknown"} eta:${trackingSummary.eta || "n/a"} last:${trackingSummary.lastEvent || "n/a"}`,
           ]
         : [],
     });
