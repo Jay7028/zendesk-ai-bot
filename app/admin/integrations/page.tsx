@@ -164,7 +164,8 @@ export default function IntegrationsPage() {
             Navigation
           </div>
           {[
-            { id: "specialists", label: "AI Specialists", href: "/specialists" },
+            { id: "home", label: "Home", href: "/" },
+            { id: "specialists", label: "AI Specialists", href: "/admin/specialists" },
             { id: "intents", label: "Intents", href: "/admin/intents" },
             { id: "data-extraction", label: "Data Extraction", href: "/admin/data-extraction" },
             { id: "integrations", label: "Integrations", href: "/admin/integrations", active: true },
