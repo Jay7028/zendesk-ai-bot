@@ -57,13 +57,17 @@ type InitTrackingResponse = {
 
 export async function initiateTracking(opts: {
   trackingId: string;
+  destinationCountry?: string;
   language?: string;
 }): Promise<InitTrackingResponse> {
   const apiKey = getApiKey();
   const shipment: Record<string, any> = {
     trackingId: opts.trackingId,
   };
-  // Destination country intentionally omitted per current integration requirements.
+  // Destination country is normally omitted; include only when explicitly provided (e.g. fallback).
+  if (opts.destinationCountry) {
+    shipment.destinationCountry = opts.destinationCountry;
+  }
   const payload = {
     apiKey,
     language: opts.language || "en",
@@ -99,10 +103,28 @@ export async function trackOnce(opts: {
   const maxPoll = opts.maxPollMs ?? 4000;
   const interval = opts.pollIntervalMs ?? 500;
 
-  const initRes = await initiateTracking({
-    trackingId,
-    language,
-  });
+  async function init(dest?: string) {
+    return initiateTracking({
+      trackingId,
+      destinationCountry: dest,
+      language,
+    });
+  }
+
+  let initRes: any;
+  try {
+    initRes = await init();
+  } catch (err: any) {
+    const msg = (err?.message || "").toLowerCase();
+    const needsCountry =
+      msg.includes("destinationcountry") || msg.includes("invalid_params");
+    const fallbackCountry = process.env.DEFAULT_DESTINATION_COUNTRY?.trim();
+    if (needsCountry && fallbackCountry) {
+      initRes = await init(fallbackCountry);
+    } else {
+      throw err;
+    }
+  }
 
   const uuid = initRes?.uuid;
 
