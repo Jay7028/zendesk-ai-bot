@@ -227,11 +227,9 @@ export async function POST(req: NextRequest) {
           destinationCountry: requestedDestination,
         });
         trackingSummary = summarizeParcel(info, trackingNumber);
-        const summaryText = `Tracking ${trackingNumber} (${courierCode}) status: ${
-          trackingSummary.status || "unknown"
-        }; ETA: ${trackingSummary.eta || "n/a"}; Last: ${
-          trackingSummary.lastEvent || "n/a"
-        }`;
+        const summaryText = `Tracking ${trackingNumber} (${trackingSummary.carrier ||
+          "unknown"}) status: ${trackingSummary.status || "unknown"}; ETA: ${trackingSummary.eta ||
+          "n/a"}; Last: ${trackingSummary.lastEvent || "n/a"}`;
         actions.push(summaryText);
         await logTicketEvent(origin, {
           ticketId,
