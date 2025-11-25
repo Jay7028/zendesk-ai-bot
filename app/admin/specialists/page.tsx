@@ -14,6 +14,9 @@ export default function SpecialistsPage() {
   const [kbTitle, setKbTitle] = useState("");
   const [kbContent, setKbContent] = useState("");
   const [kbStatus, setKbStatus] = useState<string | null>(null);
+  const [kbList, setKbList] = useState<
+    { id: string; title: string; content: string; specialist_id?: string | null }[]
+  >([]);
 
   useEffect(() => {
     async function loadSpecialists() {
@@ -45,13 +48,33 @@ export default function SpecialistsPage() {
     );
   }
 
-  function toggleSpecialistActive(id: string) {
-    setSpecialists((prev) =>
-      prev.map((s) =>
-        s.id === id ? { ...s, active: !s.active } : s
-      )
-    );
+function toggleSpecialistActive(id: string) {
+  setSpecialists((prev) =>
+    prev.map((s) =>
+      s.id === id ? { ...s, active: !s.active } : s
+    )
+  );
+}
+
+useEffect(() => {
+  async function loadKnowledge(specId: string | undefined) {
+    if (!specId) {
+      setKbList([]);
+      return;
+    }
+    try {
+      const res = await fetch(`/api/knowledge?specialistId=${encodeURIComponent(specId)}`);
+      if (!res.ok) throw new Error("Failed to load knowledge");
+      const data = await res.json();
+      setKbList(data || []);
+      setKbStatus(null);
+    } catch (e) {
+      console.error(e);
+      setKbStatus("Failed to load knowledge");
+    }
   }
+  loadKnowledge(selectedSpecialistId);
+}, [selectedSpecialistId]);
 
   function handleRequiredFieldsChange(value: string) {
     const items = value
@@ -128,8 +151,49 @@ export default function SpecialistsPage() {
       setKbStatus("Added to knowledge.");
       setKbTitle("");
       setKbContent("");
+      setKbList((prev) => [
+        {
+          id: data?.chunk?.id || `temp-${Date.now()}`,
+          title: kbTitle,
+          content: kbContent,
+          specialist_id: selectedSpecialist.id,
+        },
+        ...prev,
+      ]);
     } catch (e: any) {
       setKbStatus(e?.message || "Failed to save knowledge");
+    }
+  }
+
+  async function saveKnowledgeChunk(id: string, title: string, content: string) {
+    try {
+      const res = await fetch(`/api/knowledge?id=${encodeURIComponent(id)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title,
+          content,
+          specialistId: selectedSpecialistId,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Update failed");
+      setKbList((prev) => prev.map((k) => (k.id === id ? { ...k, title, content } : k)));
+      setKbStatus("Knowledge updated.");
+    } catch (e: any) {
+      setKbStatus(e?.message || "Update failed");
+    }
+  }
+
+  async function deleteKnowledgeChunk(id: string) {
+    try {
+      const res = await fetch(`/api/knowledge?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Delete failed");
+      setKbList((prev) => prev.filter((k) => k.id !== id));
+      setKbStatus("Knowledge deleted.");
+    } catch (e: any) {
+      setKbStatus(e?.message || "Delete failed");
     }
   }
 
@@ -358,8 +422,8 @@ export default function SpecialistsPage() {
                   </div>
 
                   <div style={{ display: "flex", gap: 8 }}>
-                    <label style={{ fontSize: 12, color: "#6b7280", width: 120 }}>
-                      Knowledge notes
+                  <label style={{ fontSize: 12, color: "#6b7280", width: 120 }}>
+                      Knowledge notes (general guidance)
                     </label>
                     <textarea
                       value={
@@ -544,16 +608,113 @@ export default function SpecialistsPage() {
                       {isDeleting ? "Deleting..." : "Delete"}
                     </button>
                       {error && (
-                        <div style={{ fontSize: 12, color: "#f97316" }}>
-                          {error}
-                        </div>
-                      )}
-                    </div>
+                      <div style={{ fontSize: 12, color: "#f97316" }}>
+                        {error}
+                      </div>
+                    )}
+                  </div>
+                  {kbStatus && (
+                    <div style={{ fontSize: 12, color: "#6b7280" }}>{kbStatus}</div>
+                  )}
+                  {kbList.length > 0 && (
                     <div
                       style={{
                         marginTop: 16,
                         paddingTop: 12,
                         borderTop: "1px solid #e5e7eb",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 12,
+                      }}
+                    >
+                      <div style={{ fontSize: 13, fontWeight: 600 }}>Existing knowledge</div>
+                      {kbList.map((k) => (
+                        <div
+                          key={k.id}
+                          style={{
+                            border: "1px solid #e5e7eb",
+                            borderRadius: "8px",
+                            padding: "10px",
+                            background: "#f9fafb",
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: 6,
+                          }}
+                        >
+                          <input
+                            value={k.title}
+                            onChange={(e) =>
+                              setKbList((prev) =>
+                                prev.map((row) =>
+                                  row.id === k.id ? { ...row, title: e.target.value } : row
+                                )
+                              )
+                            }
+                            style={{
+                              width: "100%",
+                              borderRadius: "8px",
+                              border: "1px solid #e5e7eb",
+                              padding: "8px",
+                              fontSize: 13,
+                            }}
+                          />
+                          <textarea
+                            value={k.content}
+                            onChange={(e) =>
+                              setKbList((prev) =>
+                                prev.map((row) =>
+                                  row.id === k.id ? { ...row, content: e.target.value } : row
+                                )
+                              )
+                            }
+                            rows={3}
+                            style={{
+                              width: "100%",
+                              borderRadius: "8px",
+                              border: "1px solid #e5e7eb",
+                              padding: "8px",
+                              fontSize: 13,
+                            }}
+                          />
+                          <div style={{ display: "flex", gap: 8 }}>
+                            <button
+                              onClick={() => saveKnowledgeChunk(k.id, k.title, k.content)}
+                              style={{
+                                padding: "6px 12px",
+                                borderRadius: "8px",
+                                border: "1px solid #4f46e5",
+                                background: "#eef2ff",
+                                color: "#1f2937",
+                                fontWeight: 600,
+                                cursor: "pointer",
+                              }}
+                            >
+                              Save
+                            </button>
+                            <button
+                              onClick={() => deleteKnowledgeChunk(k.id)}
+                              style={{
+                                padding: "6px 12px",
+                                borderRadius: "8px",
+                                border: "1px solid #ef4444",
+                                background: "#fff",
+                                color: "#b91c1c",
+                                fontWeight: 600,
+                                cursor: "pointer",
+                              }}
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div
+                    style={{
+                      marginTop: 16,
+                      paddingTop: 12,
+                      borderTop: "1px solid #e5e7eb",
                         display: "flex",
                         flexDirection: "column",
                         gap: 8,
