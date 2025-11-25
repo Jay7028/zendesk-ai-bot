@@ -57,16 +57,13 @@ type InitTrackingResponse = {
 
 export async function initiateTracking(opts: {
   trackingId: string;
-  destinationCountry?: string;
   language?: string;
 }): Promise<InitTrackingResponse> {
   const apiKey = getApiKey();
   const shipment: Record<string, any> = {
     trackingId: opts.trackingId,
   };
-  if (opts.destinationCountry) {
-    shipment.destinationCountry = opts.destinationCountry;
-  }
+  // Destination country intentionally omitted per current integration requirements.
   const payload = {
     apiKey,
     language: opts.language || "en",
@@ -94,7 +91,6 @@ export async function fetchTracking(uuid: string): Promise<any> {
 
 export async function trackOnce(opts: {
   trackingId: string;
-  destinationCountry?: string;
   language?: string;
   maxPollMs?: number;
   pollIntervalMs?: number;
@@ -102,11 +98,9 @@ export async function trackOnce(opts: {
   const { trackingId, language } = opts;
   const maxPoll = opts.maxPollMs ?? 4000;
   const interval = opts.pollIntervalMs ?? 500;
-  const preferredCountry = opts.destinationCountry?.trim() || undefined;
 
   const initRes = await initiateTracking({
     trackingId,
-    destinationCountry: preferredCountry,
     language,
   });
 
