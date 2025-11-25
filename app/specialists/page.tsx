@@ -303,8 +303,15 @@ export default function SpecialistsPage() {
                       Knowledge notes
                     </label>
                     <textarea
-                      value={selectedSpecialist.knowledge_base_notes}
-                      onChange={(e) => updateSelectedSpecialist({ knowledge_base_notes: e.target.value })}
+                      value={(selectedSpecialist as any).knowledge_base_notes ?? selectedSpecialist.knowledgeBaseNotes ?? ""}
+                      onChange={(e) =>
+                        updateSelectedSpecialist({
+                          // keep compatibility with backend naming
+                          knowledge_base_notes: e.target.value,
+                          // and camelCase for TS type
+                          knowledgeBaseNotes: e.target.value,
+                        } as any)
+                      }
                       rows={3}
                       style={{
                         flex: 1,
