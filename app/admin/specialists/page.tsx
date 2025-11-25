@@ -1,117 +1,145 @@
-"use client";
+﻿"use client";
 
-import { useState, useEffect } from "react";
-import type { TabKey, SpecialistConfig } from "../../api/specialists/data";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+
+type Specialist = {
+  id: string;
+  name: string;
+  description: string;
+  active: boolean;
+  docsCount: number;
+  rulesCount: number;
+  dataExtractionPrompt: string;
+  requiredFields: string[];
+  knowledgeBaseNotes?: string;
+  escalationRules: string;
+  personalityNotes: string;
+};
+
+type KnowledgeChunk = {
+  id: string;
+  title: string;
+  content: string;
+  intent_id?: string | null;
+  specialist_id?: string | null;
+  created_at?: string;
+};
+
+type TabKey = "data" | "knowledge" | "escalation" | "personality";
 
 export default function SpecialistsPage() {
-  const [specialists, setSpecialists] = useState<SpecialistConfig[]>([]);
-  const [selectedSpecialistId, setSelectedSpecialistId] = useState<string>();
-  const [activeTab, setActiveTab] = useState<TabKey>("data");
+  const [specialists, setSpecialists] = useState<Specialist[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [draft, setDraft] = useState<Specialist | null>(null);
+  const [tab, setTab] = useState<TabKey>("data");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [kbTitle, setKbTitle] = useState("");
-  const [kbContent, setKbContent] = useState("");
-  const [kbStatus, setKbStatus] = useState<string | null>(null);
-  const [kbList, setKbList] = useState<
-    { id: string; title: string; content: string; specialist_id?: string | null }[]
-  >([]);
+
+  const [knowledge, setKnowledge] = useState<KnowledgeChunk[]>([]);
+  const [knowledgeLoading, setKnowledgeLoading] = useState(false);
+  const [knowledgeError, setKnowledgeError] = useState<string | null>(null);
+  const [newKbTitle, setNewKbTitle] = useState("");
+  const [newKbContent, setNewKbContent] = useState("");
+  const [editingKbId, setEditingKbId] = useState<string | null>(null);
+  const [kbEdits, setKbEdits] = useState<Record<string, { title: string; content: string }>>({});
 
   useEffect(() => {
-    async function loadSpecialists() {
-      try {
-        setIsLoading(true);
-        const res = await fetch("/api/specialists");
-        if (!res.ok) throw new Error("Failed to load specialists");
-        const data: SpecialistConfig[] = await res.json();
-        setSpecialists(data);
-        if (data[0]) setSelectedSpecialistId(data[0].id);
-      } catch (e: any) {
-        setError(e.message ?? "Unexpected error");
-      } finally {
-        setIsLoading(false);
-      }
-    }
     loadSpecialists();
   }, []);
 
-  const selectedSpecialist =
-    specialists.find((s) => s.id === selectedSpecialistId) ?? null;
+  useEffect(() => {
+    if (!selectedId) return;
+    const found = specialists.find((s) => s.id === selectedId) ?? null;
+    setDraft(found ? { ...found } : null);
+    loadKnowledge(selectedId);
+  }, [selectedId, specialists]);
 
-  function updateSelectedSpecialist(partial: Partial<SpecialistConfig>) {
-    if (!selectedSpecialist) return;
-    setSpecialists((prev) =>
-      prev.map((s) =>
-        s.id === selectedSpecialist.id ? { ...s, ...partial } : s
-      )
-    );
-  }
-
-function toggleSpecialistActive(id: string) {
-  setSpecialists((prev) =>
-    prev.map((s) =>
-      s.id === id ? { ...s, active: !s.active } : s
-    )
+  const selectedSpecialist = useMemo(
+    () => specialists.find((s) => s.id === selectedId) ?? null,
+    [selectedId, specialists]
   );
-}
 
-useEffect(() => {
-  async function loadKnowledge(specId: string | undefined) {
-    if (!specId) {
-      setKbList([]);
-      return;
-    }
+  async function loadSpecialists() {
     try {
-      const res = await fetch(`/api/knowledge?specialistId=${encodeURIComponent(specId)}`);
-      if (!res.ok) throw new Error("Failed to load knowledge");
-      const data = await res.json();
-      setKbList(data || []);
-      setKbStatus(null);
-    } catch (e) {
-      console.error(e);
-      setKbStatus("Failed to load knowledge");
+      setIsLoading(true);
+      setError(null);
+      const res = await fetch("/api/specialists");
+      if (!res.ok) throw new Error("Failed to load specialists");
+      const data: Specialist[] = await res.json();
+      setSpecialists(data);
+      if (!selectedId && data[0]) setSelectedId(data[0].id);
+    } catch (e: any) {
+      setError(e.message ?? "Unexpected error");
+    } finally {
+      setIsLoading(false);
     }
   }
-  loadKnowledge(selectedSpecialistId);
-}, [selectedSpecialistId]);
 
-  function handleRequiredFieldsChange(value: string) {
-    const items = value
-      .split(",")
-      .map((x) => x.trim())
-      .filter(Boolean);
-    updateSelectedSpecialist({ requiredFields: items });
+  async function loadKnowledge(specialistId: string) {
+    try {
+      setKnowledgeLoading(true);
+      setKnowledgeError(null);
+      const res = await fetch(`/api/knowledge?specialistId=${encodeURIComponent(specialistId)}`);
+      if (!res.ok) throw new Error("Failed to load knowledge");
+      const data: KnowledgeChunk[] = await res.json();
+      setKnowledge(data);
+    } catch (e: any) {
+      setKnowledgeError(e.message ?? "Unexpected error");
+    } finally {
+      setKnowledgeLoading(false);
+    }
   }
 
-  async function saveSpecialist() {
-    if (!selectedSpecialist) return;
+  const handleFieldChange = (patch: Partial<Specialist>) => {
+    setDraft((prev) => (prev ? { ...prev, ...patch } : prev));
+  };
+
+  const handleRequiredFieldsChange = (value: string) => {
+    const parsed = value
+      .split(",")
+      .map((v) => v.trim())
+      .filter(Boolean);
+    handleFieldChange({ requiredFields: parsed });
+  };
+
+  const handleSave = async () => {
+    if (!draft) return;
     try {
       setIsSaving(true);
+      setError(null);
       const res = await fetch("/api/specialists", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(selectedSpecialist),
+        body: JSON.stringify(draft),
       });
       if (!res.ok) throw new Error("Failed to save specialist");
-      setError(null);
+      const saved: Specialist = await res.json();
+      setSpecialists((prev) => {
+        const existing = prev.find((s) => s.id === saved.id);
+        if (existing) return prev.map((s) => (s.id === saved.id ? saved : s));
+        return [saved, ...prev];
+      });
+      setSelectedId(saved.id);
+      setDraft(saved);
     } catch (e: any) {
       setError(e.message ?? "Unexpected error");
     } finally {
       setIsSaving(false);
     }
-  }
+  };
 
-  async function createSpecialist() {
+  const handleCreate = async () => {
     try {
       setIsSaving(true);
+      setError(null);
       const res = await fetch("/api/specialists", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: "New Specialist",
           description: "",
-          active: false,
+          active: true,
           docsCount: 0,
           rulesCount: 0,
           dataExtractionPrompt: "",
@@ -121,654 +149,690 @@ useEffect(() => {
           personalityNotes: "",
         }),
       });
-      const data: SpecialistConfig = await res.json();
-      if (!res.ok) throw new Error((data as any)?.error || "Failed to create specialist");
-      setSpecialists((prev) => [data, ...prev]);
-      setSelectedSpecialistId(data.id);
-      setError(null);
+      if (!res.ok) throw new Error("Failed to create specialist");
+      const created: Specialist = await res.json();
+      setSpecialists((prev) => [created, ...prev]);
+      setSelectedId(created.id);
+      setDraft(created);
     } catch (e: any) {
-      setError(e.message ?? "Unexpected error creating specialist");
+      setError(e.message ?? "Unexpected error");
     } finally {
       setIsSaving(false);
     }
-  }
+  };
 
-  async function deleteSpecialist() {
+  const handleDelete = async () => {
     if (!selectedSpecialist) return;
-    const ok = typeof window !== "undefined" ? window.confirm("Delete this specialist?") : true;
-    if (!ok) return;
+    const confirmed = window.confirm(`Delete ${selectedSpecialist.name}?`);
+    if (!confirmed) return;
     try {
-      setIsDeleting(true);
+      setIsSaving(true);
       setError(null);
       const res = await fetch(`/api/specialists?id=${encodeURIComponent(selectedSpecialist.id)}`, {
         method: "DELETE",
       });
       if (!res.ok) throw new Error("Failed to delete specialist");
       setSpecialists((prev) => prev.filter((s) => s.id !== selectedSpecialist.id));
+      setDraft(null);
       const remaining = specialists.filter((s) => s.id !== selectedSpecialist.id);
-      setSelectedSpecialistId(remaining[0]?.id);
+      setSelectedId(remaining[0]?.id ?? null);
+      setKnowledge([]);
     } catch (e: any) {
       setError(e.message ?? "Unexpected error");
     } finally {
-      setIsDeleting(false);
+      setIsSaving(false);
     }
-  }
+  };
 
-  async function addKnowledgeChunk() {
-    if (!selectedSpecialist) {
-      setKbStatus("Select a specialist first.");
+  const handleAddKnowledge = async () => {
+    if (!selectedId) return;
+    if (!newKbTitle.trim() || !newKbContent.trim()) {
+      setKnowledgeError("Title and content are required");
       return;
     }
-    if (!kbTitle.trim() || !kbContent.trim()) {
-      setKbStatus("Title and content are required.");
-      return;
-    }
-    setKbStatus("Saving...");
     try {
+      setKnowledgeLoading(true);
+      setKnowledgeError(null);
       const res = await fetch("/api/knowledge/add", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          title: kbTitle,
-          content: kbContent,
-          specialistId: selectedSpecialist.id,
+          title: newKbTitle,
+          content: newKbContent,
+          specialistId: selectedId,
         }),
       });
-      const data = await res.json();
-      if (!res.ok) {
-        setKbStatus(data.error || "Failed to save knowledge");
-        return;
-      }
-      setKbStatus("Added to knowledge.");
-      setKbTitle("");
-      setKbContent("");
-      setKbList((prev) => [
-        {
-          id: data?.chunk?.id || `temp-${Date.now()}`,
-          title: kbTitle,
-          content: kbContent,
-          specialist_id: selectedSpecialist.id,
-        },
-        ...prev,
-      ]);
+      if (!res.ok) throw new Error("Failed to add knowledge");
+      const json = await res.json();
+      setKnowledge((prev) => [json.chunk, ...prev]);
+      setNewKbTitle("");
+      setNewKbContent("");
     } catch (e: any) {
-      setKbStatus(e?.message || "Failed to save knowledge");
+      setKnowledgeError(e.message ?? "Unexpected error");
+    } finally {
+      setKnowledgeLoading(false);
     }
-  }
+  };
 
-  async function saveKnowledgeChunk(id: string, title: string, content: string) {
+  const handleUpdateKnowledge = async (
+    chunk: KnowledgeChunk,
+    updates: { title: string; content: string }
+  ) => {
     try {
-      const res = await fetch(`/api/knowledge?id=${encodeURIComponent(id)}`, {
+      setKnowledgeLoading(true);
+      setKnowledgeError(null);
+      const res = await fetch(`/api/knowledge?id=${encodeURIComponent(chunk.id)}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          title,
-          content,
-          specialistId: selectedSpecialistId,
+          title: updates.title,
+          content: updates.content,
+          specialistId: selectedId,
         }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Update failed");
-      setKbList((prev) => prev.map((k) => (k.id === id ? { ...k, title, content } : k)));
-      setKbStatus("Knowledge updated.");
+      if (!res.ok) throw new Error("Failed to update knowledge");
+      const json = await res.json();
+      setKnowledge((prev) => prev.map((k) => (k.id === chunk.id ? json.chunk : k)));
+      setEditingKbId(null);
     } catch (e: any) {
-      setKbStatus(e?.message || "Update failed");
+      setKnowledgeError(e.message ?? "Unexpected error");
+    } finally {
+      setKnowledgeLoading(false);
     }
-  }
+  };
 
-  async function deleteKnowledgeChunk(id: string) {
+  const handleDeleteKnowledge = async (id: string) => {
+    const confirmed = window.confirm("Delete this knowledge snippet?");
+    if (!confirmed) return;
     try {
-      const res = await fetch(`/api/knowledge?id=${encodeURIComponent(id)}`, { method: "DELETE" });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Delete failed");
-      setKbList((prev) => prev.filter((k) => k.id !== id));
-      setKbStatus("Knowledge deleted.");
+      setKnowledgeLoading(true);
+      setKnowledgeError(null);
+      const res = await fetch(`/api/knowledge?id=${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to delete knowledge");
+      setKnowledge((prev) => prev.filter((k) => k.id !== id));
     } catch (e: any) {
-      setKbStatus(e?.message || "Delete failed");
+      setKnowledgeError(e.message ?? "Unexpected error");
+    } finally {
+      setKnowledgeLoading(false);
     }
-  }
+  };
+
+  const FieldLabel = ({ label }: { label: string }) => (
+    <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 6 }}>{label}</div>
+  );
+
+  const TabButton = ({ keyName, label }: { keyName: TabKey; label: string }) => {
+    const active = tab === keyName;
+    return (
+      <button
+        onClick={() => setTab(keyName)}
+        style={{
+          padding: "10px 12px",
+          borderRadius: 10,
+          border: active ? "1px solid #c7d2fe" : "1px solid #e5e7eb",
+          background: active ? "#eef2ff" : "#f9fafb",
+          color: active ? "#111827" : "#6b7280",
+          fontWeight: 600,
+          fontSize: 13,
+          cursor: "pointer",
+        }}
+      >
+        {label}
+      </button>
+    );
+  };
+
+  const Card = ({ title, children, actions }: { title: string; children: ReactNode; actions?: ReactNode }) => (
+    <div
+      style={{
+        border: "1px solid #e5e7eb",
+        borderRadius: 14,
+        background: "#ffffff",
+        boxShadow: "0 1px 6px rgba(15,23,42,0.04)",
+        padding: 16,
+        width: "100%",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: 12,
+        }}
+      >
+        <div style={{ fontWeight: 700, color: "#111827" }}>{title}</div>
+        {actions}
+      </div>
+      {children}
+    </div>
+  );
+
+  const leftNavItems = [
+    { id: "home", label: "Home", href: "/", active: false },
+    { id: "specialists", label: "AI Specialists", href: "/admin/specialists", active: true },
+    { id: "intents", label: "Intents", href: "/admin/intents" },
+    { id: "data-extraction", label: "Data Extraction", href: "/admin/data-extraction" },
+    { id: "integrations", label: "Integrations", href: "/admin/integrations" },
+    { id: "logs", label: "Logs", href: "/admin/logs" },
+    { id: "test-ai", label: "Test AI", href: "/admin/test-ai" },
+    { id: "track", label: "Track", href: "/admin/track" },
+  ];
 
   return (
-    <div
+    <main
       style={{
         minHeight: "100vh",
         display: "flex",
-        flexDirection: "column",
         background: "#f5f7fb",
+        fontFamily: "Inter, system-ui, -apple-system, 'Segoe UI', sans-serif",
         color: "#111827",
-        fontFamily:
-          "Inter, system-ui, -apple-system, 'Segoe UI', sans-serif",
       }}
     >
-      <header
+      <aside
         style={{
-          padding: "12px 24px",
-          borderBottom: "1px solid #e5e7eb",
+          width: 220,
+          borderRight: "1px solid #e5e7eb",
+          padding: "16px 12px",
           display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          background: "#ffffff",
-          position: "sticky",
-          top: 0,
-          zIndex: 10,
+          flexDirection: "column",
+          gap: 8,
+          background: "#f9fafb",
         }}
       >
-        <div>
-          <div style={{ fontSize: "20px", fontWeight: 700 }}>AI Specialists</div>
-          <div style={{ fontSize: "12px", color: "#6b7280" }}>
-            Manage specialist profiles, data prompts, and routing defaults.
-          </div>
-        </div>
-        <div style={{ fontSize: "12px", color: "#6b7280" }}>
-          Environment: <span style={{ color: "#22c55e", fontWeight: 600 }}>Development</span>
-        </div>
-      </header>
-
-      <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
-        <aside
-          style={{
-            width: "220px",
-            borderRight: "1px solid #e5e7eb",
-            padding: "16px 12px",
-            display: "flex",
-            flexDirection: "column",
-            gap: 8,
-            background: "#f9fafb",
-          }}
-        >
-          <div style={{ fontSize: "12px", color: "#6b7280", marginBottom: 8, fontWeight: 600 }}>
-            Navigation
-          </div>
-          {[
-            { id: "home", label: "Home", href: "/" },
-            { id: "specialists", label: "AI Specialists", href: "/admin/specialists", active: true },
-            { id: "intents", label: "Intents", href: "/admin/intents" },
-            { id: "data-extraction", label: "Data Extraction", href: "/admin/data-extraction" },
-            { id: "integrations", label: "Integrations", href: "/admin/integrations" },
-            { id: "logs", label: "Logs", href: "/admin/logs" },
-            { id: "test-ai", label: "Test AI", href: "/admin/test-ai" },
-            { id: "track", label: "Track", href: "/admin/track" },
-          ].map((item) => (
-            <a
-              key={item.id}
-              href={item.href}
-              style={{ textDecoration: "none" }}
+        <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 8, fontWeight: 600 }}>Navigation</div>
+        {leftNavItems.map((item) => (
+          <a key={item.id} href={item.href} style={{ textDecoration: "none" }}>
+            <div
+              style={{
+                padding: "10px 12px",
+                borderRadius: 10,
+                cursor: "pointer",
+                fontSize: 13,
+                background: item.active ? "#eef2ff" : "transparent",
+                color: item.active ? "#1f2937" : "#6b7280",
+                fontWeight: item.active ? 700 : 500,
+                border: item.active ? "1px solid #c7d2fe" : "1px solid transparent",
+              }}
             >
-              <div
-                style={{
-                  padding: "10px 12px",
-                  borderRadius: "10px",
-                  cursor: "pointer",
-                  fontSize: "13px",
-                  background: item.active ? "#eef2ff" : "transparent",
-                  color: item.active ? "#1f2937" : "#6b7280",
-                  fontWeight: item.active ? 600 : 500,
-                  border: item.active ? "1px solid #c7d2fe" : "1px solid transparent",
-                }}
-              >
-                {item.label}
-              </div>
-            </a>
-          ))}
-        </aside>
+              {item.label}
+            </div>
+          </a>
+        ))}
+      </aside>
 
-        <main
+      <div style={{ flex: 1, padding: "24px", display: "flex", gap: 16 }}>
+        <div
           style={{
-            flex: 1,
-            padding: "16px 20px",
+            width: 260,
+            border: "1px solid #e5e7eb",
+            borderRadius: 14,
+            background: "#fff",
+            boxShadow: "0 1px 6px rgba(15,23,42,0.06)",
+            padding: 12,
             display: "flex",
             flexDirection: "column",
-            gap: 12,
-            overflowY: "auto",
-            background: "#f5f7fb",
+            gap: 10,
           }}
         >
-          {isLoading && (
-            <div style={{ fontSize: 12, color: "#6b7280" }}>Loading specialists...</div>
-          )}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 700 }}>AI Specialists</div>
+              <div style={{ fontSize: 12, color: "#6b7280" }}>
+                Manage knowledge and rules
+              </div>
+            </div>
+            <button
+              onClick={handleCreate}
+              disabled={isSaving}
+              style={{
+                padding: "8px 10px",
+                borderRadius: 10,
+                border: "1px solid #c7d2fe",
+                background: "#eef2ff",
+                color: "#1d4ed8",
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              + New
+            </button>
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {isLoading && <div style={{ color: "#6b7280" }}>Loading specialists…</div>}
+            {!isLoading && !specialists.length && (
+              <div style={{ color: "#6b7280", fontSize: 13 }}>No specialists yet.</div>
+            )}
+            {specialists.map((spec) => {
+              const active = spec.id === selectedId;
+              return (
+                <div
+                  key={spec.id}
+                  onClick={() => setSelectedId(spec.id)}
+                  style={{
+                    border: active ? "1px solid #c7d2fe" : "1px solid #e5e7eb",
+                    background: active ? "#eef2ff" : "#f9fafb",
+                    borderRadius: 12,
+                    padding: 12,
+                    cursor: "pointer",
+                    boxShadow: active ? "0 1px 6px rgba(59,130,246,0.25)" : "none",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <div
+                      style={{
+                        width: 10,
+                        height: 10,
+                        borderRadius: 999,
+                        background: spec.active ? "#22c55e" : "#d1d5db",
+                      }}
+                    />
+                    <div style={{ fontWeight: 700 }}>{spec.name || "Untitled"}</div>
+                  </div>
+                  <div style={{ fontSize: 12, color: "#6b7280", marginTop: 4 }}>
+                    {spec.description || "No description yet."}
+                  </div>
+                  <div style={{ fontSize: 12, color: "#6b7280", marginTop: 6 }}>
+                    {spec.docsCount} docs • {spec.rulesCount} rules
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 12 }}>
           {error && (
-            <div style={{ fontSize: 12, color: "#f97316", marginBottom: 8 }}>
+            <div style={{ color: "#b91c1c", background: "#fef2f2", padding: 12, borderRadius: 10 }}>
               {error}
             </div>
           )}
+          {!selectedSpecialist && !isLoading ? (
+            <div style={{ color: "#6b7280" }}>Select or create a specialist to begin.</div>
+          ) : null}
 
-          <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: 16 }}>
+          {draft && (
+            <>
               <div
                 style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  padding: "12px 14px",
+                  borderRadius: 14,
                   border: "1px solid #e5e7eb",
-                  borderRadius: "12px",
-                  padding: "12px",
-                  background: "#ffffff",
-                  overflowY: "auto",
-                  boxShadow: "0 1px 4px rgba(15,23,42,0.06)",
+                  background: "#fff",
+                  boxShadow: "0 1px 6px rgba(15,23,42,0.04)",
                 }}
               >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                <div style={{ fontSize: 14, fontWeight: 600, color: "#111827" }}>
-                  Specialists
-                </div>
-                <button
-                  onClick={createSpecialist}
-                  style={{
-                    padding: "8px 12px",
-                    borderRadius: "8px",
-                    border: "1px solid #c7d2fe",
-                    background: "#eef2ff",
-                    color: "#1f2937",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    fontSize: 12,
-                  }}
-                >
-                  + New
-                </button>
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {specialists.map((s) => {
-                  const isSelected = s.id === selectedSpecialistId;
-                  return (
-                    <button
-                      key={s.id}
-                      onClick={() => setSelectedSpecialistId(s.id)}
-                      style={{
-                        textAlign: "left",
-                        padding: "10px 12px",
-                        borderRadius: "10px",
-                        border: isSelected
-                          ? "1px solid #c7d2fe"
-                          : "1px solid #e5e7eb",
-                        background: isSelected ? "#eef2ff" : "#ffffff",
-                        color: "#111827",
-                        cursor: "pointer",
-                        boxShadow: isSelected
-                          ? "0 4px 10px rgba(99,102,241,0.1)"
-                          : "0 1px 4px rgba(15,23,42,0.06)",
-                      }}
-                    >
-                      <div style={{ fontSize: 13, fontWeight: 600 }}>{s.name}</div>
-                      <div style={{ fontSize: 11, color: "#6b7280" }}>
-                        {s.description}
-                      </div>
-                      <div style={{ fontSize: 11, color: s.active ? "#16a34a" : "#ef4444" }}>
-                        {s.active ? "Active" : "Inactive"}
-                      </div>
-                    </button>
-                  );
-                })}
-                {specialists.length === 0 && !isLoading && (
-                  <div style={{ fontSize: 12, color: "#6b7280" }}>
-                    No specialists yet.
+                <div>
+                  <div style={{ fontSize: 22, fontWeight: 800 }}>{draft.name || "Untitled"}</div>
+                  <div style={{ fontSize: 13, color: "#6b7280" }}>
+                    {draft.description || "Add a short description so teammates know when to use this."}
                   </div>
-                )}
-              </div>
-            </div>
-
-            <div
-              style={{
-                border: "1px solid #e5e7eb",
-                borderRadius: "12px",
-                padding: "16px",
-                background: "#ffffff",
-                boxShadow: "0 1px 4px rgba(15,23,42,0.06)",
-              }}
-            >
-              {!selectedSpecialist && (
-                <div style={{ fontSize: 12, color: "#6b7280" }}>
-                  Select a specialist to view details.
                 </div>
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
+                    <input
+                      type="checkbox"
+                      checked={draft.active}
+                      onChange={(e) => handleFieldChange({ active: e.target.checked })}
+                    />
+                    Active
+                  </label>
+                  <button
+                    onClick={handleSave}
+                    disabled={isSaving}
+                    style={{
+                      padding: "10px 12px",
+                      borderRadius: 10,
+                      border: "1px solid #22c55e",
+                      background: "#dcfce7",
+                      color: "#166534",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {isSaving ? "Saving…" : "Save changes"}
+                  </button>
+                  <button
+                    onClick={handleDelete}
+                    disabled={isSaving}
+                    style={{
+                      padding: "10px 12px",
+                      borderRadius: 10,
+                      border: "1px solid #fca5a5",
+                      background: "#fef2f2",
+                      color: "#b91c1c",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <TabButton keyName="data" label="Data Extraction" />
+                <TabButton keyName="knowledge" label="Knowledge Base" />
+                <TabButton keyName="escalation" label="Escalation Rules" />
+                <TabButton keyName="personality" label="Personality" />
+              </div>
+
+              {tab === "data" && (
+                <Card title="Extracted Entities">
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                    <div>
+                      <FieldLabel label="Description" />
+                      <input
+                        value={draft.description}
+                        onChange={(e) => handleFieldChange({ description: e.target.value })}
+                        style={{
+                          width: "100%",
+                          padding: "10px 12px",
+                          borderRadius: 10,
+                          border: "1px solid #e5e7eb",
+                          fontSize: 14,
+                        }}
+                        placeholder="e.g. Handles billing disputes and refund requests"
+                      />
+                    </div>
+                    <div>
+                      <FieldLabel label="Data extraction prompt" />
+                      <textarea
+                        value={draft.dataExtractionPrompt}
+                        onChange={(e) => handleFieldChange({ dataExtractionPrompt: e.target.value })}
+                        rows={4}
+                        style={{
+                          width: "100%",
+                          padding: "10px 12px",
+                          borderRadius: 10,
+                          border: "1px solid #e5e7eb",
+                          fontSize: 14,
+                          fontFamily: "inherit",
+                        }}
+                        placeholder="Tell the AI what fields to pull out of a message."
+                      />
+                    </div>
+                    <div>
+                      <FieldLabel label="Required fields (comma separated)" />
+                      <input
+                        value={draft.requiredFields?.join(", ") || ""}
+                        onChange={(e) => handleRequiredFieldsChange(e.target.value)}
+                        style={{
+                          width: "100%",
+                          padding: "10px 12px",
+                          borderRadius: 10,
+                          border: "1px solid #e5e7eb",
+                          fontSize: 14,
+                        }}
+                        placeholder="tracking_number, postcode"
+                      />
+                    </div>
+                  </div>
+                </Card>
               )}
 
-              {selectedSpecialist && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                    <div style={{ fontSize: 18, fontWeight: 700 }}>{selectedSpecialist.name}</div>
-                    <button
-                      onClick={() => toggleSpecialistActive(selectedSpecialist.id)}
-                      style={{
-                        padding: "6px 10px",
-                        borderRadius: "999px",
-                        border: "1px solid #e5e7eb",
-                        background: selectedSpecialist.active ? "#dcfce7" : "#fee2e2",
-                        color: selectedSpecialist.active ? "#16a34a" : "#ef4444",
-                        fontSize: 12,
-                        cursor: "pointer",
-                      }}
-                    >
-                      {selectedSpecialist.active ? "Active" : "Inactive"}
-                    </button>
-                  </div>
-
-                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                    <label style={{ fontSize: 12, color: "#6b7280", width: 120 }}>Name</label>
-                    <input
-                      value={selectedSpecialist.name}
-                      onChange={(e) => updateSelectedSpecialist({ name: e.target.value })}
-                      style={{
-                        flex: 1,
-                        borderRadius: "8px",
-                        border: "1px solid #e5e7eb",
-                        padding: "8px",
-                        fontSize: 13,
-                      }}
-                    />
-                  </div>
-
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <label style={{ fontSize: 12, color: "#6b7280", width: 120 }}>Description</label>
-                    <textarea
-                      value={selectedSpecialist.description}
-                      onChange={(e) => updateSelectedSpecialist({ description: e.target.value })}
-                      rows={3}
-                      style={{
-                        flex: 1,
-                        borderRadius: "8px",
-                        border: "1px solid #e5e7eb",
-                        padding: "8px",
-                        fontSize: 13,
-                      }}
-                    />
-                  </div>
-
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <label style={{ fontSize: 12, color: "#6b7280", width: 120 }}>
-                      Escalation rules
-                    </label>
-                    <textarea
-                      value={
-                        (selectedSpecialist as any).escalation_rules ??
-                        selectedSpecialist.escalationRules ??
-                        ""
-                      }
-                      onChange={(e) =>
-                        updateSelectedSpecialist({
-                          escalation_rules: e.target.value,
-                          escalationRules: e.target.value,
-                        } as any)
-                      }
-                      rows={3}
-                      style={{
-                        flex: 1,
-                        borderRadius: "8px",
-                        border: "1px solid #e5e7eb",
-                        padding: "8px",
-                        fontSize: 13,
-                      }}
-                    />
-                  </div>
-
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <label style={{ fontSize: 12, color: "#6b7280", width: 120 }}>
-                      Personality notes
-                    </label>
-                    <textarea
-                      value={
-                        (selectedSpecialist as any).personality_notes ??
-                        selectedSpecialist.personalityNotes ??
-                        ""
-                      }
-                      onChange={(e) =>
-                        updateSelectedSpecialist({
-                          personality_notes: e.target.value,
-                          personalityNotes: e.target.value,
-                        } as any)
-                      }
-                      rows={2}
-                      style={{
-                        flex: 1,
-                        borderRadius: "8px",
-                        border: "1px solid #e5e7eb",
-                        padding: "8px",
-                        fontSize: 13,
-                      }}
-                    />
-                  </div>
-
-                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                    <label style={{ fontSize: 12, color: "#6b7280", width: 120 }}>
-                      Required fields (comma separated)
-                    </label>
-                    <input
-                      value={
-                        (selectedSpecialist as any).required_fields?.join(", ") ||
-                        selectedSpecialist.requiredFields?.join(", ") ||
-                        ""
-                      }
-                      onChange={(e) => handleRequiredFieldsChange(e.target.value)}
-                      style={{
-                        flex: 1,
-                        borderRadius: "8px",
-                        border: "1px solid #e5e7eb",
-                        padding: "8px",
-                        fontSize: 13,
-                      }}
-                    />
-                  </div>
-
-                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                    <label style={{ fontSize: 12, color: "#6b7280", width: 120 }}>
-                      Data extraction prompt
-                    </label>
-                    <textarea
-                      value={
-                        (selectedSpecialist as any).data_extraction_prompt ??
-                        selectedSpecialist.dataExtractionPrompt ??
-                        ""
-                      }
-                      onChange={(e) =>
-                        updateSelectedSpecialist({
-                          data_extraction_prompt: e.target.value,
-                          dataExtractionPrompt: e.target.value,
-                        } as any)
-                      }
-                      rows={4}
-                      style={{
-                        flex: 1,
-                        borderRadius: "8px",
-                        border: "1px solid #e5e7eb",
-                        padding: "8px",
-                        fontSize: 13,
-                      }}
-                    />
-                  </div>
-
-                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                    <button
-                      onClick={saveSpecialist}
-                      disabled={isSaving}
-                      style={{
-                        padding: "10px 16px",
-                        borderRadius: "10px",
-                        border: "none",
-                        background: "#4f46e5",
-                        color: "#ffffff",
-                        fontWeight: 600,
-                        cursor: isSaving ? "default" : "pointer",
-                        boxShadow: "0 6px 12px rgba(79,70,229,0.2)",
-                      }}
-                    >
-                      {isSaving ? "Saving..." : "Save changes"}
-                    </button>
-                    <button
-                      onClick={deleteSpecialist}
-                      disabled={isDeleting || !selectedSpecialist}
-                      style={{
-                        padding: "10px 16px",
-                        borderRadius: "10px",
-                        border: "1px solid #ef4444",
-                        background: "#fff",
-                        color: "#b91c1c",
-                        fontWeight: 600,
-                        cursor: isDeleting ? "default" : "pointer",
-                      }}
-                    >
-                      {isDeleting ? "Deleting..." : "Delete"}
-                    </button>
-                      {error && (
-                      <div style={{ fontSize: 12, color: "#f97316" }}>
-                        {error}
-                      </div>
-                    )}
-                  </div>
-                  {kbStatus && (
-                    <div style={{ fontSize: 12, color: "#6b7280" }}>{kbStatus}</div>
-                  )}
-                  {kbList.length > 0 && (
+              {tab === "knowledge" && (
+                <Card
+                  title="Knowledge snippets"
+                  actions={
+                    knowledgeLoading ? (
+                      <span style={{ color: "#6b7280", fontSize: 12 }}>Saving…</span>
+                    ) : knowledgeError ? (
+                      <span style={{ color: "#b91c1c", fontSize: 12 }}>{knowledgeError}</span>
+                    ) : null
+                  }
+                >
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                     <div
                       style={{
-                        marginTop: 16,
-                        paddingTop: 12,
-                        borderTop: "1px solid #e5e7eb",
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: 12,
-                      }}
-                    >
-                      <div style={{ fontSize: 13, fontWeight: 600 }}>Existing knowledge</div>
-                      {kbList.map((k) => (
-                        <div
-                          key={k.id}
-                          style={{
-                            border: "1px solid #e5e7eb",
-                            borderRadius: "8px",
-                            padding: "10px",
-                            background: "#f9fafb",
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: 6,
-                          }}
-                        >
-                          <input
-                            value={k.title}
-                            onChange={(e) =>
-                              setKbList((prev) =>
-                                prev.map((row) =>
-                                  row.id === k.id ? { ...row, title: e.target.value } : row
-                                )
-                              )
-                            }
-                            style={{
-                              width: "100%",
-                              borderRadius: "8px",
-                              border: "1px solid #e5e7eb",
-                              padding: "8px",
-                              fontSize: 13,
-                            }}
-                          />
-                          <textarea
-                            value={k.content}
-                            onChange={(e) =>
-                              setKbList((prev) =>
-                                prev.map((row) =>
-                                  row.id === k.id ? { ...row, content: e.target.value } : row
-                                )
-                              )
-                            }
-                            rows={3}
-                            style={{
-                              width: "100%",
-                              borderRadius: "8px",
-                              border: "1px solid #e5e7eb",
-                              padding: "8px",
-                              fontSize: 13,
-                            }}
-                          />
-                          <div style={{ display: "flex", gap: 8 }}>
-                            <button
-                              onClick={() => saveKnowledgeChunk(k.id, k.title, k.content)}
-                              style={{
-                                padding: "6px 12px",
-                                borderRadius: "8px",
-                                border: "1px solid #4f46e5",
-                                background: "#eef2ff",
-                                color: "#1f2937",
-                                fontWeight: 600,
-                                cursor: "pointer",
-                              }}
-                            >
-                              Save
-                            </button>
-                            <button
-                              onClick={() => deleteKnowledgeChunk(k.id)}
-                              style={{
-                                padding: "6px 12px",
-                                borderRadius: "8px",
-                                border: "1px solid #ef4444",
-                                background: "#fff",
-                                color: "#b91c1c",
-                                fontWeight: 600,
-                                cursor: "pointer",
-                              }}
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  <div
-                    style={{
-                      marginTop: 16,
-                      paddingTop: 12,
-                      borderTop: "1px solid #e5e7eb",
+                        border: "1px dashed #c7d2fe",
+                        padding: 12,
+                        borderRadius: 12,
+                        background: "#f8fafc",
                         display: "flex",
                         flexDirection: "column",
                         gap: 8,
                       }}
                     >
-                      <div style={{ fontSize: 13, fontWeight: 600 }}>Add knowledge snippet</div>
-                      <div style={{ fontSize: 12, color: "#6b7280" }}>
-                        Create a small policy chunk for this specialist. It will be retrieved automatically.
-                      </div>
+                      <FieldLabel label="Title" />
                       <input
-                        value={kbTitle}
-                        onChange={(e) => setKbTitle(e.target.value)}
-                        placeholder="Title"
+                        value={newKbTitle}
+                        onChange={(e) => setNewKbTitle(e.target.value)}
+                        placeholder="e.g. Disputed delivery with signature"
                         style={{
                           width: "100%",
-                          borderRadius: "8px",
+                          padding: "10px 12px",
+                          borderRadius: 10,
                           border: "1px solid #e5e7eb",
-                          padding: "8px",
-                          fontSize: 13,
+                          fontSize: 14,
                         }}
                       />
+                      <FieldLabel label="Content" />
                       <textarea
-                        value={kbContent}
-                        onChange={(e) => setKbContent(e.target.value)}
-                        rows={4}
-                        placeholder="Content (short, self-contained policy/scenario)"
+                        value={newKbContent}
+                        onChange={(e) => setNewKbContent(e.target.value)}
+                        rows={3}
+                        placeholder="Guidance or policy snippet"
                         style={{
                           width: "100%",
-                          borderRadius: "8px",
+                          padding: "10px 12px",
+                          borderRadius: 10,
                           border: "1px solid #e5e7eb",
-                          padding: "8px",
-                          fontSize: 13,
+                          fontSize: 14,
+                          fontFamily: "inherit",
                         }}
                       />
-                      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                      <div style={{ display: "flex", justifyContent: "flex-end" }}>
                         <button
-                          onClick={addKnowledgeChunk}
+                          onClick={handleAddKnowledge}
+                          disabled={knowledgeLoading}
                           style={{
-                            padding: "8px 14px",
-                            borderRadius: "8px",
-                            border: "1px solid #4f46e5",
+                            padding: "10px 12px",
+                            borderRadius: 10,
+                            border: "1px solid #c7d2fe",
                             background: "#eef2ff",
-                            color: "#1f2937",
-                            fontWeight: 600,
+                            color: "#1d4ed8",
+                            fontWeight: 700,
                             cursor: "pointer",
                           }}
                         >
-                          Add knowledge
+                          Add snippet
                         </button>
-                        {kbStatus && <div style={{ fontSize: 12, color: "#6b7280" }}>{kbStatus}</div>}
                       </div>
                     </div>
+
+                    {knowledgeLoading && knowledge.length === 0 && (
+                      <div style={{ color: "#6b7280" }}>Loading…</div>
+                    )}
+                    {!knowledgeLoading && knowledge.length === 0 && (
+                      <div style={{ color: "#6b7280", fontSize: 13 }}>
+                        No knowledge snippets yet. Add policy fragments for retrieval.
+                      </div>
+                    )}
+
+                    {knowledge.map((chunk) => {
+                      const isEditing = editingKbId === chunk.id;
+                      const edit = kbEdits[chunk.id] || { title: chunk.title, content: chunk.content };
+
+                      return isEditing ? (
+                        <div
+                          key={chunk.id}
+                          style={{
+                            border: "1px solid #e5e7eb",
+                            borderRadius: 12,
+                            padding: 12,
+                            background: "#f9fafb",
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: 8,
+                          }}
+                        >
+                          <input
+                            value={edit.title}
+                            onChange={(e) =>
+                              setKbEdits((prev) => ({ ...prev, [chunk.id]: { ...edit, title: e.target.value } }))
+                            }
+                            style={{
+                              width: "100%",
+                              padding: "10px 12px",
+                              borderRadius: 10,
+                              border: "1px solid #e5e7eb",
+                              fontSize: 14,
+                            }}
+                          />
+                          <textarea
+                            value={edit.content}
+                            onChange={(e) =>
+                              setKbEdits((prev) => ({ ...prev, [chunk.id]: { ...edit, content: e.target.value } }))
+                            }
+                            rows={3}
+                            style={{
+                              width: "100%",
+                              padding: "10px 12px",
+                              borderRadius: 10,
+                              border: "1px solid #e5e7eb",
+                              fontSize: 14,
+                              fontFamily: "inherit",
+                            }}
+                          />
+                          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                            <button
+                              onClick={() => setEditingKbId(null)}
+                              style={{
+                                padding: "8px 10px",
+                                borderRadius: 10,
+                                border: "1px solid #e5e7eb",
+                                background: "#fff",
+                                cursor: "pointer",
+                              }}
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              onClick={() =>
+                                handleUpdateKnowledge(chunk, { title: edit.title, content: edit.content })
+                              }
+                              style={{
+                                padding: "8px 10px",
+                                borderRadius: 10,
+                                border: "1px solid #22c55e",
+                                background: "#dcfce7",
+                                color: "#166534",
+                                cursor: "pointer",
+                                fontWeight: 700,
+                              }}
+                            >
+                              Save
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div
+                          key={chunk.id}
+                          style={{
+                            border: "1px solid #e5e7eb",
+                            borderRadius: 12,
+                            padding: 12,
+                            background: "#fff",
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: 6,
+                          }}
+                        >
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <div style={{ fontWeight: 700 }}>{chunk.title}</div>
+                            <div style={{ display: "flex", gap: 8 }}>
+                              <button
+                                onClick={() => {
+                                  setKbEdits((prev) => ({ ...prev, [chunk.id]: edit }));
+                                  setEditingKbId(chunk.id);
+                                }}
+                                style={{
+                                  padding: "6px 8px",
+                                  borderRadius: 8,
+                                  border: "1px solid #e5e7eb",
+                                  background: "#f9fafb",
+                                  cursor: "pointer",
+                                  fontSize: 12,
+                                }}
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => handleDeleteKnowledge(chunk.id)}
+                                style={{
+                                  padding: "6px 8px",
+                                  borderRadius: 8,
+                                  border: "1px solid #fca5a5",
+                                  background: "#fef2f2",
+                                  color: "#b91c1c",
+                                  cursor: "pointer",
+                                  fontSize: 12,
+                                }}
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </div>
+                          <div style={{ fontSize: 13, color: "#374151", whiteSpace: "pre-wrap" }}>
+                            {chunk.content}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
+                </Card>
               )}
-            </div>
-          </div>
-        </main>
+
+              {tab === "escalation" && (
+                <Card title="Escalation rules">
+                  <FieldLabel label="Rules" />
+                  <textarea
+                    value={draft.escalationRules}
+                    onChange={(e) => handleFieldChange({ escalationRules: e.target.value })}
+                    rows={6}
+                    style={{
+                      width: "100%",
+                      padding: "10px 12px",
+                      borderRadius: 10,
+                      border: "1px solid #e5e7eb",
+                      fontSize: 14,
+                      fontFamily: "inherit",
+                    }}
+                    placeholder="Describe when to hand off to a human."
+                  />
+                </Card>
+              )}
+
+              {tab === "personality" && (
+                <Card title="Personality">
+                  <FieldLabel label="Voice and tone" />
+                  <textarea
+                    value={draft.personalityNotes}
+                    onChange={(e) => handleFieldChange({ personalityNotes: e.target.value })}
+                    rows={6}
+                    style={{
+                      width: "100%",
+                      padding: "10px 12px",
+                      borderRadius: 10,
+                      border: "1px solid #e5e7eb",
+                      fontSize: 14,
+                      fontFamily: "inherit",
+                    }}
+                    placeholder="How should this specialist speak?"
+                  />
+                </Card>
+              )}
+            </>
+          )}
+        </div>
       </div>
-    </div>
+    </main>
   );
 }
