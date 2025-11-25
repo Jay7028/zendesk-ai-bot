@@ -77,25 +77,73 @@ export async function POST(request: Request) {
     personalityNotes: body.personalityNotes ?? "",
   });
 
-  // Let Supabase generate the id if none provided
-  if (!body.id) {
-    delete (dbRecord as any).id;
+  // Update if id is provided, otherwise insert new
+  if (body.id) {
+    const { data, error } = await supabaseAdmin
+      .from("specialists")
+      .update(dbRecord)
+      .eq("id", body.id)
+      .select()
+      .single();
+
+    if (error || !data) {
+      console.error("Supabase POST /specialists update error", error);
+      return NextResponse.json(
+        { error: "Failed to update specialist", details: error?.message },
+        { status: 500 }
+      );
+    }
+
+    await logAdminEvent(`Updated specialist "${data.name}"`, `id: ${data.id}`);
+    return NextResponse.json(dbToCamel(data), { status: 200 });
+  } else {
+    delete (dbRecord as any).id; // let Supabase generate
+    const { data, error } = await supabaseAdmin
+      .from("specialists")
+      .insert(dbRecord)
+      .select()
+      .single();
+
+    if (error || !data) {
+      console.error("Supabase POST /specialists insert error", error);
+      return NextResponse.json(
+        { error: "Failed to create specialist", details: error?.message },
+        { status: 500 }
+      );
+    }
+
+    await logAdminEvent(`Created specialist "${data.name}"`, `id: ${data.id}`);
+    return NextResponse.json(dbToCamel(data), { status: 201 });
+  }
+}
+
+export async function DELETE(request: Request) {
+  const url = new URL(request.url);
+  const idFromQuery = url.searchParams.get("id");
+  const body = request.headers.get("content-length")
+    ? ((await request.json()) as { id?: string })
+    : {};
+  const id = idFromQuery || body.id;
+  if (!id) {
+    return NextResponse.json(
+      { error: "id is required to delete specialist" },
+      { status: 400 }
+    );
   }
 
-  const { data, error } = await supabaseAdmin
+  const { error } = await supabaseAdmin
     .from("specialists")
-    .insert(dbRecord)
-    .select()
-    .single();
+    .delete()
+    .eq("id", id);
 
-  if (error || !data) {
-    console.error("Supabase POST /specialists error", error);
+  if (error) {
+    console.error("Supabase DELETE /specialists error", error);
     return NextResponse.json(
-      { error: "Failed to create specialist", details: error?.message },
+      { error: "Failed to delete specialist", details: error.message },
       { status: 500 }
     );
   }
 
-  await logAdminEvent(`Created specialist "${data.name}"`, `id: ${data.id}`);
-  return NextResponse.json(dbToCamel(data), { status: 201 });
+  await logAdminEvent(`Deleted specialist`, `id: ${id}`);
+  return NextResponse.json({ success: true }, { status: 200 });
 }
