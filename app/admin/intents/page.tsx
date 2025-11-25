@@ -315,12 +315,13 @@ export default function IntentsPage() {
             Navigation
           </div>
           {[
-            { id: "specialists", label: "AI Specialists", href: "/admin" },
-            { id: "intents", label: "Intents & Routing", href: "/admin/intents", active: true },
+            { id: "specialists", label: "AI Specialists", href: "/specialists" },
+            { id: "intents", label: "Intents", href: "/admin/intents", active: true },
             { id: "data-extraction", label: "Data Extraction", href: "/admin/data-extraction" },
             { id: "integrations", label: "Integrations", href: "/admin/integrations" },
             { id: "logs", label: "Logs", href: "/admin/logs" },
             { id: "test-ai", label: "Test AI", href: "/test-ai" },
+            { id: "track", label: "Track", href: "/track" },
           ].map((item) => (
             <a
               key={item.id}
