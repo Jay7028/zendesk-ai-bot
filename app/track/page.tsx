@@ -2,60 +2,52 @@
 
 import { useState } from "react";
 
-type TrackResult = {
-  registered?: unknown;
-  refreshed?: unknown;
-  trackInfo?: unknown;
-  usedNumbers?: string[];
+type TrackResponse = {
+  created?: unknown;
+  info?: unknown;
+  tracking_number?: string;
+  courier_code?: string;
   error?: string;
   detail?: string;
 };
 
-const EXAMPLES = [
-  "EZ1000000001",
-  "9400110898825022579493",
-  "1Z999AA10123456784",
-  "9274899991899154345251",
-];
+const SAMPLE_NUMBER = "H06A8A0002038467";
+const DEFAULT_COURIER = "hermes-uk";
 
-export default function TrackTester() {
-  const [number, setNumber] = useState(EXAMPLES[0]);
-  const [carrier, setCarrier] = useState("usps");
-  const [realtime, setRealtime] = useState(false);
+export default function TrackPage() {
+  const [trackingNumber, setTrackingNumber] = useState(SAMPLE_NUMBER);
+  const [courierCode, setCourierCode] = useState(DEFAULT_COURIER);
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<TrackResult | null>(null);
   const [error, setError] = useState("");
+  const [result, setResult] = useState<TrackResponse | null>(null);
 
-  async function handleSubmit() {
+  async function handleTest() {
     setError("");
     setResult(null);
-    const trimmed = number.trim();
-    if (!trimmed) {
+    const num = trackingNumber.trim();
+    const courier = courierCode.trim() || DEFAULT_COURIER;
+    if (!num) {
       setError("Enter a tracking number.");
       return;
     }
-
     setLoading(true);
     try {
       const res = await fetch("/api/track", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          action: "register_and_fetch",
-          carrier: carrier || undefined,
-          numbers: [trimmed],
-          realtime,
+          tracking_number: num,
+          courier_code: courier,
         }),
       });
-      const data = (await res.json()) as TrackResult;
+      const data = (await res.json()) as TrackResponse;
       if (!res.ok || data.error) {
-        setError(data.error || "Request failed");
-        if (data.detail) setError(`${data.error}: ${data.detail}`);
+        setError(data.detail || data.error || "Request failed");
         return;
       }
       setResult(data);
     } catch (e: any) {
-      setError(`Request failed: ${e.message || e}`);
+      setError(e?.message || "Request failed");
     } finally {
       setLoading(false);
     }
@@ -68,10 +60,10 @@ export default function TrackTester() {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        fontFamily:
-          "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
         background: "#0f172a",
         color: "#e5e7eb",
+        fontFamily:
+          "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
         padding: "24px",
       }}
     >
@@ -82,46 +74,22 @@ export default function TrackTester() {
           background: "#020617",
           borderRadius: "12px",
           padding: "24px",
-          boxShadow: "0 20px 40px rgba(0,0,0,0.4)",
           border: "1px solid #1f2937",
+          boxShadow: "0 20px 40px rgba(0,0,0,0.4)",
         }}
       >
-        <h1 style={{ fontSize: "24px", marginBottom: "8px" }}>
-          17TRACK Tester
-        </h1>
+        <h1 style={{ fontSize: "24px", marginBottom: "8px" }}>TrackingMore Tester</h1>
         <p style={{ marginBottom: "12px", color: "#9ca3af", fontSize: "14px" }}>
-          Enter a tracking number and hit Test. Use the samples below if you
-          don’t have one. Realtime refresh costs more quota; leave off unless
-          you need it.
+          Enter a tracking number and courier code. Defaults to hermes-uk.
         </p>
-
-        <div style={{ marginBottom: "12px", display: "flex", gap: "8px" }}>
-          {EXAMPLES.map((ex) => (
-            <button
-              key={ex}
-              onClick={() => setNumber(ex)}
-              style={{
-                padding: "6px 10px",
-                borderRadius: "6px",
-                border: "1px solid #1f2937",
-                background: "#0b1224",
-                color: "#e5e7eb",
-                cursor: "pointer",
-                fontSize: "12px",
-              }}
-            >
-              {ex}
-            </button>
-          ))}
-        </div>
 
         <label style={{ display: "block", marginBottom: "6px", fontSize: "14px" }}>
           Tracking number
         </label>
         <input
-          value={number}
-          onChange={(e) => setNumber(e.target.value)}
-          placeholder="e.g. 9400110898825022579493"
+          value={trackingNumber}
+          onChange={(e) => setTrackingNumber(e.target.value)}
+          placeholder="Tracking number"
           style={{
             width: "100%",
             padding: "10px",
@@ -135,12 +103,12 @@ export default function TrackTester() {
         />
 
         <label style={{ display: "block", marginBottom: "6px", fontSize: "14px" }}>
-          Carrier code (optional, helps detection)
+          Courier code
         </label>
         <input
-          value={carrier}
-          onChange={(e) => setCarrier(e.target.value)}
-          placeholder="usps | ups | fedex | leave empty to auto-detect"
+          value={courierCode}
+          onChange={(e) => setCourierCode(e.target.value)}
+          placeholder="hermes-uk"
           style={{
             width: "100%",
             padding: "10px",
@@ -149,18 +117,9 @@ export default function TrackTester() {
             background: "#020617",
             color: "#e5e7eb",
             fontSize: "14px",
-            marginBottom: "10px",
+            marginBottom: "12px",
           }}
         />
-
-        <label style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
-          <input
-            type="checkbox"
-            checked={realtime}
-            onChange={(e) => setRealtime(e.target.checked)}
-          />
-          <span style={{ fontSize: "14px" }}>Force realtime refresh (uses more quota)</span>
-        </label>
 
         {error && (
           <div
@@ -178,7 +137,7 @@ export default function TrackTester() {
         )}
 
         <button
-          onClick={handleSubmit}
+          onClick={handleTest}
           disabled={loading}
           style={{
             padding: "10px 18px",
