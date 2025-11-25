@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "../../../lib/supabase";
+import {
+  ensureTrackingAndFetch,
+  summarizeTracking,
+  TrackingSummary,
+} from "../../../lib/trackingmore";
 
 type SpecialistRow = {
   id: string;
@@ -33,6 +38,7 @@ async function logRun(origin: string, payload: {
   inputSummary: string;
   outputSummary: string;
   status: "success" | "fallback" | "escalated";
+  knowledgeSources?: string[];
 }) {
   try {
     await fetch(new URL("/api/logs", origin), {
@@ -45,7 +51,7 @@ async function logRun(origin: string, payload: {
         intentId: payload.intentId,
         intentName: payload.intentName,
         inputSummary: payload.inputSummary,
-        knowledgeSources: [],
+        knowledgeSources: payload.knowledgeSources ?? [],
         outputSummary: payload.outputSummary,
         status: payload.status,
       }),
@@ -77,6 +83,12 @@ async function logTicketEvent(origin: string, payload: {
   }
 }
 
+function extractTrackingCandidates(text: string): string[] {
+  if (!text) return [];
+  const matches = text.toUpperCase().match(/\b[A-Z0-9]{10,22}\b/g);
+  return matches ? Array.from(new Set(matches)) : [];
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -88,6 +100,12 @@ export async function POST(req: NextRequest) {
 
     const latestUser = [...messages].reverse().find((m) => m.role === "user");
     const userMessage = latestUser?.content?.trim() || "No message provided";
+    const requestedTrackingNumber: string | undefined =
+      (body.trackingNumber || body.tracking_number || "").toString().trim() ||
+      undefined;
+    const requestedCourier: string | undefined =
+      (body.courierCode || body.courier_code || "").toString().trim() ||
+      undefined;
 
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
@@ -197,6 +215,40 @@ export async function POST(req: NextRequest) {
       actions.push("Would tag: bot-handover");
     }
 
+    // Optional tracking enrichment
+    let trackingSummary: TrackingSummary | null = null;
+    const trackingNumber =
+      requestedTrackingNumber ||
+      extractTrackingCandidates(userMessage).find((n) => n.length >= 10);
+    const courierCode = (requestedCourier || "royal-mail").toLowerCase();
+    const hasTrackingKey =
+      process.env.TRACKINGMORE_API_KEY || process.env.TRACKING_MORE_API_KEY;
+
+    if (trackingNumber && hasTrackingKey) {
+      try {
+        const info = await ensureTrackingAndFetch(trackingNumber, courierCode);
+        trackingSummary = summarizeTracking(info, trackingNumber, courierCode);
+        const summaryText = `Tracking ${trackingNumber} (${courierCode}) status: ${
+          trackingSummary.status || "unknown"
+        }; ETA: ${trackingSummary.eta || "n/a"}; Last: ${
+          trackingSummary.lastEvent || "n/a"
+        }`;
+        actions.push(summaryText);
+        await logTicketEvent(origin, {
+          ticketId,
+          eventType: "zendesk_update",
+          summary: "Tracking fetched",
+          detail: summaryText,
+        });
+      } catch (err: any) {
+        actions.push(
+          `Tracking lookup failed for ${trackingNumber} (${courierCode}): ${
+            err?.message || err
+          }`
+        );
+      }
+    }
+
     await logTicketEvent(origin, {
       ticketId,
       eventType: "intent_detected",
@@ -212,6 +264,15 @@ export async function POST(req: NextRequest) {
           : "You are a helpful customer service email assistant.",
       },
     ];
+
+    if (trackingSummary) {
+      replyMessages.unshift({
+        role: "system",
+        content: `Tracking info: number ${trackingSummary.trackingNumber} (${trackingSummary.courierCode}); status: ${trackingSummary.status ||
+          "unknown"}; ETA: ${trackingSummary.eta || "n/a"}; Last event: ${trackingSummary.lastEvent ||
+          "n/a"}. Include this tracking update in your reply if the user asked about parcel status.`,
+      });
+    }
 
     messages.forEach((m) => {
       replyMessages.push({ role: m.role, content: m.content });
@@ -256,6 +317,12 @@ export async function POST(req: NextRequest) {
       inputSummary: userMessage.slice(0, 200),
       outputSummary: reply.slice(0, 200),
       status: "success",
+      knowledgeSources: trackingSummary
+        ? [
+            `tracking ${trackingSummary.trackingNumber} (${trackingSummary.courierCode}) status:${trackingSummary.status ||
+              "unknown"} eta:${trackingSummary.eta || "n/a"} last:${trackingSummary.lastEvent || "n/a"}`,
+          ]
+        : [],
     });
     await logTicketEvent(origin, {
       ticketId,
@@ -270,6 +337,7 @@ export async function POST(req: NextRequest) {
       intentName: matchedIntent?.name ?? null,
       specialistId: matchedSpecialist?.id ?? null,
       specialistName: matchedSpecialist?.name ?? null,
+      trackingSummary: trackingSummary ?? null,
       actions,
       ticketId,
       inputSummary: userMessage,

@@ -1,70 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
+import {
+  ensureTrackingAndFetch,
+  summarizeTracking,
+} from "../../../lib/trackingmore";
 
 type TrackRequest = {
   tracking_number?: string;
   courier_code?: string;
 };
 
-const TRACKINGMORE_BASE = "https://api.trackingmore.com/v4";
-
-async function tmFetch<T>(
-  apiKey: string,
-  path: string,
-  init: RequestInit
-): Promise<T> {
-  const res = await fetch(`${TRACKINGMORE_BASE}${path}`, {
-    ...init,
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-      "Tracking-Api-Key": apiKey,
-      ...(init.headers || {}),
-    },
-  });
-
-  const text = await res.text();
-  let json: any;
-  try {
-    json = text ? JSON.parse(text) : {};
-  } catch {
-    throw new Error(`TrackingMore returned non-JSON response: ${text}`);
-  }
-
-  const isSuccessCode = (val: unknown) => {
-    if (val === undefined || val === null) return false;
-    const num = Number(val);
-    return !Number.isNaN(num) && num === 200;
-  };
-  const okBody =
-    isSuccessCode(json?.code) ||
-    isSuccessCode(json?.meta?.code) ||
-    (json?.code === undefined && res.ok); // fall back to HTTP ok when code is absent
-
-  if (!res.ok || !okBody) {
-    const msg = json?.message || json?.meta?.message || res.statusText;
-    const code = json?.code ?? json?.meta?.code ?? res.status;
-    const err = new Error(`TrackingMore error ${code}: ${msg}`);
-    // Preserve raw body so callers can inspect reason
-    (err as any)._tmBody = json;
-    throw err;
-  }
-
-  return json as T;
-}
-
 export async function POST(req: NextRequest) {
   try {
-    const apiKey =
-      process.env.TRACKINGMORE_API_KEY ||
-      process.env.TRACKING_MORE_API_KEY ||
-      "";
-    if (!apiKey) {
-      return NextResponse.json(
-        { error: "TRACKINGMORE_API_KEY not set on server" },
-        { status: 500 }
-      );
-    }
-
     const body = (await req.json()) as TrackRequest;
     const trackingNumber = body.tracking_number?.trim();
     const courierCode = (body.courier_code || "hermes-uk").trim();
@@ -76,44 +22,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 1) Create/register tracking
-    let createRes: { code: number; data: unknown; message?: string } | null = null;
-    try {
-      createRes = await tmFetch<{
-        code: number;
-        data: unknown;
-        message?: string;
-      }>(apiKey, "/trackings/create", {
-        method: "POST",
-        body: JSON.stringify({
-          tracking_number: trackingNumber,
-          courier_code: courierCode,
-        }),
-      });
-    } catch (err: any) {
-      const msg = err?.message || "";
-      const body = err?._tmBody;
-      const alreadyExists =
-        msg.toLowerCase().includes("already exists") ||
-        body?.meta?.message?.toLowerCase?.().includes("already exists");
-      if (!alreadyExists) {
-        throw err;
-      }
-      // If it already exists, we can still fetch info below.
-    }
-
-    // 2) Fetch tracking info
-    const infoRes = await tmFetch<{
-      code: number;
-      data: unknown;
-      message?: string;
-    }>(apiKey, `/trackings/${courierCode}/${trackingNumber}`, {
-      method: "GET",
-    });
+    const infoRes = await ensureTrackingAndFetch(trackingNumber, courierCode);
+    const summary = summarizeTracking(infoRes, trackingNumber, courierCode);
 
     return NextResponse.json({
-      created: createRes?.data ?? "already exists",
+      created: infoRes?.data ?? "created or exists",
       info: infoRes.data,
+      summary,
       tracking_number: trackingNumber,
       courier_code: courierCode,
     });
