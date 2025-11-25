@@ -170,7 +170,7 @@ export default function DataExtractionPage() {
             { id: "data-extraction", label: "Data Extraction", href: "/admin/data-extraction", active: true },
             { id: "integrations", label: "Integrations", href: "/admin/integrations" },
             { id: "logs", label: "Logs", href: "/admin/logs" },
-            { id: "test-ai", label: "Test AI", href: "/test-ai" },
+            { id: "test-ai", label: "Test AI", href: "/admin/test-ai" },
             { id: "track", label: "Track", href: "/track" },
           ].map((item) => (
             <a

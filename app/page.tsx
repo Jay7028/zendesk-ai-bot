@@ -30,7 +30,7 @@ export default function Home() {
             { id: "data-extraction", label: "Data Extraction", href: "/admin/data-extraction" },
             { id: "integrations", label: "Integrations", href: "/admin/integrations" },
             { id: "logs", label: "Logs", href: "/admin/logs" },
-            { id: "test-ai", label: "Test AI", href: "/test-ai" },
+            { id: "test-ai", label: "Test AI", href: "/admin/test-ai" },
             { id: "track", label: "Track", href: "/track" },
           ].map((item) => (
             <a key={item.id} href={item.href} style={{ textDecoration: "none" }}>
