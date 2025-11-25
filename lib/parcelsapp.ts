@@ -104,16 +104,30 @@ export async function trackOnce(opts: {
   const maxPoll = opts.maxPollMs ?? 4000;
   const interval = opts.pollIntervalMs ?? 500;
 
-  const destination =
-    opts.destinationCountry?.trim() ||
-    process.env.DEFAULT_DESTINATION_COUNTRY?.trim() ||
-    "United Kingdom";
+  const preferredCountry = opts.destinationCountry?.trim() || undefined;
+  const fallbackCountry = process.env.DEFAULT_DESTINATION_COUNTRY?.trim();
 
-  const initRes = await initiateTracking({
-    trackingId,
-    destinationCountry: destination,
-    language,
-  });
+  async function init(dest?: string) {
+    return initiateTracking({
+      trackingId,
+      destinationCountry: dest,
+      language,
+    });
+  }
+
+  let initRes: any;
+  try {
+    initRes = await init(preferredCountry);
+  } catch (err: any) {
+    const msg = (err?.message || "").toLowerCase();
+    const needsCountry =
+      msg.includes("destinationcountry") || msg.includes("invalid_params");
+    if (needsCountry && !preferredCountry && fallbackCountry) {
+      initRes = await init(fallbackCountry);
+    } else {
+      throw err;
+    }
+  }
 
   const uuid = initRes?.uuid;
 
