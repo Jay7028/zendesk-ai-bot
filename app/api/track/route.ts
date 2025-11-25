@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
 
     // Store a human-friendly log entry
     try {
-      const scans = summary.scans?.slice(-3) || [];
+      const scans = summary.scans?.slice(0, 3) || [];
       const scanText =
         scans.length > 0
           ? scans

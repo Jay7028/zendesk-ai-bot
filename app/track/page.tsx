@@ -250,7 +250,7 @@ export default function TrackPage() {
                       </td>
                       <td style={{ padding: "10px", borderBottom: "1px solid #1f2937" }}>
                         {(() => {
-                          const last = result.summary!.scans![result.summary!.scans!.length - 1];
+                          const last = result.summary!.scans![0];
                           const pieces = [
                             last.time || null,
                             last.location || null,
@@ -324,7 +324,7 @@ export default function TrackPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {result.summary.scans.map((scan, idx) => (
+                      {result.summary.scans.slice(0, 3).map((scan, idx) => (
                         <tr key={idx}>
                           <td style={{ padding: "10px", borderBottom: "1px solid #1f2937" }}>
                             {scan.time || "N/A"}

@@ -160,30 +160,32 @@ export function summarizeParcel(raw: any, trackingId: string): ParcelSummary {
     ? shipment.states
     : [];
 
-  const lastCheckpoint = checkpoints.length ? checkpoints[checkpoints.length - 1] : null;
+  const scans = checkpoints
+    .map((cp) => ({
+      time: cp.time || cp.datetime || cp.date,
+      location: cp.location || cp.place,
+      message: cp.message || cp.status || cp.description,
+      status: cp.status || cp.substatus,
+      _ts: Date.parse(cp.time || cp.datetime || cp.date || cp.timestamp || "") || 0,
+    }))
+    .sort((a, b) => b._ts - a._ts)
+    .map(({ _ts, ...rest }) => rest);
+
+  const latest = scans[0];
   const lastEvent =
     shipment?.lastEvent ||
     shipment?.latestEvent ||
-    lastCheckpoint?.message ||
-    lastCheckpoint?.status ||
-    lastCheckpoint?.description;
+    latest?.message ||
+    latest?.status;
   const lastLocation =
     shipment?.lastLocation ||
     shipment?.latestLocation ||
-    lastCheckpoint?.location;
+    latest?.location;
   const updatedAt =
     shipment?.lastUpdate ||
     shipment?.updatedAt ||
     shipment?.timestamp ||
-    lastCheckpoint?.time ||
-    lastCheckpoint?.datetime;
-
-  const scans = checkpoints.map((cp) => ({
-    time: cp.time || cp.datetime || cp.date,
-    location: cp.location || cp.place,
-    message: cp.message || cp.status || cp.description,
-    status: cp.status || cp.substatus,
-  }));
+    latest?.time;
 
   return {
     trackingId,

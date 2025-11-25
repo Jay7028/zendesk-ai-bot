@@ -231,7 +231,7 @@ export async function POST(req: NextRequest) {
           "unknown"}) status: ${trackingSummary.status || "unknown"}; ETA: ${trackingSummary.eta ||
           "n/a"}; Last: ${trackingSummary.lastEvent || "n/a"}`;
         actions.push(summaryText);
-        const scans = trackingSummary.scans?.slice(-3) || [];
+        const scans = trackingSummary.scans?.slice(0, 3) || [];
         const scanText =
           scans.length > 0
             ? scans
