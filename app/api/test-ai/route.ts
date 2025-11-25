@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "../../../lib/supabase";
-import {
-  ensureTrackingAndFetch,
-  summarizeTracking,
-  TrackingSummary,
-} from "../../../lib/trackingmore";
+import { trackOnce, summarizeParcel, ParcelSummary } from "../../../lib/parcelsapp";
 
 type SpecialistRow = {
   id: string;
@@ -98,14 +94,16 @@ export async function POST(req: NextRequest) {
       ? [{ role: "user", content: body.message }]
       : [];
 
-    const latestUser = [...messages].reverse().find((m) => m.role === "user");
-    const userMessage = latestUser?.content?.trim() || "No message provided";
-    const requestedTrackingNumber: string | undefined =
-      (body.trackingNumber || body.tracking_number || "").toString().trim() ||
-      undefined;
-    const requestedCourier: string | undefined =
-      (body.courierCode || body.courier_code || "").toString().trim() ||
-      undefined;
+  const latestUser = [...messages].reverse().find((m) => m.role === "user");
+  const userMessage = latestUser?.content?.trim() || "No message provided";
+  const requestedTrackingNumber: string | undefined =
+    (body.trackingNumber || body.tracking_number || "").toString().trim() ||
+    undefined;
+  const requestedCourier: string | undefined =
+    (body.courierCode || body.courier_code || "").toString().trim() ||
+    undefined;
+  const requestedDestination: string | undefined =
+    (body.destinationCountry || "").toString().trim() || undefined;
 
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
@@ -216,18 +214,19 @@ export async function POST(req: NextRequest) {
     }
 
     // Optional tracking enrichment
-    let trackingSummary: TrackingSummary | null = null;
+    let trackingSummary: ParcelSummary | null = null;
     const trackingNumber =
       requestedTrackingNumber ||
       extractTrackingCandidates(userMessage).find((n) => n.length >= 10);
-    const courierCode = (requestedCourier || "royal-mail").toLowerCase();
-    const hasTrackingKey =
-      process.env.TRACKINGMORE_API_KEY || process.env.TRACKING_MORE_API_KEY;
+    const hasTrackingKey = process.env.PARCELSAPP_API_KEY;
 
     if (trackingNumber && hasTrackingKey) {
       try {
-        const info = await ensureTrackingAndFetch(trackingNumber, courierCode);
-        trackingSummary = summarizeTracking(info, trackingNumber, courierCode);
+        const info = await trackOnce({
+          trackingId: trackingNumber,
+          destinationCountry: requestedDestination,
+        });
+        trackingSummary = summarizeParcel(info, trackingNumber);
         const summaryText = `Tracking ${trackingNumber} (${courierCode}) status: ${
           trackingSummary.status || "unknown"
         }; ETA: ${trackingSummary.eta || "n/a"}; Last: ${
@@ -242,7 +241,7 @@ export async function POST(req: NextRequest) {
         });
       } catch (err: any) {
         actions.push(
-          `Tracking lookup failed for ${trackingNumber} (${courierCode}): ${
+          `Tracking lookup failed for ${trackingNumber}: ${
             err?.message || err
           }`
         );
@@ -268,7 +267,8 @@ export async function POST(req: NextRequest) {
     if (trackingSummary) {
       replyMessages.unshift({
         role: "system",
-        content: `Tracking info: number ${trackingSummary.trackingNumber} (${trackingSummary.courierCode}); status: ${trackingSummary.status ||
+        content: `Tracking info: number ${trackingSummary.trackingId} (${trackingSummary.carrier ||
+          "unknown carrier"}); status: ${trackingSummary.status ||
           "unknown"}; ETA: ${trackingSummary.eta || "n/a"}; Last event: ${trackingSummary.lastEvent ||
           "n/a"}. Include this tracking update in your reply if the user asked about parcel status.`,
       });
@@ -319,7 +319,8 @@ export async function POST(req: NextRequest) {
       status: "success",
       knowledgeSources: trackingSummary
         ? [
-            `tracking ${trackingSummary.trackingNumber} (${trackingSummary.courierCode}) status:${trackingSummary.status ||
+            `tracking ${trackingSummary.trackingId} (${trackingSummary.carrier ||
+              "unknown"}) status:${trackingSummary.status ||
               "unknown"} eta:${trackingSummary.eta || "n/a"} last:${trackingSummary.lastEvent || "n/a"}`,
           ]
         : [],

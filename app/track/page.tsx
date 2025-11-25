@@ -3,30 +3,39 @@
 import { useState } from "react";
 
 type TrackResponse = {
-  created?: unknown;
   info?: unknown;
-  tracking_number?: string;
-  courier_code?: string;
+  summary?: {
+    trackingId: string;
+    carrier?: string;
+    status?: string;
+    eta?: string;
+    lastEvent?: string;
+    lastLocation?: string;
+    updatedAt?: string;
+  };
   error?: string;
   detail?: string;
 };
 
-const SAMPLE_NUMBER = "H06A8A0002038467";
-const DEFAULT_COURIER = "hermes-uk";
+const SAMPLE = {
+  trackingId: "OH869664236GB",
+  destinationCountry: "",
+};
 
 export default function TrackPage() {
-  const [trackingNumber, setTrackingNumber] = useState(SAMPLE_NUMBER);
-  const [courierCode, setCourierCode] = useState(DEFAULT_COURIER);
+  const [trackingId, setTrackingId] = useState(SAMPLE.trackingId);
+  const [destinationCountry, setDestinationCountry] = useState(
+    SAMPLE.destinationCountry
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState<TrackResponse | null>(null);
 
-  async function handleTest() {
+  async function handleSubmit() {
     setError("");
     setResult(null);
-    const num = trackingNumber.trim();
-    const courier = courierCode.trim() || DEFAULT_COURIER;
-    if (!num) {
+    const id = trackingId.trim();
+    if (!id) {
       setError("Enter a tracking number.");
       return;
     }
@@ -36,8 +45,8 @@ export default function TrackPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          tracking_number: num,
-          courier_code: courier,
+          tracking_number: id,
+          destinationCountry: destinationCountry || undefined,
         }),
       });
       const data = (await res.json()) as TrackResponse;
@@ -57,45 +66,65 @@ export default function TrackPage() {
     <main
       style={{
         minHeight: "100vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        background: "#0f172a",
-        color: "#e5e7eb",
         fontFamily:
           "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-        padding: "24px",
+        background: "#0b1224",
+        color: "#e5e7eb",
       }}
     >
+      <header
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          padding: "16px 24px",
+          borderBottom: "1px solid #1f2937",
+          background: "#0f172a",
+        }}
+      >
+        <div style={{ fontWeight: 700, fontSize: "18px" }}>Zendesk AI Bot</div>
+        <nav style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+          <a
+            href="/"
+            style={{ color: "#e5e7eb", textDecoration: "none", fontSize: "14px" }}
+          >
+            Home
+          </a>
+          <a
+            href="/track"
+            style={{ color: "#e5e7eb", textDecoration: "none", fontSize: "14px" }}
+          >
+            Track
+          </a>
+        </nav>
+      </header>
+
       <div
         style={{
           width: "100%",
           maxWidth: "900px",
-          background: "#020617",
-          borderRadius: "12px",
-          padding: "24px",
-          border: "1px solid #1f2937",
-          boxShadow: "0 20px 40px rgba(0,0,0,0.4)",
+          margin: "0 auto",
+          padding: "32px 24px 48px",
         }}
       >
-        <h1 style={{ fontSize: "24px", marginBottom: "8px" }}>TrackingMore Tester</h1>
+        <h1 style={{ fontSize: "24px", marginBottom: "8px" }}>Parcelsapp Tester</h1>
         <p style={{ marginBottom: "12px", color: "#9ca3af", fontSize: "14px" }}>
-          Enter a tracking number and courier code. Defaults to hermes-uk.
+          Enter a tracking number. Destination country is optional; leave blank to auto-detect.
         </p>
 
         <label style={{ display: "block", marginBottom: "6px", fontSize: "14px" }}>
           Tracking number
         </label>
         <input
-          value={trackingNumber}
-          onChange={(e) => setTrackingNumber(e.target.value)}
+          value={trackingId}
+          onChange={(e) => setTrackingId(e.target.value)}
           placeholder="Tracking number"
           style={{
             width: "100%",
             padding: "10px",
             borderRadius: "8px",
             border: "1px solid #374151",
-            background: "#020617",
+            background: "#0b1224",
             color: "#e5e7eb",
             fontSize: "14px",
             marginBottom: "10px",
@@ -103,18 +132,18 @@ export default function TrackPage() {
         />
 
         <label style={{ display: "block", marginBottom: "6px", fontSize: "14px" }}>
-          Courier code
+          Destination country (optional)
         </label>
         <input
-          value={courierCode}
-          onChange={(e) => setCourierCode(e.target.value)}
-          placeholder="hermes-uk"
+          value={destinationCountry}
+          onChange={(e) => setDestinationCountry(e.target.value)}
+          placeholder="e.g. United Kingdom"
           style={{
             width: "100%",
             padding: "10px",
             borderRadius: "8px",
             border: "1px solid #374151",
-            background: "#020617",
+            background: "#0b1224",
             color: "#e5e7eb",
             fontSize: "14px",
             marginBottom: "12px",
@@ -137,7 +166,7 @@ export default function TrackPage() {
         )}
 
         <button
-          onClick={handleTest}
+          onClick={handleSubmit}
           disabled={loading}
           style={{
             padding: "10px 18px",
@@ -162,7 +191,7 @@ export default function TrackPage() {
               paddingTop: "16px",
             }}
           >
-            <h2 style={{ fontSize: "16px", marginBottom: "8px" }}>Response</h2>
+            <h2 style={{ fontSize: "16px", marginBottom: "8px" }}>Summary</h2>
             <pre
               style={{
                 whiteSpace: "pre-wrap",
@@ -175,7 +204,24 @@ export default function TrackPage() {
                 lineHeight: 1.4,
               }}
             >
-              {JSON.stringify(result, null, 2)}
+              {JSON.stringify(result.summary, null, 2)}
+            </pre>
+            <h3 style={{ fontSize: "14px", marginTop: "12px", marginBottom: "6px" }}>
+              Raw
+            </h3>
+            <pre
+              style={{
+                whiteSpace: "pre-wrap",
+                wordBreak: "break-word",
+                background: "#0b1224",
+                borderRadius: "8px",
+                padding: "12px",
+                border: "1px solid #1f2937",
+                fontSize: "13px",
+                lineHeight: 1.4,
+              }}
+            >
+              {JSON.stringify(result.info, null, 2)}
             </pre>
           </div>
         )}
