@@ -424,8 +424,17 @@ export default function SpecialistsPage() {
                   <div style={{ display: "flex", gap: 8 }}>
                     <label style={{ fontSize: 12, color: "#6b7280", width: 120 }}>Notes</label>
                     <textarea
-                      value={selectedSpecialist.knowledge_base_notes}
-                      onChange={(e) => updateSelectedSpecialist({ knowledge_base_notes: e.target.value })}
+                      value={
+                        (selectedSpecialist as any).knowledge_base_notes ??
+                        selectedSpecialist.knowledgeBaseNotes ??
+                        ""
+                      }
+                      onChange={(e) =>
+                        updateSelectedSpecialist({
+                          knowledge_base_notes: e.target.value,
+                          knowledgeBaseNotes: e.target.value,
+                        } as any)
+                      }
                       rows={2}
                       style={{
                         flex: 1,
