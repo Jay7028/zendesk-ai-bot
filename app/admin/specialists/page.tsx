@@ -9,6 +9,7 @@ export default function SpecialistsPage() {
   const [activeTab, setActiveTab] = useState<TabKey>("data");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -72,6 +73,27 @@ export default function SpecialistsPage() {
       setError(e.message ?? "Unexpected error");
     } finally {
       setIsSaving(false);
+    }
+  }
+
+  async function deleteSpecialist() {
+    if (!selectedSpecialist) return;
+    const ok = typeof window !== "undefined" ? window.confirm("Delete this specialist?") : true;
+    if (!ok) return;
+    try {
+      setIsDeleting(true);
+      setError(null);
+      const res = await fetch(`/api/specialists?id=${encodeURIComponent(selectedSpecialist.id)}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to delete specialist");
+      setSpecialists((prev) => prev.filter((s) => s.id !== selectedSpecialist.id));
+      const remaining = specialists.filter((s) => s.id !== selectedSpecialist.id);
+      setSelectedSpecialistId(remaining[0]?.id);
+    } catch (e: any) {
+      setError(e.message ?? "Unexpected error");
+    } finally {
+      setIsDeleting(false);
     }
   }
 
@@ -469,6 +491,21 @@ export default function SpecialistsPage() {
                       }}
                     >
                       {isSaving ? "Saving..." : "Save changes"}
+                    </button>
+                    <button
+                      onClick={deleteSpecialist}
+                      disabled={isDeleting || !selectedSpecialist}
+                      style={{
+                        padding: "10px 16px",
+                        borderRadius: "10px",
+                        border: "1px solid #ef4444",
+                        background: "#fff",
+                        color: "#b91c1c",
+                        fontWeight: 600,
+                        cursor: isDeleting ? "default" : "pointer",
+                      }}
+                    >
+                      {isDeleting ? "Deleting..." : "Delete"}
                     </button>
                     {error && (
                       <div style={{ fontSize: 12, color: "#f97316" }}>
