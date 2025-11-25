@@ -196,7 +196,7 @@ export default function LogsPage() {
           </div>
           {[
             { id: "specialists", label: "AI Specialists", href: "/admin" },
-            { id: "intents", label: "Intents & Routing", href: "/admin/intents" },
+            { id: "intents", label: "Intents", href: "/admin/intents" },
             { id: "data-extraction", label: "Data Extraction", href: "/admin/data-extraction" },
             { id: "integrations", label: "Integrations", href: "/admin/integrations" },
             { id: "logs", label: "Logs", href: "/admin/logs", active: true },
