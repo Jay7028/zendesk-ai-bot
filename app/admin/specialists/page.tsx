@@ -53,7 +53,7 @@ export default function SpecialistsPage() {
     const found = specialists.find((s) => s.id === selectedId) ?? null;
     setDraft(found ? { ...found } : null);
     loadKnowledge(selectedId);
-  }, [selectedId, specialists]);
+  }, [selectedId]);
 
   const selectedSpecialist = useMemo(
     () => specialists.find((s) => s.id === selectedId) ?? null,
