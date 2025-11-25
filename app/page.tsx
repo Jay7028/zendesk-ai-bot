@@ -24,6 +24,7 @@ export default function Home() {
             Navigation
           </div>
           {[
+            { id: "home", label: "Home", href: "/" },
             { id: "specialists", label: "AI Specialists", href: "/specialists" },
             { id: "intents", label: "Intents", href: "/admin/intents" },
             { id: "data-extraction", label: "Data Extraction", href: "/admin/data-extraction" },
