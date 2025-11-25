@@ -529,7 +529,7 @@ export default function SpecialistsPage() {
                     <div>
                       <FieldLabel label="Description" />
                       <input
-                        value={draft.description}
+                        value={draft.description || ""}
                         onChange={(e) => handleFieldChange({ description: e.target.value })}
                         style={{
                           width: "100%",
@@ -544,7 +544,7 @@ export default function SpecialistsPage() {
                     <div>
                       <FieldLabel label="Data extraction prompt" />
                       <textarea
-                        value={draft.dataExtractionPrompt}
+                        value={draft.dataExtractionPrompt || ""}
                         onChange={(e) => handleFieldChange({ dataExtractionPrompt: e.target.value })}
                         rows={4}
                         style={{
@@ -794,7 +794,7 @@ export default function SpecialistsPage() {
                 <Card title="Escalation rules">
                   <FieldLabel label="Rules" />
                   <textarea
-                    value={draft.escalationRules}
+                    value={draft.escalationRules || ""}
                     onChange={(e) => handleFieldChange({ escalationRules: e.target.value })}
                     rows={6}
                     style={{
@@ -814,7 +814,7 @@ export default function SpecialistsPage() {
                 <Card title="Personality">
                   <FieldLabel label="Voice and tone" />
                   <textarea
-                    value={draft.personalityNotes}
+                    value={draft.personalityNotes || ""}
                     onChange={(e) => handleFieldChange({ personalityNotes: e.target.value })}
                     rows={6}
                     style={{
