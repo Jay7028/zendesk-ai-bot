@@ -48,11 +48,18 @@ async function paFetch<T>(path: string, init: RequestInit): Promise<T> {
   return json as T;
 }
 
+type InitTrackingResponse = {
+  uuid?: string;
+  fromCache?: boolean;
+  shipments?: any[];
+  [key: string]: any;
+};
+
 export async function initiateTracking(opts: {
   trackingId: string;
   destinationCountry?: string;
   language?: string;
-}): Promise<{ uuid: string; fromCache?: boolean }> {
+}): Promise<InitTrackingResponse> {
   const apiKey = getApiKey();
   const shipment: Record<string, any> = {
     trackingId: opts.trackingId,
@@ -65,7 +72,7 @@ export async function initiateTracking(opts: {
     language: opts.language || "en",
     shipments: [shipment],
   };
-  const data = await paFetch<{ uuid: string; fromCache?: boolean }>(
+  const data = await paFetch<InitTrackingResponse>(
     "/shipments/tracking",
     {
       method: "POST",
