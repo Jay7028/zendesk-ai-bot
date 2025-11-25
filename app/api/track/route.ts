@@ -1,156 +1,104 @@
 import { NextRequest, NextResponse } from "next/server";
 
-type RegisterInput = {
-  number: string;
-  carrier?: string;
-  order?: string;
-  destination?: string;
-  customer?: string;
-  phone?: string;
-  email?: string;
-  postalCode?: string;
-  shipper?: string;
+type TrackRequest = {
+  tracking_number?: string;
+  courier_code?: string;
 };
 
-type TrackAction = "register" | "info" | "register_and_fetch";
+const TRACKINGMORE_BASE = "https://api.trackingmore.com/v4";
 
-const BASE_URL = "https://api.17track.net/track/v2";
-
-const TEST_NUMBERS = {
-  ups: "1Z999AA10123456784",
-  usps: "9400110898825022579493",
-  fedexSmartPost: "9274899991899154345251",
-  dhlGm: "GM1234567890123456",
-  seventeenTrackTest: "EZ1000000001",
-};
-
-async function call17Track<T>(
-  token: string,
+async function tmFetch<T>(
+  apiKey: string,
   path: string,
-  body: Record<string, unknown>
-): Promise<{ code: number; data: T; message?: string }> {
-  const res = await fetch(`${BASE_URL}${path}`, {
-    method: "POST",
+  init: RequestInit
+): Promise<T> {
+  const res = await fetch(`${TRACKINGMORE_BASE}${path}`, {
+    ...init,
     headers: {
+      Accept: "application/json",
       "Content-Type": "application/json",
-      "17token": token,
+      "Tracking-Api-Key": apiKey,
+      ...(init.headers || {}),
     },
-    body: JSON.stringify(body),
   });
 
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`17TRACK HTTP ${res.status}: ${text}`);
+  const text = await res.text();
+  let json: any;
+  try {
+    json = text ? JSON.parse(text) : {};
+  } catch {
+    throw new Error(`TrackingMore returned non-JSON response: ${text}`);
   }
 
-  const json = (await res.json()) as { code: number; data: T; message?: string };
-  if (typeof json.code !== "number") {
-    throw new Error("17TRACK response missing code");
+  // TrackingMore uses code:200 for success in body
+  if (!res.ok || json?.code !== 200) {
+    const msg = json?.message || json?.meta?.message || res.statusText;
+    const code = json?.code ?? res.status;
+    throw new Error(`TrackingMore error ${code}: ${msg}`);
   }
-  if (json.code !== 0) {
-    throw new Error(`17TRACK error code ${json.code}: ${json.message || "Unknown error"}`);
-  }
-  return json;
-}
 
-function normalizeNumbers(rawNumbers: unknown, fallbackCarrier?: string): RegisterInput[] {
-  if (!Array.isArray(rawNumbers)) return [];
-  return rawNumbers
-    .map((item) => {
-      if (typeof item === "string") {
-        return { number: item.trim(), carrier: fallbackCarrier };
-      }
-      if (item && typeof item === "object") {
-        const maybe = item as Partial<RegisterInput>;
-        return { ...maybe, number: String(maybe.number || "").trim() };
-      }
-      return null;
-    })
-    .filter((n): n is RegisterInput => !!n && !!n.number)
-    .slice(0, 40); // API hard limit per call
-}
-
-export async function GET() {
-  return NextResponse.json({
-    message: "17TRACK quick-start",
-    samplePayload: {
-      action: "register_and_fetch" as TrackAction,
-      carrier: "usps",
-      numbers: [
-        TEST_NUMBERS.seventeenTrackTest,
-        TEST_NUMBERS.usps,
-        TEST_NUMBERS.ups,
-      ],
-      realtime: false,
-    },
-    docs: "https://api.17track.net/en/doc?version=v2.4",
-  });
+  return json as T;
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const action: TrackAction = body.action || "register_and_fetch";
-    const realtime: boolean = Boolean(body.realtime);
-    const carrier: string | undefined = typeof body.carrier === "string" ? body.carrier : undefined;
-
-    const numbers = normalizeNumbers(body.numbers, carrier);
-    if (!numbers.length) {
-      return NextResponse.json(
-        { error: "Provide an array of numbers (strings or objects with a number field)." },
-        { status: 400 }
-      );
-    }
-
-    const token =
-      process.env.SEVENTEENTRACK_API_TOKEN ||
-      process.env["17TRACK_API_TOKEN"] ||
+    const apiKey =
+      process.env.TRACKINGMORE_API_KEY ||
+      process.env.TRACKING_MORE_API_KEY ||
       "";
-    if (!token) {
+    if (!apiKey) {
       return NextResponse.json(
-        { error: "Missing SEVENTEENTRACK_API_TOKEN in server environment." },
+        { error: "TRACKINGMORE_API_KEY not set on server" },
         { status: 500 }
       );
     }
 
-    const response: {
-      registered?: unknown;
-      refreshed?: unknown;
-      trackInfo?: unknown;
-    } = {};
+    const body = (await req.json()) as TrackRequest;
+    const trackingNumber = body.tracking_number?.trim();
+    const courierCode = (body.courier_code || "hermes-uk").trim();
 
-    if (action === "register" || action === "register_and_fetch") {
-      const registerPayload = {
-        numbers: numbers.map(({ carrier: c, ...rest }) =>
-          c ? { ...rest, carrier: c } : rest
-        ),
-      };
-      const registerRes = await call17Track(token, "/register", registerPayload);
-      response.registered = registerRes.data;
+    if (!trackingNumber) {
+      return NextResponse.json(
+        { error: "tracking_number is required" },
+        { status: 400 }
+      );
     }
 
-    if (realtime) {
-      const realtimeRes = await call17Track(token, "/realtime", {
-        numbers: numbers.map((n) => n.number),
-      });
-      response.refreshed = realtimeRes.data;
-    }
+    // 1) Create/register tracking
+    const createRes = await tmFetch<{
+      code: number;
+      data: unknown;
+      message?: string;
+    }>(apiKey, "/trackings/create", {
+      method: "POST",
+      body: JSON.stringify({
+        tracking_number: trackingNumber,
+        courier_code: courierCode,
+      }),
+    });
 
-    if (action === "info" || action === "register_and_fetch") {
-      const infoRes = await call17Track(token, "/gettrackinfo", {
-        numbers: numbers.map((n) => n.number),
-      });
-      response.trackInfo = infoRes.data;
-    }
+    // 2) Fetch tracking info
+    const infoRes = await tmFetch<{
+      code: number;
+      data: unknown;
+      message?: string;
+    }>(apiKey, `/trackings/${courierCode}/${trackingNumber}`, {
+      method: "GET",
+    });
 
     return NextResponse.json({
-      ...response,
-      usedNumbers: numbers.map((n) => n.number),
+      created: createRes.data,
+      info: infoRes.data,
+      tracking_number: trackingNumber,
+      courier_code: courierCode,
     });
   } catch (err) {
-    console.error("17TRACK route error", err);
+    console.error("TrackingMore route error", err);
     return NextResponse.json(
-      { error: "Failed to process tracking request", detail: (err as Error).message },
+      {
+        error: "Failed to process tracking request",
+        detail: (err as Error).message,
+      },
       { status: 500 }
     );
   }
