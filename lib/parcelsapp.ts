@@ -51,15 +51,16 @@ export async function initiateTracking(opts: {
   language?: string;
 }): Promise<{ uuid: string; fromCache?: boolean }> {
   const apiKey = getApiKey();
+  const shipment: Record<string, any> = {
+    trackingId: opts.trackingId,
+  };
+  if (opts.destinationCountry) {
+    shipment.destinationCountry = opts.destinationCountry;
+  }
   const payload = {
     apiKey,
     language: opts.language || "en",
-    shipments: [
-      {
-        trackingId: opts.trackingId,
-        destinationCountry: opts.destinationCountry,
-      },
-    ],
+    shipments: [shipment],
   };
   const data = await paFetch<{ uuid: string; fromCache?: boolean }>(
     "/shipments/tracking",
@@ -91,7 +92,7 @@ export async function trackOnce(opts: {
   const { trackingId, language } = opts;
   const maxPoll = opts.maxPollMs ?? 4000;
   const interval = opts.pollIntervalMs ?? 500;
-  const destinationCountry = opts.destinationCountry || "United Kingdom";
+  const destinationCountry = opts.destinationCountry?.trim() || undefined;
 
   const initRes: any = await initiateTracking({ trackingId, destinationCountry, language });
   const uuid = initRes?.uuid;
