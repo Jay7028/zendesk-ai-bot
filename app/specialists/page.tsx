@@ -399,8 +399,17 @@ export default function SpecialistsPage() {
                       Data extraction prompt
                     </label>
                     <textarea
-                      value={selectedSpecialist.data_extraction_prompt}
-                      onChange={(e) => updateSelectedSpecialist({ data_extraction_prompt: e.target.value })}
+                      value={
+                        (selectedSpecialist as any).data_extraction_prompt ??
+                        selectedSpecialist.dataExtractionPrompt ??
+                        ""
+                      }
+                      onChange={(e) =>
+                        updateSelectedSpecialist({
+                          data_extraction_prompt: e.target.value,
+                          dataExtractionPrompt: e.target.value,
+                        } as any)
+                      }
                       rows={4}
                       style={{
                         flex: 1,
