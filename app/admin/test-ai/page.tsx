@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 
+type ConversationMessage = { role: "user" | "assistant"; content: string };
+
 type TestResult = {
   reply: string;
   intentId: string | null;
@@ -16,13 +18,14 @@ type TestResult = {
 type HistoryEntry = {
   id: string;
   title: string;
-  message: string;
-  result: TestResult;
+  messages: ConversationMessage[];
+  meta: TestResult;
   createdAt: string;
 };
 
 export default function TestAiPage() {
-  const [message, setMessage] = useState("");
+  const [messages, setMessages] = useState<ConversationMessage[]>([]);
+  const [messageInput, setMessageInput] = useState("");
   const [result, setResult] = useState<TestResult | null>(null);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -46,46 +49,57 @@ export default function TestAiPage() {
     try {
       localStorage.setItem("testAiHistory", JSON.stringify(next.slice(0, 30)));
     } catch {
-      // ignore storage errors (storage might be unavailable)
+      // ignore storage errors
     }
   }
 
   function openHistory(entry: HistoryEntry) {
-    setMessage(entry.message);
-    setResult(entry.result);
-    setTicketId(entry.result.ticketId || "");
+    setMessages(entry.messages);
+    setResult(entry.meta);
+    setTicketId(entry.meta.ticketId || "");
   }
 
   async function handleSend() {
     setError(null);
-    setResult(null);
-    if (!message.trim()) {
+    if (!messageInput.trim()) {
       setError("Type a customer message first.");
       return;
     }
+    const nextMessages: ConversationMessage[] = [
+      ...messages,
+      { role: "user", content: messageInput.trim() },
+    ];
+    setMessages(nextMessages);
     setIsLoading(true);
     try {
       const res = await fetch("/api/test-ai", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message, ticketId: ticketId || undefined }),
+        body: JSON.stringify({ messages: nextMessages, ticketId: ticketId || undefined }),
       });
       const data = await res.json();
       if (!res.ok) {
         setError(data.error || "Something went wrong.");
         return;
       }
+      const botMessage: ConversationMessage = { role: "assistant", content: data.reply };
+      const fullMessages = [...nextMessages, botMessage];
+      setMessages(fullMessages);
       setResult(data);
       if (data.ticketId) setTicketId(data.ticketId);
 
+      const title =
+        fullMessages.find((m) => m.role === "user")?.content?.slice(0, 60) ||
+        "Test conversation";
       const entry: HistoryEntry = {
         id: data.ticketId || `local-${Date.now()}`,
-        title: data.inputSummary || message.slice(0, 60) || "Test message",
-        message,
-        result: data,
+        title,
+        messages: fullMessages,
+        meta: data,
         createdAt: new Date().toISOString(),
       };
       persistHistory([entry, ...history]);
+      setMessageInput("");
     } catch (e: any) {
       setError("Request failed. Check console / network.");
     } finally {
@@ -118,7 +132,7 @@ export default function TestAiPage() {
         <div>
           <div style={{ fontSize: "20px", fontWeight: 700 }}>Test AI</div>
           <div style={{ fontSize: "12px", color: "#6b7280" }}>
-            Send a test message and inspect routing/reply.
+            Simulate full conversations and inspect routing/replies.
           </div>
         </div>
       </header>
@@ -177,7 +191,7 @@ export default function TestAiPage() {
             overflowY: "auto",
           }}
         >
-          {/* Actions / history */}
+          {/* Composer / history */}
           <div
             style={{
               border: "1px solid #e5e7eb",
@@ -207,11 +221,51 @@ export default function TestAiPage() {
             </div>
 
             <div>
-              <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 6 }}>Customer message</div>
+              <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 6 }}>Conversation</div>
+              <div
+                style={{
+                  border: "1px solid #e5e7eb",
+                  borderRadius: "10px",
+                  padding: "10px",
+                  background: "#f9fafb",
+                  minHeight: 180,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 8,
+                }}
+              >
+                {messages.length === 0 && (
+                  <div style={{ fontSize: 12, color: "#9ca3af" }}>No messages yet.</div>
+                )}
+                {messages.map((m, idx) => (
+                  <div
+                    key={idx}
+                    style={{
+                      alignSelf: m.role === "user" ? "flex-end" : "flex-start",
+                      maxWidth: "100%",
+                      background: m.role === "user" ? "#e0e7ff" : "#fff",
+                      border: "1px solid #e5e7eb",
+                      borderRadius: "10px",
+                      padding: "8px 10px",
+                      fontSize: 13,
+                      color: "#111827",
+                    }}
+                  >
+                    <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 2 }}>
+                      {m.role === "user" ? "You" : "Bot"}
+                    </div>
+                    <div style={{ whiteSpace: "pre-wrap" }}>{m.content}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 6 }}>Your message</div>
               <textarea
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                rows={6}
+                value={messageInput}
+                onChange={(e) => setMessageInput(e.target.value)}
+                rows={4}
                 style={{
                   width: "100%",
                   resize: "vertical",
@@ -223,7 +277,7 @@ export default function TestAiPage() {
                   fontSize: "14px",
                   marginBottom: "8px",
                 }}
-                placeholder="Hi, my parcel is 3 days late. Can you check the status?..."
+                placeholder="Type the next customer message..."
               />
               {error && (
                 <div
@@ -254,7 +308,7 @@ export default function TestAiPage() {
                   boxShadow: "0 6px 12px rgba(79,70,229,0.2)",
                 }}
               >
-                {isLoading ? "Sending..." : "Send test"}
+                {isLoading ? "Sending..." : "Send message"}
               </button>
             </div>
 
