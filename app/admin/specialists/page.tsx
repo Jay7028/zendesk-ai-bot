@@ -470,33 +470,6 @@ useEffect(() => {
                   </div>
 
                   <div style={{ display: "flex", gap: 8 }}>
-                  <label style={{ fontSize: 12, color: "#6b7280", width: 120 }}>
-                      Knowledge notes (general guidance)
-                    </label>
-                    <textarea
-                      value={
-                        (selectedSpecialist as any).knowledge_base_notes ??
-                        selectedSpecialist.knowledgeBaseNotes ??
-                        ""
-                      }
-                      onChange={(e) =>
-                        updateSelectedSpecialist({
-                          knowledge_base_notes: e.target.value,
-                          knowledgeBaseNotes: e.target.value,
-                        } as any)
-                      }
-                      rows={3}
-                      style={{
-                        flex: 1,
-                        borderRadius: "8px",
-                        border: "1px solid #e5e7eb",
-                        padding: "8px",
-                        fontSize: 13,
-                      }}
-                    />
-                  </div>
-
-                  <div style={{ display: "flex", gap: 8 }}>
                     <label style={{ fontSize: 12, color: "#6b7280", width: 120 }}>
                       Escalation rules
                     </label>
@@ -588,31 +561,6 @@ useEffect(() => {
                         } as any)
                       }
                       rows={4}
-                      style={{
-                        flex: 1,
-                        borderRadius: "8px",
-                        border: "1px solid #e5e7eb",
-                        padding: "8px",
-                        fontSize: 13,
-                      }}
-                    />
-                  </div>
-
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <label style={{ fontSize: 12, color: "#6b7280", width: 120 }}>Notes</label>
-                    <textarea
-                      value={
-                        (selectedSpecialist as any).knowledge_base_notes ??
-                        selectedSpecialist.knowledgeBaseNotes ??
-                        ""
-                      }
-                      onChange={(e) =>
-                        updateSelectedSpecialist({
-                          knowledge_base_notes: e.target.value,
-                          knowledgeBaseNotes: e.target.value,
-                        } as any)
-                      }
-                      rows={2}
                       style={{
                         flex: 1,
                         borderRadius: "8px",
