@@ -95,6 +95,7 @@ export async function fetchTracking(uuid: string): Promise<any> {
 
 export async function trackOnce(opts: {
   trackingId: string;
+  destinationCountry?: string;
   language?: string;
   maxPollMs?: number;
   pollIntervalMs?: number;
@@ -103,28 +104,16 @@ export async function trackOnce(opts: {
   const maxPoll = opts.maxPollMs ?? 4000;
   const interval = opts.pollIntervalMs ?? 500;
 
-  async function init(dest?: string) {
-    return initiateTracking({
-      trackingId,
-      destinationCountry: dest,
-      language,
-    });
-  }
+  const destination =
+    opts.destinationCountry?.trim() ||
+    process.env.DEFAULT_DESTINATION_COUNTRY?.trim() ||
+    "United Kingdom";
 
-  let initRes: any;
-  try {
-    initRes = await init();
-  } catch (err: any) {
-    const msg = (err?.message || "").toLowerCase();
-    const needsCountry =
-      msg.includes("destinationcountry") || msg.includes("invalid_params");
-    const fallbackCountry = process.env.DEFAULT_DESTINATION_COUNTRY?.trim();
-    if (needsCountry && fallbackCountry) {
-      initRes = await init(fallbackCountry);
-    } else {
-      throw err;
-    }
-  }
+  const initRes = await initiateTracking({
+    trackingId,
+    destinationCountry: destination,
+    language,
+  });
 
   const uuid = initRes?.uuid;
 
