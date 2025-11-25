@@ -192,22 +192,68 @@ export default function TrackPage() {
             }}
           >
             <h2 style={{ fontSize: "16px", marginBottom: "8px" }}>Summary</h2>
-            <pre
+            <div
               style={{
-                whiteSpace: "pre-wrap",
-                wordBreak: "break-word",
-                background: "#0b1224",
-                borderRadius: "8px",
-                padding: "12px",
                 border: "1px solid #1f2937",
-                fontSize: "13px",
-                lineHeight: 1.4,
+                borderRadius: "8px",
+                overflow: "hidden",
               }}
             >
-              {JSON.stringify(result.summary, null, 2)}
-            </pre>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+                <thead style={{ background: "#0f172a" }}>
+                  <tr>
+                    <th style={{ textAlign: "left", padding: "10px", borderBottom: "1px solid #1f2937" }}>
+                      Field
+                    </th>
+                    <th style={{ textAlign: "left", padding: "10px", borderBottom: "1px solid #1f2937" }}>
+                      Value
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td style={{ padding: "10px", borderBottom: "1px solid #1f2937" }}>Tracking #</td>
+                    <td style={{ padding: "10px", borderBottom: "1px solid #1f2937" }}>
+                      {result.summary?.trackingId || trackingId}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style={{ padding: "10px", borderBottom: "1px solid #1f2937" }}>Carrier</td>
+                    <td style={{ padding: "10px", borderBottom: "1px solid #1f2937" }}>
+                      {result.summary?.carrier || "N/A"}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style={{ padding: "10px", borderBottom: "1px solid #1f2937" }}>Status</td>
+                    <td style={{ padding: "10px", borderBottom: "1px solid #1f2937" }}>
+                      {result.summary?.status || "Unknown"}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style={{ padding: "10px", borderBottom: "1px solid #1f2937" }}>ETA</td>
+                    <td style={{ padding: "10px", borderBottom: "1px solid #1f2937" }}>
+                      {result.summary?.eta || "N/A"}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style={{ padding: "10px", borderBottom: "1f2937" }}>Last Event</td>
+                    <td style={{ padding: "10px", borderBottom: "1px solid #1f2937" }}>
+                      {result.summary?.lastEvent || "N/A"}
+                      {result.summary?.lastLocation ? ` @ ${result.summary.lastLocation}` : ""}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style={{ padding: "10px" }}>Last Updated</td>
+                    <td style={{ padding: "10px" }}>
+                      {result.summary?.updatedAt || "N/A"}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
             <h3 style={{ fontSize: "14px", marginTop: "12px", marginBottom: "6px" }}>
-              Raw
+              Raw (for debugging)
             </h3>
             <pre
               style={{

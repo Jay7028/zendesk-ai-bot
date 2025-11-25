@@ -38,9 +38,12 @@ export async function POST(req: NextRequest) {
         intent_name: "parcel_status",
         input_summary: `Tracking request for ${trackingNumber}`,
         knowledge_sources: [],
-        output_summary: `Status: ${summary.status || "unknown"} | ETA: ${
-          summary.eta || "n/a"
-        } | Last: ${summary.lastEvent || "n/a"}`,
+        output_summary: [
+          `Status: ${summary.status || "unknown"}`,
+          `ETA: ${summary.eta || "n/a"}`,
+          `Carrier: ${summary.carrier || "n/a"}`,
+          `Last: ${summary.lastEvent || "n/a"}`,
+        ].join(" | "),
         status: "success",
       });
     } catch (e) {
