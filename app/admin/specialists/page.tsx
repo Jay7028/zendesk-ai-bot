@@ -11,6 +11,9 @@ export default function SpecialistsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [kbTitle, setKbTitle] = useState("");
+  const [kbContent, setKbContent] = useState("");
+  const [kbStatus, setKbStatus] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadSpecialists() {
@@ -94,6 +97,39 @@ export default function SpecialistsPage() {
       setError(e.message ?? "Unexpected error");
     } finally {
       setIsDeleting(false);
+    }
+  }
+
+  async function addKnowledgeChunk() {
+    if (!selectedSpecialist) {
+      setKbStatus("Select a specialist first.");
+      return;
+    }
+    if (!kbTitle.trim() || !kbContent.trim()) {
+      setKbStatus("Title and content are required.");
+      return;
+    }
+    setKbStatus("Saving...");
+    try {
+      const res = await fetch("/api/knowledge/add", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: kbTitle,
+          content: kbContent,
+          specialistId: selectedSpecialist.id,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setKbStatus(data.error || "Failed to save knowledge");
+        return;
+      }
+      setKbStatus("Added to knowledge.");
+      setKbTitle("");
+      setKbContent("");
+    } catch (e: any) {
+      setKbStatus(e?.message || "Failed to save knowledge");
     }
   }
 
@@ -507,13 +543,70 @@ export default function SpecialistsPage() {
                     >
                       {isDeleting ? "Deleting..." : "Delete"}
                     </button>
-                    {error && (
-                      <div style={{ fontSize: 12, color: "#f97316" }}>
-                        {error}
+                      {error && (
+                        <div style={{ fontSize: 12, color: "#f97316" }}>
+                          {error}
+                        </div>
+                      )}
+                    </div>
+                    <div
+                      style={{
+                        marginTop: 16,
+                        paddingTop: 12,
+                        borderTop: "1px solid #e5e7eb",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 8,
+                      }}
+                    >
+                      <div style={{ fontSize: 13, fontWeight: 600 }}>Add knowledge snippet</div>
+                      <div style={{ fontSize: 12, color: "#6b7280" }}>
+                        Create a small policy chunk for this specialist. It will be retrieved automatically.
                       </div>
-                    )}
+                      <input
+                        value={kbTitle}
+                        onChange={(e) => setKbTitle(e.target.value)}
+                        placeholder="Title"
+                        style={{
+                          width: "100%",
+                          borderRadius: "8px",
+                          border: "1px solid #e5e7eb",
+                          padding: "8px",
+                          fontSize: 13,
+                        }}
+                      />
+                      <textarea
+                        value={kbContent}
+                        onChange={(e) => setKbContent(e.target.value)}
+                        rows={4}
+                        placeholder="Content (short, self-contained policy/scenario)"
+                        style={{
+                          width: "100%",
+                          borderRadius: "8px",
+                          border: "1px solid #e5e7eb",
+                          padding: "8px",
+                          fontSize: 13,
+                        }}
+                      />
+                      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                        <button
+                          onClick={addKnowledgeChunk}
+                          style={{
+                            padding: "8px 14px",
+                            borderRadius: "8px",
+                            border: "1px solid #4f46e5",
+                            background: "#eef2ff",
+                            color: "#1f2937",
+                            fontWeight: 600,
+                            cursor: "pointer",
+                          }}
+                        >
+                          Add knowledge
+                        </button>
+                        {kbStatus && <div style={{ fontSize: 12, color: "#6b7280" }}>{kbStatus}</div>}
+                      </div>
+                    </div>
                   </div>
-                </div>
               )}
             </div>
           </div>
