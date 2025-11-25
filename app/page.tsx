@@ -1,14 +1,4 @@
 export default function Home() {
-  const links = [
-    { href: "/specialists", title: "AI Specialists", desc: "Manage specialist profiles and prompts." },
-    { href: "/admin/intents", title: "Intents", desc: "Configure intents and routing." },
-    { href: "/admin/data-extraction", title: "Data Extraction", desc: "Manage extraction templates." },
-    { href: "/admin/integrations", title: "Integrations", desc: "Configure external integrations." },
-    { href: "/admin/logs", title: "Logs", desc: "View ticket activity and tracking events." },
-    { href: "/test-ai", title: "Test AI", desc: "Quickly test the reply flow." },
-    { href: "/track", title: "Track", desc: "Lookup parcels and view status history." },
-  ];
-
   return (
     <main
       style={{
@@ -16,42 +6,92 @@ export default function Home() {
         fontFamily: "Inter, system-ui, -apple-system, 'Segoe UI', sans-serif",
         background: "#0b1224",
         color: "#e5e7eb",
-        padding: "48px 24px",
       }}
     >
-      <div style={{ maxWidth: 960, margin: "0 auto" }}>
-        <header style={{ marginBottom: 32 }}>
-          <div style={{ fontSize: 28, fontWeight: 700 }}>Zendesk AI Admin</div>
-          <div style={{ color: "#9ca3af", marginTop: 6 }}>
-            Jump into specialists, intents, tracking, and logs from one place.
+      <div style={{ display: "flex", minHeight: "100vh" }}>
+        <aside
+          style={{
+            width: "220px",
+            borderRight: "1px solid #1f2937",
+            padding: "16px 12px",
+            display: "flex",
+            flexDirection: "column",
+            gap: 8,
+            background: "#0f172a",
+          }}
+        >
+          <div style={{ fontSize: "12px", color: "#9ca3af", marginBottom: 8, fontWeight: 600 }}>
+            Navigation
           </div>
-        </header>
+          {[
+            { id: "specialists", label: "AI Specialists", href: "/specialists" },
+            { id: "intents", label: "Intents", href: "/admin/intents" },
+            { id: "data-extraction", label: "Data Extraction", href: "/admin/data-extraction" },
+            { id: "integrations", label: "Integrations", href: "/admin/integrations" },
+            { id: "logs", label: "Logs", href: "/admin/logs" },
+            { id: "test-ai", label: "Test AI", href: "/test-ai" },
+            { id: "track", label: "Track", href: "/track" },
+          ].map((item) => (
+            <a key={item.id} href={item.href} style={{ textDecoration: "none" }}>
+              <div
+                style={{
+                  padding: "10px 12px",
+                  borderRadius: "10px",
+                  cursor: "pointer",
+                  fontSize: "13px",
+                  background: "transparent",
+                  color: "#e5e7eb",
+                  fontWeight: 600,
+                  border: "1px solid #1f2937",
+                  transition: "background 0.15s",
+                }}
+              >
+                {item.label}
+              </div>
+            </a>
+          ))}
+        </aside>
 
         <div
           style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-            gap: 16,
+            flex: 1,
+            padding: "32px 24px",
+            background: "#0b1224",
           }}
         >
-          {links.map((link) => (
-            <a
-              key={link.href}
-              href={link.href}
-              style={{
-                textDecoration: "none",
-                border: "1px solid #1f2937",
-                borderRadius: "12px",
-                padding: "16px",
-                background: "#0f172a",
-                color: "#e5e7eb",
-                boxShadow: "0 10px 30px rgba(0,0,0,0.25)",
-              }}
-            >
-              <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 6 }}>{link.title}</div>
-              <div style={{ fontSize: 13, color: "#9ca3af" }}>{link.desc}</div>
-            </a>
-          ))}
+          <header style={{ marginBottom: 20 }}>
+            <div style={{ fontSize: 28, fontWeight: 700 }}>Zendesk AI Admin</div>
+            <div style={{ color: "#9ca3af", marginTop: 6 }}>
+              Welcome. Use the navigation to manage specialists, intents, integrations, logs, tests, and tracking.
+            </div>
+          </header>
+
+          <div
+            style={{
+              border: "1px solid #1f2937",
+              borderRadius: "12px",
+              padding: "16px",
+              background: "#0f172a",
+              color: "#e5e7eb",
+              boxShadow: "0 10px 30px rgba(0,0,0,0.25)",
+              fontSize: 14,
+              lineHeight: 1.5,
+              maxWidth: 700,
+            }}
+          >
+            <p style={{ marginBottom: 12 }}>
+              This will become a welcome/setup page. For now, it mirrors the admin layout so you can navigate quickly.
+            </p>
+            <p style={{ marginBottom: 12 }}>
+              Suggestions:
+              <ul style={{ margin: "8px 0 0 16px", color: "#cbd5e1" }}>
+                <li>Confirm your API keys and environment settings.</li>
+                <li>Set up AI Specialists with knowledge and escalation rules.</li>
+                <li>Wire intents to the right specialists.</li>
+                <li>Use Track to check parcel statuses and Logs to view ticket history.</li>
+              </ul>
+            </p>
+          </div>
         </div>
       </div>
     </main>
