@@ -3,12 +3,15 @@ const BASE = "https://parcelsapp.com/api/v3";
 export type ParcelSummary = {
   trackingId: string;
   carrier?: string;
+  detectedCarrier?: string;
+  detectedCarrierSlug?: string;
   status?: string;
   substatus?: string;
   eta?: string;
   lastEvent?: string;
   lastLocation?: string;
   updatedAt?: string;
+  scans?: { time?: string; location?: string; message?: string; status?: string }[];
   raw?: unknown;
 };
 
@@ -92,9 +95,28 @@ export async function trackOnce(opts: {
   const { trackingId, language } = opts;
   const maxPoll = opts.maxPollMs ?? 4000;
   const interval = opts.pollIntervalMs ?? 500;
-  const destinationCountry = opts.destinationCountry?.trim() || undefined;
+  const preferredCountry = opts.destinationCountry?.trim() || undefined;
+  const fallbackCountry =
+    process.env.DEFAULT_DESTINATION_COUNTRY?.trim() || "United Kingdom";
 
-  const initRes: any = await initiateTracking({ trackingId, destinationCountry, language });
+  async function tryInit(dest?: string) {
+    return initiateTracking({ trackingId, destinationCountry: dest, language });
+  }
+
+  let initRes: any;
+  try {
+    initRes = await tryInit(preferredCountry);
+  } catch (err: any) {
+    const msg = (err?.message || "").toLowerCase();
+    const needsCountry =
+      msg.includes("destinationcountry") || msg.includes("invalid_params");
+    if (needsCountry && !preferredCountry) {
+      initRes = await tryInit(fallbackCountry);
+    } else {
+      throw err;
+    }
+  }
+
   const uuid = initRes?.uuid;
 
   // If cached results returned immediately
@@ -127,25 +149,52 @@ export function summarizeParcel(raw: any, trackingId: string): ParcelSummary {
   const status = shipment?.status || shipment?.statusText || shipment?.trackingStatus;
   const substatus = shipment?.substatus || shipment?.subStatus;
   const eta = shipment?.eta || shipment?.estimatedDeliveryDate || shipment?.expected;
+  const detectedCarrier = shipment?.detectedCarrier?.name;
+  const detectedCarrierSlug = shipment?.detectedCarrier?.slug;
+
+  const checkpoints: any[] = Array.isArray(shipment?.checkpoints)
+    ? shipment.checkpoints
+    : Array.isArray(shipment?.events)
+    ? shipment.events
+    : [];
+
+  const lastCheckpoint = checkpoints.length ? checkpoints[checkpoints.length - 1] : null;
   const lastEvent =
     shipment?.lastEvent ||
     shipment?.latestEvent ||
-    shipment?.checkpoints?.[shipment.checkpoints.length - 1]?.message;
+    lastCheckpoint?.message ||
+    lastCheckpoint?.status ||
+    lastCheckpoint?.description;
   const lastLocation =
     shipment?.lastLocation ||
     shipment?.latestLocation ||
-    shipment?.checkpoints?.[shipment.checkpoints.length - 1]?.location;
-  const updatedAt = shipment?.lastUpdate || shipment?.updatedAt || shipment?.timestamp;
+    lastCheckpoint?.location;
+  const updatedAt =
+    shipment?.lastUpdate ||
+    shipment?.updatedAt ||
+    shipment?.timestamp ||
+    lastCheckpoint?.time ||
+    lastCheckpoint?.datetime;
+
+  const scans = checkpoints.map((cp) => ({
+    time: cp.time || cp.datetime || cp.date,
+    location: cp.location || cp.place,
+    message: cp.message || cp.status || cp.description,
+    status: cp.status || cp.substatus,
+  }));
 
   return {
     trackingId,
     carrier: shipment?.carrier || shipment?.courier || shipment?.provider,
+    detectedCarrier,
+    detectedCarrierSlug,
     status,
     substatus,
     eta,
     lastEvent,
     lastLocation,
     updatedAt,
+    scans,
     raw: shipment,
   };
 }

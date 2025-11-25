@@ -7,11 +7,14 @@ type TrackResponse = {
   summary?: {
     trackingId: string;
     carrier?: string;
+    detectedCarrier?: string;
+    detectedCarrierSlug?: string;
     status?: string;
     eta?: string;
     lastEvent?: string;
     lastLocation?: string;
     updatedAt?: string;
+    scans?: { time?: string; location?: string; message?: string; status?: string }[];
   };
   error?: string;
   detail?: string;
@@ -224,6 +227,17 @@ export default function TrackPage() {
                     </td>
                   </tr>
                   <tr>
+                    <td style={{ padding: "10px", borderBottom: "1px solid #1f2937" }}>
+                      Detected carrier
+                    </td>
+                    <td style={{ padding: "10px", borderBottom: "1px solid #1f2937" }}>
+                      {result.summary?.detectedCarrier || "N/A"}
+                      {result.summary?.detectedCarrierSlug
+                        ? ` (${result.summary.detectedCarrierSlug})`
+                        : ""}
+                    </td>
+                  </tr>
+                  <tr>
                     <td style={{ padding: "10px", borderBottom: "1px solid #1f2937" }}>Status</td>
                     <td style={{ padding: "10px", borderBottom: "1px solid #1f2937" }}>
                       {result.summary?.status || "Unknown"}
@@ -251,6 +265,64 @@ export default function TrackPage() {
                 </tbody>
               </table>
             </div>
+
+            {result.summary?.scans && result.summary.scans.length > 0 && (
+              <>
+                <h3 style={{ fontSize: "14px", marginTop: "16px", marginBottom: "6px" }}>
+                  Scans
+                </h3>
+                <div
+                  style={{
+                    border: "1px solid #1f2937",
+                    borderRadius: "8px",
+                    overflow: "hidden",
+                  }}
+                >
+                  <table
+                    style={{
+                      width: "100%",
+                      borderCollapse: "collapse",
+                      fontSize: "13px",
+                    }}
+                  >
+                    <thead style={{ background: "#0f172a" }}>
+                      <tr>
+                        <th
+                          style={{ textAlign: "left", padding: "10px", borderBottom: "1px solid #1f2937" }}
+                        >
+                          Time
+                        </th>
+                        <th
+                          style={{ textAlign: "left", padding: "10px", borderBottom: "1px solid #1f2937" }}
+                        >
+                          Location
+                        </th>
+                        <th
+                          style={{ textAlign: "left", padding: "10px", borderBottom: "1px solid #1f2937" }}
+                        >
+                          Message
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {result.summary.scans.map((scan, idx) => (
+                        <tr key={idx}>
+                          <td style={{ padding: "10px", borderBottom: "1px solid #1f2937" }}>
+                            {scan.time || "N/A"}
+                          </td>
+                          <td style={{ padding: "10px", borderBottom: "1px solid #1f2937" }}>
+                            {scan.location || "N/A"}
+                          </td>
+                          <td style={{ padding: "10px", borderBottom: "1px solid #1f2937" }}>
+                            {scan.message || "N/A"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
 
             <h3 style={{ fontSize: "14px", marginTop: "12px", marginBottom: "6px" }}>
               Raw (for debugging)

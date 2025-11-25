@@ -231,11 +231,21 @@ export async function POST(req: NextRequest) {
           "unknown"}) status: ${trackingSummary.status || "unknown"}; ETA: ${trackingSummary.eta ||
           "n/a"}; Last: ${trackingSummary.lastEvent || "n/a"}`;
         actions.push(summaryText);
+        const scans = trackingSummary.scans?.slice(-3) || [];
+        const scanText =
+          scans.length > 0
+            ? scans
+                .map(
+                  (s) =>
+                    `${s.time || ""} ${s.location ? `@ ${s.location}` : ""} ${s.message || ""}`.trim()
+                )
+                .join(" | ")
+            : "";
         await logTicketEvent(origin, {
           ticketId,
           eventType: "zendesk_update",
           summary: "Tracking fetched",
-          detail: summaryText,
+          detail: scans.length ? `${summaryText} | Recent: ${scanText}` : summaryText,
         });
       } catch (err: any) {
         actions.push(
@@ -270,6 +280,19 @@ export async function POST(req: NextRequest) {
           "unknown"}; ETA: ${trackingSummary.eta || "n/a"}; Last event: ${trackingSummary.lastEvent ||
           "n/a"}. Include this tracking update in your reply if the user asked about parcel status.`,
       });
+      if (trackingSummary.scans?.length) {
+        const lastScans = trackingSummary.scans.slice(-3);
+        const scanLines = lastScans
+          .map(
+            (s) =>
+              `${s.time || ""} ${s.location ? `@ ${s.location}` : ""} ${s.message || ""}`.trim()
+          )
+          .join(" | ");
+        replyMessages.unshift({
+          role: "system",
+          content: `Recent scans: ${scanLines}`,
+        });
+      }
     }
 
     messages.forEach((m) => {

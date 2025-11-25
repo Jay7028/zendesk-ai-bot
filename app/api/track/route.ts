@@ -30,6 +30,16 @@ export async function POST(req: NextRequest) {
 
     // Store a human-friendly log entry
     try {
+      const scans = summary.scans?.slice(-3) || [];
+      const scanText =
+        scans.length > 0
+          ? scans
+              .map(
+                (s) =>
+                  `${s.time || ""} ${s.location ? `@ ${s.location}` : ""} ${s.message || ""}`.trim()
+              )
+              .join(" | ")
+          : "";
       await supabaseAdmin.from("logs").insert({
         zendesk_ticket_id: trackingNumber, // no ticket context here; reuse number
         specialist_id: "tracking",
@@ -43,7 +53,10 @@ export async function POST(req: NextRequest) {
           `ETA: ${summary.eta || "n/a"}`,
           `Carrier: ${summary.carrier || "n/a"}`,
           `Last: ${summary.lastEvent || "n/a"}`,
-        ].join(" | "),
+          scans.length ? `Recent scans: ${scanText}` : null,
+        ]
+          .filter(Boolean)
+          .join(" | "),
         status: "success",
       });
     } catch (e) {
