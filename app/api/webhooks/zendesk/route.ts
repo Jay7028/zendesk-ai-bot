@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "../../../../lib/supabase";
 import { trackOnce, summarizeParcel, type ParcelSummary } from "../../../../lib/parcelsapp";
+import { buildKnowledgeContext } from "../../../../lib/knowledge";
 
 type SpecialistRow = {
   id: string;
@@ -347,6 +348,13 @@ export async function POST(req: NextRequest) {
         ? specialists.find((s) => s.id === matchedIntent.specialist_id) ?? null
         : null;
 
+    // Knowledge retrieval (intent/specialist scoped)
+    const knowledge = await buildKnowledgeContext({
+      query: latestComment,
+      intentId: matchedIntent?.id ?? undefined,
+      specialistId: matchedSpecialist?.id ?? undefined,
+    });
+
     // Optional tracking enrichment
     if (trackingCandidates.length) {
       const trackingId = trackingCandidates[0];
@@ -584,6 +592,13 @@ export async function POST(req: NextRequest) {
         }\n\nCustomer message:\n"""\n${latestComment}\n"""\n\nWrite a clear, polite email reply in a professional tone. If information is missing, ask for the needed details instead of guessing.`,
       },
     ];
+
+    if (knowledge.summary) {
+      replyPrompt.unshift({
+        role: "system",
+        content: `Relevant policies for this intent:\n${knowledge.summary}`,
+      });
+    }
 
     // 1) Get AI reply
     const openaiRes = await fetch("https://api.openai.com/v1/chat/completions", {
