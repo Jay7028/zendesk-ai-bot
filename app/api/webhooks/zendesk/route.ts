@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "../../../../lib/supabase";
+import { trackOnce, summarizeParcel, type ParcelSummary } from "../../../../lib/parcelsapp";
 
 type SpecialistRow = {
   id: string;
@@ -177,6 +178,15 @@ async function saveIntentSuggestion(
   });
 }
 
+function extractTrackingCandidates(text: string): string[] {
+  if (!text) return [];
+  const matches = text.match(/\b[A-Z0-9]{10,35}\b/gi) || [];
+  const cleaned = matches
+    .map((m) => m.replace(/[^A-Z0-9]/gi, "").toUpperCase())
+    .filter((m) => m.length >= 10 && m.length <= 35);
+  return Array.from(new Set(cleaned));
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -189,6 +199,9 @@ export async function POST(req: NextRequest) {
       "No customer message provided.";
     const requesterEmail =
       body.requester_email ?? body.requester?.email ?? "unknown@example.com";
+    const trackingCandidates = extractTrackingCandidates(latestComment);
+    let trackingSummary: ParcelSummary | null = null;
+    let trackingContextText = "";
 
     if (!ticketId) {
       return NextResponse.json(
@@ -333,6 +346,53 @@ export async function POST(req: NextRequest) {
       matchedIntent && confidence >= CONFIDENCE_THRESHOLD
         ? specialists.find((s) => s.id === matchedIntent.specialist_id) ?? null
         : null;
+
+    // Optional tracking enrichment
+    if (trackingCandidates.length) {
+      const trackingId = trackingCandidates[0];
+      try {
+        const trackRes = await trackOnce({ trackingId });
+        trackingSummary = summarizeParcel(trackRes, trackingId);
+        const scans = trackingSummary.scans?.slice(0, 3) || [];
+        const scanSnippet = scans
+          .map(
+            (s) =>
+              `${s.time || ""}${s.location ? ` @ ${s.location}` : ""}${
+                s.message ? ` - ${s.message}` : ""
+              }`.trim()
+          )
+          .filter(Boolean)
+          .join(" | ");
+        trackingContextText = [
+          `Tracking ${trackingId}`,
+          trackingSummary.status ? `Status: ${trackingSummary.status}` : null,
+          trackingSummary.eta ? `ETA: ${trackingSummary.eta}` : null,
+          trackingSummary.carrier ? `Carrier: ${trackingSummary.carrier}` : null,
+          trackingSummary.lastEvent
+            ? `Last event: ${trackingSummary.lastEvent}${
+                trackingSummary.lastLocation ? ` @ ${trackingSummary.lastLocation}` : ""
+              }`
+            : null,
+          scanSnippet ? `Recent: ${scanSnippet}` : null,
+        ]
+          .filter(Boolean)
+          .join(" | ");
+
+        await logTicketEvent(origin, {
+          ticketId,
+          eventType: "message_received",
+          summary: `Tracking detected: ${trackingId}`,
+          detail: trackingContextText.slice(0, 400),
+        });
+      } catch (e: any) {
+        await logTicketEvent(origin, {
+          ticketId,
+          eventType: "error",
+          summary: "Tracking lookup failed",
+          detail: (e?.message || "Unknown error").slice(0, 300),
+        });
+      }
+    }
 
     await logTicketEvent(origin, {
       ticketId,
@@ -519,7 +579,9 @@ export async function POST(req: NextRequest) {
       },
       {
         role: "user",
-        content: `Ticket ID: ${ticketId}\nCustomer email: ${requesterEmail}\n\nCustomer message:\n"""\n${latestComment}\n"""\n\nWrite a clear, polite email reply in a professional tone. If information is missing, ask for the needed details instead of guessing.`,
+        content: `Ticket ID: ${ticketId}\nCustomer email: ${requesterEmail}\nTracking context: ${
+          trackingContextText || "none available"
+        }\n\nCustomer message:\n"""\n${latestComment}\n"""\n\nWrite a clear, polite email reply in a professional tone. If information is missing, ask for the needed details instead of guessing.`,
       },
     ];
 
@@ -622,7 +684,12 @@ export async function POST(req: NextRequest) {
       intentId: matchedIntent?.id ?? null,
       intentName: matchedIntent?.name ?? null,
       inputSummary: String(latestComment).slice(0, 200),
-      outputSummary: aiReply.slice(0, 200),
+      outputSummary: [
+        aiReply.slice(0, 160),
+        trackingContextText ? `Tracking: ${trackingContextText.slice(0, 200)}` : null,
+      ]
+        .filter(Boolean)
+        .join(" | "),
       status: "success",
     });
     await logTicketEvent(origin, {
