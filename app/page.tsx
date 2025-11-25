@@ -43,27 +43,49 @@ export default function Home() {
     <main
       style={{
         minHeight: "100vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-        background: "#0f172a",
+        fontFamily:
+          "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+        background: "#0b1224",
         color: "#e5e7eb",
       }}
     >
+      <header
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          padding: "16px 24px",
+          borderBottom: "1px solid #1f2937",
+          background: "#0f172a",
+        }}
+      >
+        <div style={{ fontWeight: 700, fontSize: "18px" }}>Zendesk AI Bot</div>
+        <nav style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+          <a
+            href="/"
+            style={{ color: "#e5e7eb", textDecoration: "none", fontSize: "14px" }}
+          >
+            Home
+          </a>
+          <a
+            href="/track"
+            style={{ color: "#e5e7eb", textDecoration: "none", fontSize: "14px" }}
+          >
+            Track
+          </a>
+        </nav>
+      </header>
+
       <div
         style={{
           width: "100%",
           maxWidth: "800px",
-          background: "#020617",
-          borderRadius: "12px",
-          padding: "24px",
-          boxShadow: "0 20px 40px rgba(0,0,0,0.4)",
-          border: "1px solid #1f2937",
+          margin: "0 auto",
+          padding: "32px 24px 48px",
         }}
       >
         <h1 style={{ fontSize: "24px", marginBottom: "8px" }}>
-          Zendesk AI Email Bot – Test Console
+          Zendesk AI Email Bot — Test Console
         </h1>
         <p style={{ marginBottom: "16px", color: "#9ca3af", fontSize: "14px" }}>
           Type a customer email message below and I&apos;ll show you the AI-generated reply.
@@ -82,7 +104,7 @@ export default function Home() {
             padding: "10px",
             borderRadius: "8px",
             border: "1px solid #374151",
-            background: "#020617",
+            background: "#0b1224",
             color: "#e5e7eb",
             fontSize: "14px",
             marginBottom: "12px",
@@ -135,7 +157,7 @@ export default function Home() {
             <div
               style={{
                 whiteSpace: "pre-wrap",
-                background: "#020617",
+                background: "#0b1224",
                 borderRadius: "8px",
                 padding: "12px",
                 border: "1px solid #1f2937",
