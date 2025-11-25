@@ -310,21 +310,6 @@ useEffect(() => {
               </div>
             </a>
           ))}
-          <button
-            onClick={createSpecialist}
-            style={{
-              marginTop: 8,
-              padding: "10px 12px",
-              borderRadius: "10px",
-              border: "1px solid #c7d2fe",
-              background: "#eef2ff",
-              color: "#1f2937",
-              fontWeight: 600,
-              cursor: "pointer",
-            }}
-          >
-            + New specialist
-          </button>
         </aside>
 
         <main
@@ -348,18 +333,35 @@ useEffect(() => {
           )}
 
           <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: 16 }}>
-            <div
-              style={{
-                border: "1px solid #e5e7eb",
-                borderRadius: "12px",
-                padding: "12px",
-                background: "#ffffff",
-                overflowY: "auto",
-                boxShadow: "0 1px 4px rgba(15,23,42,0.06)",
-              }}
-            >
-              <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8, color: "#111827" }}>
-                Specialists
+              <div
+                style={{
+                  border: "1px solid #e5e7eb",
+                  borderRadius: "12px",
+                  padding: "12px",
+                  background: "#ffffff",
+                  overflowY: "auto",
+                  boxShadow: "0 1px 4px rgba(15,23,42,0.06)",
+                }}
+              >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: "#111827" }}>
+                  Specialists
+                </div>
+                <button
+                  onClick={createSpecialist}
+                  style={{
+                    padding: "8px 12px",
+                    borderRadius: "8px",
+                    border: "1px solid #c7d2fe",
+                    background: "#eef2ff",
+                    color: "#1f2937",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    fontSize: 12,
+                  }}
+                >
+                  + New
+                </button>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {specialists.map((s) => {
