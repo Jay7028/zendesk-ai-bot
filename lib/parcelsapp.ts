@@ -96,26 +96,12 @@ export async function trackOnce(opts: {
   const maxPoll = opts.maxPollMs ?? 4000;
   const interval = opts.pollIntervalMs ?? 500;
   const preferredCountry = opts.destinationCountry?.trim() || undefined;
-  const fallbackCountry =
-    process.env.DEFAULT_DESTINATION_COUNTRY?.trim() || "United Kingdom";
 
-  async function tryInit(dest?: string) {
-    return initiateTracking({ trackingId, destinationCountry: dest, language });
-  }
-
-  let initRes: any;
-  try {
-    initRes = await tryInit(preferredCountry);
-  } catch (err: any) {
-    const msg = (err?.message || "").toLowerCase();
-    const needsCountry =
-      msg.includes("destinationcountry") || msg.includes("invalid_params");
-    if (needsCountry && !preferredCountry) {
-      initRes = await tryInit(fallbackCountry);
-    } else {
-      throw err;
-    }
-  }
+  const initRes = await initiateTracking({
+    trackingId,
+    destinationCountry: preferredCountry,
+    language,
+  });
 
   const uuid = initRes?.uuid;
 
