@@ -3,96 +3,105 @@ export default function Home() {
     <main
       style={{
         minHeight: "100vh",
+        display: "flex",
         fontFamily: "Inter, system-ui, -apple-system, 'Segoe UI', sans-serif",
-        background: "#0b1224",
-        color: "#e5e7eb",
+        background: "#f5f7fb",
+        color: "#111827",
       }}
     >
-      <div style={{ display: "flex", minHeight: "100vh" }}>
-        <aside
+      <aside
+        style={{
+          width: "220px",
+          borderRight: "1px solid #e5e7eb",
+          padding: "16px 12px",
+          display: "flex",
+          flexDirection: "column",
+          gap: 8,
+          background: "#f9fafb",
+        }}
+      >
+        <div style={{ fontSize: "12px", color: "#6b7280", marginBottom: 8, fontWeight: 600 }}>
+          Navigation
+        </div>
+        {[
+          { id: "home", label: "Home", href: "/", active: true },
+          { id: "specialists", label: "AI Specialists", href: "/admin/specialists" },
+          { id: "intents", label: "Intents", href: "/admin/intents" },
+          { id: "data-extraction", label: "Data Extraction", href: "/admin/data-extraction" },
+          { id: "integrations", label: "Integrations", href: "/admin/integrations" },
+          { id: "logs", label: "Logs", href: "/admin/logs" },
+          { id: "test-ai", label: "Test AI", href: "/admin/test-ai" },
+          { id: "track", label: "Track", href: "/admin/track" },
+        ].map((item) => (
+          <a key={item.id} href={item.href} style={{ textDecoration: "none" }}>
+            <div
+              style={{
+                padding: "10px 12px",
+                borderRadius: "10px",
+                cursor: "pointer",
+                fontSize: "13px",
+                background: item.active ? "#eef2ff" : "transparent",
+                color: item.active ? "#1f2937" : "#6b7280",
+                fontWeight: item.active ? 600 : 500,
+                border: item.active ? "1px solid #c7d2fe" : "1px solid transparent",
+              }}
+            >
+              {item.label}
+            </div>
+          </a>
+        ))}
+      </aside>
+
+      <div
+        style={{
+          flex: 1,
+          padding: "24px 20px",
+          display: "flex",
+          flexDirection: "column",
+          gap: 16,
+        }}
+      >
+        <header
           style={{
-            width: "220px",
-            borderRight: "1px solid #1f2937",
-            padding: "16px 12px",
-            display: "flex",
-            flexDirection: "column",
-            gap: 8,
-            background: "#0f172a",
+            paddingBottom: 8,
+            borderBottom: "1px solid #e5e7eb",
+            marginBottom: 8,
           }}
         >
-          <div style={{ fontSize: "12px", color: "#9ca3af", marginBottom: 8, fontWeight: 600 }}>
-            Navigation
+          <div style={{ fontSize: 26, fontWeight: 700 }}>Welcome</div>
+          <div style={{ color: "#6b7280", marginTop: 4 }}>
+            Quick links and setup notes for your AI workspace.
           </div>
-          {[
-            { id: "home", label: "Home", href: "/" },
-            { id: "specialists", label: "AI Specialists", href: "/admin/specialists" },
-            { id: "intents", label: "Intents", href: "/admin/intents" },
-            { id: "data-extraction", label: "Data Extraction", href: "/admin/data-extraction" },
-            { id: "integrations", label: "Integrations", href: "/admin/integrations" },
-            { id: "logs", label: "Logs", href: "/admin/logs" },
-            { id: "test-ai", label: "Test AI", href: "/admin/test-ai" },
-            { id: "track", label: "Track", href: "/track" },
-          ].map((item) => (
-            <a key={item.id} href={item.href} style={{ textDecoration: "none" }}>
-              <div
-                style={{
-                  padding: "10px 12px",
-                  borderRadius: "10px",
-                  cursor: "pointer",
-                  fontSize: "13px",
-                  background: "transparent",
-                  color: "#e5e7eb",
-                  fontWeight: 600,
-                  border: "1px solid #1f2937",
-                  transition: "background 0.15s",
-                }}
-              >
-                {item.label}
-              </div>
-            </a>
-          ))}
-        </aside>
+        </header>
 
         <div
           style={{
-            flex: 1,
-            padding: "32px 24px",
-            background: "#0b1224",
+            border: "1px solid #e5e7eb",
+            borderRadius: "12px",
+            padding: "16px",
+            background: "#ffffff",
+            boxShadow: "0 1px 4px rgba(15,23,42,0.06)",
+            maxWidth: 900,
+            lineHeight: 1.6,
+            fontSize: 14,
           }}
         >
-          <header style={{ marginBottom: 20 }}>
-            <div style={{ fontSize: 28, fontWeight: 700 }}>Zendesk AI Admin</div>
-            <div style={{ color: "#9ca3af", marginTop: 6 }}>
-              Welcome. Use the navigation to manage specialists, intents, integrations, logs, tests, and tracking.
-            </div>
-          </header>
-
-          <div
-            style={{
-              border: "1px solid #1f2937",
-              borderRadius: "12px",
-              padding: "16px",
-              background: "#0f172a",
-              color: "#e5e7eb",
-              boxShadow: "0 10px 30px rgba(0,0,0,0.25)",
-              fontSize: 14,
-              lineHeight: 1.5,
-              maxWidth: 700,
-            }}
-          >
-            <p style={{ marginBottom: 12 }}>
-              This will become a welcome/setup page. For now, it mirrors the admin layout so you can navigate quickly.
-            </p>
-            <p style={{ marginBottom: 12 }}>
-              Suggestions:
-              <ul style={{ margin: "8px 0 0 16px", color: "#cbd5e1" }}>
-                <li>Confirm your API keys and environment settings.</li>
-                <li>Set up AI Specialists with knowledge and escalation rules.</li>
-                <li>Wire intents to the right specialists.</li>
-                <li>Use Track to check parcel statuses and Logs to view ticket history.</li>
-              </ul>
-            </p>
-          </div>
+          <p style={{ marginBottom: 12 }}>
+            Use the navigation on the left to configure AI specialists, intents, data extraction, integrations,
+            and to review logs, run tests, or track parcels.
+          </p>
+          <p style={{ marginBottom: 12, color: "#374151" }}>
+            Next steps:
+          </p>
+          <ul style={{ margin: "0 0 12px 18px", color: "#4b5563" }}>
+            <li>Confirm environment keys (Parcelsapp, OpenAI, Supabase).</li>
+            <li>Build out AI Specialists with knowledge and escalation notes.</li>
+            <li>Map intents to specialists; test flows under Test AI.</li>
+            <li>Track parcels under Track and review recent activity in Logs.</li>
+          </ul>
+          <p style={{ marginBottom: 0, color: "#6b7280" }}>
+            This page will evolve into a setup checklist and quick-start guide.
+          </p>
         </div>
       </div>
     </main>
