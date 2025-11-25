@@ -65,7 +65,15 @@ export async function POST(req: NextRequest) {
   const token = req.headers.get("x-seed-token") || req.headers.get("authorization");
   const normalized = token?.replace(/^Bearer\s+/i, "").trim();
   if (!normalized || normalized !== SEED_TOKEN) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json(
+      {
+        error: "Unauthorized",
+        hint: "Token mismatch or missing. Ensure SEED_TOKEN is set in env and header matches.",
+        receivedLength: normalized ? normalized.length : 0,
+        expectedSet: !!SEED_TOKEN,
+      },
+      { status: 401 }
+    );
   }
   try {
     const rows = [];
