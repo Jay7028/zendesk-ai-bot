@@ -25,7 +25,7 @@ export default function Home() {
           </div>
           {[
             { id: "home", label: "Home", href: "/" },
-            { id: "specialists", label: "AI Specialists", href: "/specialists" },
+            { id: "specialists", label: "AI Specialists", href: "/admin/specialists" },
             { id: "intents", label: "Intents", href: "/admin/intents" },
             { id: "data-extraction", label: "Data Extraction", href: "/admin/data-extraction" },
             { id: "integrations", label: "Integrations", href: "/admin/integrations" },
