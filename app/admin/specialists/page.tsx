@@ -102,6 +102,37 @@ useEffect(() => {
     }
   }
 
+  async function createSpecialist() {
+    try {
+      setIsSaving(true);
+      const res = await fetch("/api/specialists", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: "New Specialist",
+          description: "",
+          active: false,
+          docsCount: 0,
+          rulesCount: 0,
+          dataExtractionPrompt: "",
+          requiredFields: [],
+          knowledgeBaseNotes: "",
+          escalationRules: "",
+          personalityNotes: "",
+        }),
+      });
+      const data: SpecialistConfig = await res.json();
+      if (!res.ok) throw new Error((data as any)?.error || "Failed to create specialist");
+      setSpecialists((prev) => [data, ...prev]);
+      setSelectedSpecialistId(data.id);
+      setError(null);
+    } catch (e: any) {
+      setError(e.message ?? "Unexpected error creating specialist");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
   async function deleteSpecialist() {
     if (!selectedSpecialist) return;
     const ok = typeof window !== "undefined" ? window.confirm("Delete this specialist?") : true;
@@ -279,6 +310,21 @@ useEffect(() => {
               </div>
             </a>
           ))}
+          <button
+            onClick={createSpecialist}
+            style={{
+              marginTop: 8,
+              padding: "10px 12px",
+              borderRadius: "10px",
+              border: "1px solid #c7d2fe",
+              background: "#eef2ff",
+              color: "#1f2937",
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            + New specialist
+          </button>
         </aside>
 
         <main
