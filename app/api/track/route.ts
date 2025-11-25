@@ -34,7 +34,10 @@ async function tmFetch<T>(
   if (!res.ok || json?.code !== 200) {
     const msg = json?.message || json?.meta?.message || res.statusText;
     const code = json?.code ?? res.status;
-    throw new Error(`TrackingMore error ${code}: ${msg}`);
+    const err = new Error(`TrackingMore error ${code}: ${msg}`);
+    // Preserve raw body so callers can inspect reason
+    (err as any)._tmBody = json;
+    throw err;
   }
 
   return json as T;
@@ -65,17 +68,30 @@ export async function POST(req: NextRequest) {
     }
 
     // 1) Create/register tracking
-    const createRes = await tmFetch<{
-      code: number;
-      data: unknown;
-      message?: string;
-    }>(apiKey, "/trackings/create", {
-      method: "POST",
-      body: JSON.stringify({
-        tracking_number: trackingNumber,
-        courier_code: courierCode,
-      }),
-    });
+    let createRes: { code: number; data: unknown; message?: string } | null = null;
+    try {
+      createRes = await tmFetch<{
+        code: number;
+        data: unknown;
+        message?: string;
+      }>(apiKey, "/trackings/create", {
+        method: "POST",
+        body: JSON.stringify({
+          tracking_number: trackingNumber,
+          courier_code: courierCode,
+        }),
+      });
+    } catch (err: any) {
+      const msg = err?.message || "";
+      const body = err?._tmBody;
+      const alreadyExists =
+        msg.toLowerCase().includes("already exists") ||
+        body?.meta?.message?.toLowerCase?.().includes("already exists");
+      if (!alreadyExists) {
+        throw err;
+      }
+      // If it already exists, we can still fetch info below.
+    }
 
     // 2) Fetch tracking info
     const infoRes = await tmFetch<{
@@ -87,7 +103,7 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json({
-      created: createRes.data,
+      created: createRes?.data ?? "already exists",
       info: infoRes.data,
       tracking_number: trackingNumber,
       courier_code: courierCode,
