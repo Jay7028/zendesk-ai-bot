@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "../../../lib/supabase";
 import { trackOnce, summarizeParcel, type ParcelSummary } from "../../../lib/parcelsapp";
+import { buildKnowledgeContext } from "../../../lib/knowledge";
 
 type SpecialistRow = {
   id: string;
@@ -254,6 +255,13 @@ export async function POST(req: NextRequest) {
       detail: `Confidence: ${confidence.toFixed(2)} | Specialist: ${matchedSpecialist?.name ?? "none"}`,
     });
 
+    // Knowledge retrieval (intent/specialist scoped)
+    const knowledge = await buildKnowledgeContext({
+      query: userMessage,
+      intentId: matchedIntent?.id ?? undefined,
+      specialistId: matchedSpecialist?.id ?? undefined,
+    });
+
     const replyMessages: { role: "system" | "user" | "assistant"; content: string }[] = [
       {
         role: "system",
@@ -262,6 +270,14 @@ export async function POST(req: NextRequest) {
           : "You are a helpful customer service email assistant.",
       },
     ];
+
+    if (knowledge.summary) {
+      replyMessages.unshift({
+        role: "system",
+        content: `Relevant policies for this intent:\n${knowledge.summary}`,
+      });
+      actions.push("Applied retrieved knowledge to guide reply.");
+    }
 
     if (trackingSummary) {
       replyMessages.unshift({
@@ -311,6 +327,18 @@ export async function POST(req: NextRequest) {
 
     actions.push("Generated reply");
 
+    const knowledgeSources: string[] = [];
+    if (trackingSummary) {
+      knowledgeSources.push(
+        `tracking ${trackingSummary.trackingId} (${trackingSummary.carrier || "unknown"}) status:${trackingSummary.status || "unknown"} eta:${trackingSummary.eta || "n/a"} last:${trackingSummary.lastEvent || "n/a"}`
+      );
+    }
+    if (knowledge.used?.length) {
+      knowledgeSources.push(
+        ...knowledge.used.map((c) => `knowledge: ${c.title || c.id}`)
+      );
+    }
+
     await logRun(origin, {
       ticketId,
       specialistId: matchedSpecialist?.id ?? null,
@@ -320,11 +348,7 @@ export async function POST(req: NextRequest) {
       inputSummary: userMessage.slice(0, 200),
       outputSummary: reply.slice(0, 200),
       status: "success",
-      knowledgeSources: trackingSummary
-        ? [
-            `tracking ${trackingSummary.trackingId} (${trackingSummary.carrier || "unknown"}) status:${trackingSummary.status || "unknown"} eta:${trackingSummary.eta || "n/a"} last:${trackingSummary.lastEvent || "n/a"}`,
-          ]
-        : [],
+      knowledgeSources,
     });
     await logTicketEvent(origin, {
       ticketId,
