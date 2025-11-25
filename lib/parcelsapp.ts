@@ -88,9 +88,10 @@ export async function trackOnce(opts: {
   maxPollMs?: number;
   pollIntervalMs?: number;
 }): Promise<any> {
-  const { trackingId, destinationCountry, language } = opts;
+  const { trackingId, language } = opts;
   const maxPoll = opts.maxPollMs ?? 4000;
   const interval = opts.pollIntervalMs ?? 500;
+  const destinationCountry = opts.destinationCountry || "United Kingdom";
 
   const initRes: any = await initiateTracking({ trackingId, destinationCountry, language });
   const uuid = initRes?.uuid;
