@@ -13,34 +13,48 @@ type TestResult = {
   inputSummary: string;
 };
 
-type LogEntry = {
+type HistoryEntry = {
   id: string;
-  zendeskTicketId: string;
-  intentName?: string | null;
-  specialistName?: string | null;
+  title: string;
+  message: string;
+  result: TestResult;
+  createdAt: string;
 };
 
 export default function TestAiPage() {
   const [message, setMessage] = useState("");
   const [result, setResult] = useState<TestResult | null>(null);
-  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ticketId, setTicketId] = useState<string>("");
 
   useEffect(() => {
-    async function loadLogs() {
-      try {
-        const res = await fetch("/api/logs");
-        if (!res.ok) throw new Error("Failed to load logs");
-        const data: LogEntry[] = await res.json();
-        setLogs(data.slice(0, 10));
-      } catch (e: any) {
-        console.error("Failed to load logs", e);
+    try {
+      const raw = localStorage.getItem("testAiHistory");
+      if (raw) {
+        const parsed = JSON.parse(raw) as HistoryEntry[];
+        setHistory(parsed);
       }
+    } catch (e) {
+      console.error("Failed to load test AI history", e);
     }
-    loadLogs();
   }, []);
+
+  function persistHistory(next: HistoryEntry[]) {
+    setHistory(next);
+    try {
+      localStorage.setItem("testAiHistory", JSON.stringify(next.slice(0, 30)));
+    } catch {
+      // ignore storage errors (storage might be unavailable)
+    }
+  }
+
+  function openHistory(entry: HistoryEntry) {
+    setMessage(entry.message);
+    setResult(entry.result);
+    setTicketId(entry.result.ticketId || "");
+  }
 
   async function handleSend() {
     setError(null);
@@ -63,6 +77,15 @@ export default function TestAiPage() {
       }
       setResult(data);
       if (data.ticketId) setTicketId(data.ticketId);
+
+      const entry: HistoryEntry = {
+        id: data.ticketId || `local-${Date.now()}`,
+        title: data.inputSummary || message.slice(0, 60) || "Test message",
+        message,
+        result: data,
+        createdAt: new Date().toISOString(),
+      };
+      persistHistory([entry, ...history]);
     } catch (e: any) {
       setError("Request failed. Check console / network.");
     } finally {
@@ -123,7 +146,7 @@ export default function TestAiPage() {
             { id: "integrations", label: "Integrations", href: "/admin/integrations" },
             { id: "logs", label: "Logs", href: "/admin/logs" },
             { id: "test-ai", label: "Test AI", href: "/admin/test-ai", active: true },
-            { id: "track", label: "Track", href: "/track" },
+            { id: "track", label: "Track", href: "/admin/track" },
           ].map((item) => (
             <a key={item.id} href={item.href} style={{ textDecoration: "none" }}>
               <div
@@ -154,7 +177,7 @@ export default function TestAiPage() {
             overflowY: "auto",
           }}
         >
-          {/* Actions / status */}
+          {/* Actions / history */}
           <div
             style={{
               border: "1px solid #e5e7eb",
@@ -236,27 +259,31 @@ export default function TestAiPage() {
             </div>
 
             <div>
-              <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 6 }}>Recent logs</div>
+              <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 6 }}>Previous chats</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                {logs.map((l) => (
-                  <div
-                    key={l.id}
+                {history.map((h) => (
+                  <button
+                    key={h.id}
+                    onClick={() => openHistory(h)}
                     style={{
+                      textAlign: "left",
                       border: "1px solid #e5e7eb",
                       borderRadius: "8px",
                       padding: "8px",
                       background: "#f9fafb",
+                      cursor: "pointer",
                     }}
                   >
-                    <div style={{ fontSize: 12, color: "#6b7280" }}>{l.zendeskTicketId}</div>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>
-                      {l.intentName || "Unknown intent"}{" "}
-                      {l.specialistName ? `→ ${l.specialistName}` : ""}
+                    <div style={{ fontSize: 12, color: "#6b7280" }}>
+                      {new Date(h.createdAt).toLocaleString()}
                     </div>
-                  </div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>
+                      {h.title || "Untitled chat"}
+                    </div>
+                  </button>
                 ))}
-                {logs.length === 0 && (
-                  <div style={{ fontSize: 12, color: "#9ca3af" }}>No logs loaded yet.</div>
+                {history.length === 0 && (
+                  <div style={{ fontSize: 12, color: "#9ca3af" }}>No chats yet.</div>
                 )}
               </div>
             </div>
