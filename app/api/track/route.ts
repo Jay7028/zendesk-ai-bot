@@ -30,10 +30,19 @@ async function tmFetch<T>(
     throw new Error(`TrackingMore returned non-JSON response: ${text}`);
   }
 
-  // TrackingMore uses code:200 for success in body
-  if (!res.ok || json?.code !== 200) {
+  const isSuccessCode = (val: unknown) => {
+    if (val === undefined || val === null) return false;
+    const num = Number(val);
+    return !Number.isNaN(num) && num === 200;
+  };
+  const okBody =
+    isSuccessCode(json?.code) ||
+    isSuccessCode(json?.meta?.code) ||
+    (json?.code === undefined && res.ok); // fall back to HTTP ok when code is absent
+
+  if (!res.ok || !okBody) {
     const msg = json?.message || json?.meta?.message || res.statusText;
-    const code = json?.code ?? res.status;
+    const code = json?.code ?? json?.meta?.code ?? res.status;
     const err = new Error(`TrackingMore error ${code}: ${msg}`);
     // Preserve raw body so callers can inspect reason
     (err as any)._tmBody = json;
