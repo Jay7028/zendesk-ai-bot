@@ -5,7 +5,6 @@ import { supabaseAdmin } from "../../../lib/supabase";
 type TrackRequest = {
   tracking_number?: string;
   courier_code?: string;
-  destinationCountry?: string;
 };
 
 export async function POST(req: NextRequest) {
@@ -13,7 +12,6 @@ export async function POST(req: NextRequest) {
     const body = (await req.json()) as TrackRequest;
     const trackingNumber = body.tracking_number?.trim();
     const courierCode = body.courier_code?.trim();
-    const destination = body.destinationCountry?.trim();
 
     if (!trackingNumber) {
       return NextResponse.json(
@@ -24,7 +22,6 @@ export async function POST(req: NextRequest) {
 
     const infoRes = await trackOnce({
       trackingId: trackingNumber,
-      destinationCountry: destination,
     });
     const summary = summarizeParcel(infoRes, trackingNumber);
 

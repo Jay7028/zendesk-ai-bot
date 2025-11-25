@@ -102,8 +102,7 @@ export async function POST(req: NextRequest) {
   const requestedCourier: string | undefined =
     (body.courierCode || body.courier_code || "").toString().trim() ||
     undefined;
-  const requestedDestination: string | undefined =
-    (body.destinationCountry || "").toString().trim() || undefined;
+const requestedDestination: string | undefined = undefined;
 
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
@@ -224,7 +223,6 @@ export async function POST(req: NextRequest) {
       try {
         const info = await trackOnce({
           trackingId: trackingNumber,
-          destinationCountry: requestedDestination,
         });
         trackingSummary = summarizeParcel(info, trackingNumber);
         const summaryText = `Tracking ${trackingNumber} (${trackingSummary.carrier ||
