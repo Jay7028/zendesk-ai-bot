@@ -322,7 +322,7 @@ export default function IntentsPage() {
             { id: "integrations", label: "Integrations", href: "/admin/integrations" },
             { id: "logs", label: "Logs", href: "/admin/logs" },
             { id: "test-ai", label: "Test AI", href: "/admin/test-ai" },
-            { id: "track", label: "Track", href: "/track" },
+            { id: "track", label: "Track", href: "/admin/track" },
           ].map((item) => (
             <a
               key={item.id}
