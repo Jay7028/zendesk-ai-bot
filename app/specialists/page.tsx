@@ -328,8 +328,13 @@ export default function SpecialistsPage() {
                       Escalation rules
                     </label>
                     <textarea
-                      value={selectedSpecialist.escalation_rules}
-                      onChange={(e) => updateSelectedSpecialist({ escalation_rules: e.target.value })}
+                      value={(selectedSpecialist as any).escalation_rules ?? selectedSpecialist.escalationRules ?? ""}
+                      onChange={(e) =>
+                        updateSelectedSpecialist({
+                          escalation_rules: e.target.value,
+                          escalationRules: e.target.value,
+                        } as any)
+                      }
                       rows={3}
                       style={{
                         flex: 1,
