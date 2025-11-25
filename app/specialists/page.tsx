@@ -378,7 +378,11 @@ export default function SpecialistsPage() {
                       Required fields (comma separated)
                     </label>
                     <input
-                      value={selectedSpecialist.required_fields?.join(", ") || ""}
+                      value={
+                        (selectedSpecialist as any).required_fields?.join(", ") ||
+                        selectedSpecialist.requiredFields?.join(", ") ||
+                        ""
+                      }
                       onChange={(e) => handleRequiredFieldsChange(e.target.value)}
                       style={{
                         flex: 1,
