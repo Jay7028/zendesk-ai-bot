@@ -351,8 +351,17 @@ export default function SpecialistsPage() {
                       Personality notes
                     </label>
                     <textarea
-                      value={selectedSpecialist.personality_notes}
-                      onChange={(e) => updateSelectedSpecialist({ personality_notes: e.target.value })}
+                      value={
+                        (selectedSpecialist as any).personality_notes ??
+                        selectedSpecialist.personalityNotes ??
+                        ""
+                      }
+                      onChange={(e) =>
+                        updateSelectedSpecialist({
+                          personality_notes: e.target.value,
+                          personalityNotes: e.target.value,
+                        } as any)
+                      }
                       rows={2}
                       style={{
                         flex: 1,
