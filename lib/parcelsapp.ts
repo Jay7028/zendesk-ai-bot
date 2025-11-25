@@ -92,7 +92,20 @@ export async function trackOnce(opts: {
   const maxPoll = opts.maxPollMs ?? 4000;
   const interval = opts.pollIntervalMs ?? 500;
 
-  const { uuid } = await initiateTracking({ trackingId, destinationCountry, language });
+  const initRes: any = await initiateTracking({ trackingId, destinationCountry, language });
+  const uuid = initRes?.uuid;
+
+  // If cached results returned immediately
+  if (initRes?.shipments) {
+    return initRes;
+  }
+
+  if (!uuid) {
+    const err = new Error("Parcelsapp tracking request did not return uuid");
+    (err as any)._paBody = initRes;
+    throw err;
+  }
+
   const started = Date.now();
 
   while (Date.now() - started < maxPoll) {
