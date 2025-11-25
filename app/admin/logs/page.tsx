@@ -201,6 +201,7 @@ export default function LogsPage() {
             { id: "integrations", label: "Integrations", href: "/admin/integrations" },
             { id: "logs", label: "Logs", href: "/admin/logs", active: true },
             { id: "test-ai", label: "Test AI", href: "/test-ai" },
+            { id: "track", label: "Track", href: "/track" },
           ].map((item) => (
             <a
               key={item.id}
@@ -389,39 +390,117 @@ export default function LogsPage() {
                       No events for this ticket yet.
                     </div>
                   )}
-                  {timeline.map((ev) => (
-                    <div
-                      key={ev.id}
-                      style={{
-                        border: "1px solid #e5e7eb",
-                        borderRadius: "10px",
-                        padding: "10px",
-                        background: "#f9fafb",
-                        boxShadow: "0 1px 4px rgba(15,23,42,0.06)",
-                      }}
-                    >
+                  {timeline.map((ev) => {
+                    const maybeTrackingTable = (() => {
+                      const outputLine = ev.detail
+                        ?.split("\n")
+                        .find((line) => line.startsWith("Output:"));
+                      if (!outputLine) return null;
+                      const parts = outputLine.replace("Output:", "").split("|").map((p) => p.trim());
+                      if (!parts.some((p) => p.toLowerCase().startsWith("status:"))) return null;
+                      const getVal = (key: string) =>
+                        parts.find((p) => p.toLowerCase().startsWith(key))?.split(":")?.slice(1).join(":").trim() ||
+                        "N/A";
+                      const recentScans = parts.find((p) => p.toLowerCase().startsWith("recent scans"));
+                      return {
+                        status: getVal("status"),
+                        eta: getVal("eta"),
+                        carrier: getVal("carrier"),
+                        last: getVal("last"),
+                        recent: recentScans ? recentScans.split(":").slice(1).join(":").trim() : "",
+                      };
+                    })();
+
+                    return (
                       <div
+                        key={ev.id}
                         style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          fontSize: 12,
-                          marginBottom: 4,
-                          color: "#6b7280",
+                          border: "1px solid #e5e7eb",
+                          borderRadius: "10px",
+                          padding: "10px",
+                          background: "#f9fafb",
+                          boxShadow: "0 1px 4px rgba(15,23,42,0.06)",
                         }}
                       >
-                        <span>{ev.eventType}</span>
-                        <span>{new Date(ev.createdAt).toLocaleString()}</span>
-                      </div>
-                      <div style={{ fontSize: 13, color: "#111827" }}>
-                        {ev.summary}
-                      </div>
-                      {ev.detail && (
-                        <div style={{ fontSize: 12, color: "#6b7280", whiteSpace: "pre-wrap" }}>
-                          {ev.detail}
+                        <div
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            fontSize: 12,
+                            marginBottom: 4,
+                            color: "#6b7280",
+                          }}
+                        >
+                          <span>{ev.eventType}</span>
+                          <span>{new Date(ev.createdAt).toLocaleString()}</span>
                         </div>
-                      )}
-                    </div>
-                  ))}
+                        <div style={{ fontSize: 13, color: "#111827" }}>
+                          {ev.summary}
+                        </div>
+                        {maybeTrackingTable ? (
+                          <div style={{ marginTop: 8 }}>
+                            <table
+                              style={{
+                                width: "100%",
+                                borderCollapse: "collapse",
+                                fontSize: 12,
+                                border: "1px solid #e5e7eb",
+                                borderRadius: "8px",
+                                overflow: "hidden",
+                              }}
+                            >
+                              <tbody>
+                                <tr>
+                                  <td style={{ padding: "6px", borderBottom: "1px solid #e5e7eb" }}>
+                                    Status
+                                  </td>
+                                  <td style={{ padding: "6px", borderBottom: "1px solid #e5e7eb" }}>
+                                    {maybeTrackingTable.status}
+                                  </td>
+                                </tr>
+                                <tr>
+                                  <td style={{ padding: "6px", borderBottom: "1px solid #e5e7eb" }}>
+                                    ETA
+                                  </td>
+                                  <td style={{ padding: "6px", borderBottom: "1px solid #e5e7eb" }}>
+                                    {maybeTrackingTable.eta}
+                                  </td>
+                                </tr>
+                                <tr>
+                                  <td style={{ padding: "6px", borderBottom: "1px solid #e5e7eb" }}>
+                                    Carrier
+                                  </td>
+                                  <td style={{ padding: "6px", borderBottom: "1px solid #e5e7eb" }}>
+                                    {maybeTrackingTable.carrier}
+                                  </td>
+                                </tr>
+                                <tr>
+                                  <td style={{ padding: "6px", borderBottom: "1px solid #e5e7eb" }}>
+                                    Last
+                                  </td>
+                                  <td style={{ padding: "6px", borderBottom: "1px solid #e5e7eb" }}>
+                                    {maybeTrackingTable.last}
+                                  </td>
+                                </tr>
+                                {maybeTrackingTable.recent && (
+                                  <tr>
+                                    <td style={{ padding: "6px" }}>Recent scans</td>
+                                    <td style={{ padding: "6px" }}>{maybeTrackingTable.recent}</td>
+                                  </tr>
+                                )}
+                              </tbody>
+                            </table>
+                          </div>
+                        ) : (
+                          ev.detail && (
+                            <div style={{ fontSize: 12, color: "#6b7280", whiteSpace: "pre-wrap" }}>
+                              {ev.detail}
+                            </div>
+                          )
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
