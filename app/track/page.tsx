@@ -243,6 +243,25 @@ export default function TrackPage() {
                       {result.summary?.status || "Unknown"}
                     </td>
                   </tr>
+                  {result.summary?.scans && result.summary.scans.length > 0 && (
+                    <tr>
+                      <td style={{ padding: "10px", borderBottom: "1px solid #1f2937" }}>
+                        Last tracking event
+                      </td>
+                      <td style={{ padding: "10px", borderBottom: "1px solid #1f2937" }}>
+                        {(() => {
+                          const last = result.summary!.scans![result.summary!.scans!.length - 1];
+                          const pieces = [
+                            last.time || null,
+                            last.location || null,
+                            last.message || null,
+                            last.status || null,
+                          ].filter(Boolean);
+                          return pieces.join(" | ") || "N/A";
+                        })()}
+                      </td>
+                    </tr>
+                  )}
                   <tr>
                     <td style={{ padding: "10px", borderBottom: "1px solid #1f2937" }}>ETA</td>
                     <td style={{ padding: "10px", borderBottom: "1px solid #1f2937" }}>
