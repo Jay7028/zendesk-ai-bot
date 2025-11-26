@@ -354,6 +354,12 @@ export async function POST(req: NextRequest) {
     const intentListForPrompt = intents
       .map((i) => `- ${i.id}: ${i.name} — ${i.description}`)
       .join("\n");
+    console.log("Zendesk webhook about to classify", {
+      orgId,
+      ticketId,
+      intents: intents.length,
+      specialists: specialists.length,
+    });
 
     const classifyPrompt = [
       {
@@ -435,6 +441,13 @@ export async function POST(req: NextRequest) {
       matchedIntent && confidence >= CONFIDENCE_THRESHOLD
         ? specialists.find((s) => s.id === matchedIntent.specialist_id) ?? null
         : null;
+    console.log("Zendesk classify result", {
+      orgId,
+      ticketId,
+      intentId: matchedIntent?.id,
+      specialistId: matchedSpecialist?.id,
+      confidence,
+    });
 
     // Knowledge retrieval (intent/specialist scoped)
     const knowledge = await buildKnowledgeContext({
@@ -863,7 +876,7 @@ export async function POST(req: NextRequest) {
       specialistId: matchedSpecialist.id,
     });
   } catch (err: any) {
-    console.error("Error in /api/webhooks/zendesk:", err);
+    console.error("Error in /api/webhooks/zendesk:", { err, stack: err?.stack });
     return NextResponse.json(
       { error: "Internal server error", details: String(err) },
       { status: 500 }
