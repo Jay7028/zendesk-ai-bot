@@ -264,7 +264,14 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const subdomainHint = body?.brand_subdomain || body?.subdomain || null;
-    const orgId = await resolveOrgForZendeskWebhook(subdomainHint);
+    let orgId: string | null = null;
+    try {
+      orgId = await resolveOrgForZendeskWebhook(subdomainHint);
+    } catch (e) {
+      console.error("Zendesk webhook could not resolve org", e);
+      throw e;
+    }
+    const withOrg = <T extends Record<string, any>>(payload: T) => ({ ...payload, orgId });
 
     const ticketId = body.ticket_id ?? body.id;
     const latestComment =
@@ -321,7 +328,7 @@ export async function POST(req: NextRequest) {
     const origin = req.nextUrl.origin;
 
     if (!intents.length || !specialists.length) {
-      await logRun({
+      await logRun(withOrg({
         ticketId,
         specialistId: null,
         specialistName: null,
@@ -330,15 +337,13 @@ export async function POST(req: NextRequest) {
         inputSummary: String(latestComment).slice(0, 200),
         outputSummary: "No intents or specialists configured.",
         status: "fallback",
-        orgId,
-      });
-      await logTicketEvent({
+      }));
+      await logTicketEvent(withOrg({
         ticketId,
         eventType: "error",
         summary: "No intents/specialists configured",
         detail: "Nothing to route against.",
-        orgId,
-      });
+      }));
       return NextResponse.json(
         { error: "No intents or specialists configured" },
         { status: 500 }
@@ -877,6 +882,22 @@ export async function POST(req: NextRequest) {
     });
   } catch (err: any) {
     console.error("Error in /api/webhooks/zendesk:", { err, stack: err?.stack });
+    // Also persist to logs for visibility in /admin/logs (best-effort)
+    try {
+      await supabaseAdmin.from("logs").insert({
+        zendesk_ticket_id: "unknown",
+        specialist_id: "webhook",
+        specialist_name: "Zendesk Webhook",
+        intent_id: null,
+        intent_name: null,
+        input_summary: "Webhook processing error",
+        output_summary: String(err?.message || err).slice(0, 500),
+        status: "error",
+        org_id: null,
+      });
+    } catch (logErr) {
+      console.error("Failed to persist webhook error to logs", logErr);
+    }
     return NextResponse.json(
       { error: "Internal server error", details: String(err) },
       { status: 500 }
