@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { apiFetch } from "../../../lib/api-client";
+import { withOrgPrefix } from "../../../lib/org-path";
 
 type Specialist = {
   id: string;
