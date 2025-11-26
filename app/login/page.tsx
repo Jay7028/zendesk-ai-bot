@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabaseBrowser } from "../../lib/supabase-browser";
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const nextPath = useMemo(() => searchParams.get("next") || "/admin", [searchParams]);
@@ -35,7 +35,7 @@ export default function LoginPage() {
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [nextPath, router]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -110,8 +110,8 @@ export default function LoginPage() {
       >
         <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 6 }}>Sign in</h1>
         <p style={{ color: "#6b7280", marginBottom: 16 }}>
-            Use your email/password to manage the admin tools.
-            </p>
+          Use your email/password to manage the admin tools.
+        </p>
 
         <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
           <button
@@ -234,5 +234,28 @@ export default function LoginPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div
+          style={{
+            minHeight: "100vh",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontFamily: "Inter, system-ui, -apple-system, 'Segoe UI', sans-serif",
+            color: "#111827",
+          }}
+        >
+          Loading…
+        </div>
+      }
+    >
+      <LoginForm />
+    </Suspense>
   );
 }
