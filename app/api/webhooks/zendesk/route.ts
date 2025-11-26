@@ -204,7 +204,7 @@ async function getZendeskCredentials(orgId: string) {
     .eq("org_id", orgId)
     .eq("type", "zendesk")
     .eq("enabled", true)
-    .order("created_at", { ascending: false })
+    .order("id", { ascending: false })
     .limit(1)
     .maybeSingle();
   if (error) throw error;
@@ -222,7 +222,7 @@ async function getZendeskCredentials(orgId: string) {
     .select("encrypted_payload")
     .eq("integration_account_id", data.id)
     .eq("org_id", orgId)
-    .order("created_at", { ascending: false })
+    .order("id", { ascending: false })
     .limit(1)
     .maybeSingle();
   const creds = decryptJSON<{ subdomain?: string; email?: string; token?: string }>(
