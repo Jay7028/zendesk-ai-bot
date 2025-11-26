@@ -32,6 +32,7 @@ export default function SpecialistsPage() {
   const [specialists, setSpecialists] = useState<Specialist[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draft, setDraft] = useState<Specialist | null>(null);
+  const [form, setForm] = useState<Specialist | null>(null);
   const [tab, setTab] = useState<TabKey>("data");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -53,6 +54,7 @@ export default function SpecialistsPage() {
     if (!selectedId) return;
     const found = specialists.find((s) => s.id === selectedId) ?? null;
     setDraft(found ? { ...found } : null);
+    setForm(found ? { ...found } : null);
     loadKnowledge(selectedId);
   }, [selectedId]);
 
@@ -93,10 +95,7 @@ export default function SpecialistsPage() {
   }
 
   const handleFieldChange = (patch: Partial<Specialist>) => {
-    setDraft((prev) => (prev ? { ...prev, ...patch } : prev));
-    if (selectedId) {
-      setSpecialists((prev) => prev.map((s) => (s.id === selectedId ? { ...s, ...patch } : s)));
-    }
+    setForm((prev) => (prev ? { ...prev, ...patch } : prev));
   };
 
   const handleRequiredFieldsChange = (value: string) => {
@@ -114,7 +113,7 @@ export default function SpecialistsPage() {
       setError(null);
       const res = await apiFetch("/api/specialists", {
         method: "POST",
-        body: JSON.stringify(draft),
+        body: JSON.stringify(form),
       });
       if (!res.ok) throw new Error("Failed to save specialist");
       const saved: Specialist = await res.json();
@@ -125,6 +124,7 @@ export default function SpecialistsPage() {
       });
       setSelectedId(saved.id);
       setDraft(saved);
+      setForm(saved);
     } catch (e: any) {
       setError(e.message ?? "Unexpected error");
     } finally {
@@ -156,6 +156,7 @@ export default function SpecialistsPage() {
       setSpecialists((prev) => [created, ...prev]);
       setSelectedId(created.id);
       setDraft(created);
+      setForm(created);
     } catch (e: any) {
       setError(e.message ?? "Unexpected error");
     } finally {
@@ -454,8 +455,8 @@ export default function SpecialistsPage() {
             <div style={{ color: "#6b7280" }}>Select or create a specialist to begin.</div>
           ) : null}
 
-          {draft && (
-            <>
+              {form && (
+                <>
               <div
                 style={{
                   display: "flex",
@@ -469,16 +470,16 @@ export default function SpecialistsPage() {
                 }}
               >
                 <div>
-                  <div style={{ fontSize: 22, fontWeight: 800 }}>{draft.name || "Untitled"}</div>
+                  <div style={{ fontSize: 22, fontWeight: 800 }}>{form?.name || "Untitled"}</div>
                   <div style={{ fontSize: 13, color: "#6b7280" }}>
-                    {draft.description || "Add a short description so teammates know when to use this."}
+                    {form?.description || "Add a short description so teammates know when to use this."}
                   </div>
                 </div>
                 <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                   <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
                     <input
                       type="checkbox"
-                      checked={draft.active}
+                      checked={form?.active || false}
                       onChange={(e) => handleFieldChange({ active: e.target.checked })}
                     />
                     Active
@@ -529,7 +530,7 @@ export default function SpecialistsPage() {
                     <div>
                       <FieldLabel label="Description" />
                       <input
-                        value={draft.description || ""}
+                        value={form.description || ""}
                         onChange={(e) => handleFieldChange({ description: e.target.value })}
                         style={{
                           width: "100%",
@@ -544,7 +545,7 @@ export default function SpecialistsPage() {
                     <div>
                       <FieldLabel label="Data extraction prompt" />
                       <textarea
-                        value={draft.dataExtractionPrompt || ""}
+                        value={form.dataExtractionPrompt || ""}
                         onChange={(e) => handleFieldChange({ dataExtractionPrompt: e.target.value })}
                         rows={4}
                         style={{
@@ -561,7 +562,7 @@ export default function SpecialistsPage() {
                     <div>
                       <FieldLabel label="Required fields (comma separated)" />
                       <input
-                        value={draft.requiredFields?.join(", ") || ""}
+                        value={form.requiredFields?.join(", ") || ""}
                         onChange={(e) => handleRequiredFieldsChange(e.target.value)}
                         style={{
                           width: "100%",
@@ -794,7 +795,7 @@ export default function SpecialistsPage() {
                 <Card title="Escalation rules">
                   <FieldLabel label="Rules" />
                   <textarea
-                    value={draft.escalationRules || ""}
+                    value={form.escalationRules || ""}
                     onChange={(e) => handleFieldChange({ escalationRules: e.target.value })}
                     rows={6}
                     style={{
@@ -814,7 +815,7 @@ export default function SpecialistsPage() {
                 <Card title="Personality">
                   <FieldLabel label="Voice and tone" />
                   <textarea
-                    value={draft.personalityNotes || ""}
+                    value={form.personalityNotes || ""}
                     onChange={(e) => handleFieldChange({ personalityNotes: e.target.value })}
                     rows={6}
                     style={{
