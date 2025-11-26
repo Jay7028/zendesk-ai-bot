@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
     const { orgId } = await requireOrgContext(req);
     const { data, error } = await supabaseAdmin
       .from("org_invites")
-      .select("id, email, role, status, expires_at, created_at")
+      .select("id, email, role, status, expires_at, created_at, token")
       .eq("org_id", orgId)
       .order("created_at", { ascending: false });
     if (error) throw error;

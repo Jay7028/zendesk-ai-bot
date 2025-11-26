@@ -107,9 +107,26 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             justifyContent: "space-between",
             alignItems: "center",
             fontFamily: "Inter, system-ui, -apple-system, 'Segoe UI', sans-serif",
+            gap: 12,
           }}
         >
-          <div style={{ fontWeight: 700, color: "#111827" }}>Admin</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ fontWeight: 700, color: "#111827" }}>Admin</div>
+            <a
+              href="/admin/orgs"
+              style={{
+                fontSize: 13,
+                color: "#1d4ed8",
+                textDecoration: "none",
+                border: "1px solid #c7d2fe",
+                padding: "6px 10px",
+                borderRadius: 8,
+                background: "#eef2ff",
+              }}
+            >
+              Org & Members
+            </a>
+          </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <label style={{ fontSize: 12, color: "#6b7280" }}>Organization:</label>
             <select
