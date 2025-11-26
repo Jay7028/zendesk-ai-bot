@@ -291,6 +291,11 @@ export async function POST(req: NextRequest) {
     const trackingCandidates = extractTrackingCandidates(latestComment);
     let trackingSummary: ParcelSummary | null = null;
     let trackingContextText = "";
+    if (trackingCandidates.length) {
+      console.log("Zendesk webhook tracking candidates", { ticketId, orgId, trackingCandidates });
+    } else {
+      console.log("Zendesk webhook no tracking candidates", { ticketId, orgId });
+    }
 
     if (!ticketId) {
       return NextResponse.json(
