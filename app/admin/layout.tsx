@@ -120,7 +120,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <div style={{ fontWeight: 700, color: "#111827" }}>Admin</div>
             <a
-              href={withOrgPrefix("/admin/orgs", currentOrgSlug)}
+              href="/admin/orgs"
               style={{
                 fontSize: 13,
                 color: "#1d4ed8",
