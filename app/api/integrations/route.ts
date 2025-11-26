@@ -40,14 +40,9 @@ export async function GET(req: Request) {
       console.error("Supabase GET /integrations error", error);
       return NextResponse.json({ error: "Failed to load integrations" }, { status: 500 });
     }
-    // For Zendesk, do not return apiKey
-    return NextResponse.json(
-      (data ?? []).map((row) =>
-        row.type === "zendesk"
-          ? { ...dbToCamel(row), apiKey: "" } // mask token
-          : dbToCamel(row)
-      )
-    );
+
+    // Return raw values (including apiKey) so the UI can show what is stored
+    return NextResponse.json((data ?? []).map((row) => dbToCamel(row)));
   } catch (err: any) {
     if (err instanceof HttpError) {
       return NextResponse.json({ error: err.message }, { status: err.status });

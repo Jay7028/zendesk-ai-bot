@@ -11,7 +11,6 @@ export default function IntegrationsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [testResult, setTestResult] = useState<string | null>(null);
-  const [zendeskToken, setZendeskToken] = useState<string>("");
 
   useEffect(() => {
     async function loadItems() {
@@ -33,10 +32,6 @@ export default function IntegrationsPage() {
 
   const selected = items.find((i) => i.id === selectedId) ?? null;
   const isZendesk = selected?.type === "zendesk";
-
-  useEffect(() => {
-    setZendeskToken("");
-  }, [selectedId]);
 
   function updateSelected(partial: Partial<IntegrationConfig>) {
     if (!selected) return;
@@ -79,9 +74,7 @@ export default function IntegrationsPage() {
       setError(null);
       const body =
         selected.type === "zendesk"
-          ? zendeskToken
-            ? { ...selected, apiKey: zendeskToken }
-            : { ...selected, apiKey: undefined }
+          ? { ...selected, apiKey: selected.apiKey }
           : selected;
       const res = await apiFetch(`/api/integrations/${selected.id}`, {
         method: "PUT",
@@ -92,7 +85,6 @@ export default function IntegrationsPage() {
       setItems((prev) =>
         prev.map((i) => (i.id === updated.id ? updated : i))
       );
-      if (isZendesk) setZendeskToken("");
     } catch (e: any) {
       setError(e.message ?? "Unexpected error while saving");
     } finally {
@@ -412,37 +404,20 @@ export default function IntegrationsPage() {
                     <div style={{ fontSize: 13, marginBottom: 4, color: "#374151" }}>
                       {isZendesk ? "Zendesk API token" : "API Key"}
                     </div>
-                    {isZendesk ? (
-                      <input
-                        value={zendeskToken}
-                        onChange={(e) => setZendeskToken(e.target.value)}
-                        placeholder="paste your Zendesk API token"
-                        style={{
-                          width: "100%",
-                          borderRadius: "8px",
-                          border: "1px solid #e5e7eb",
-                          background: "#f9fafb",
-                          color: "#111827",
-                          padding: "8px",
-                          fontSize: "13px",
-                        }}
-                      />
-                    ) : (
-                      <input
-                        value={selected.apiKey}
-                        onChange={(e) => updateSelected({ apiKey: e.target.value })}
-                        placeholder="sk-..."
-                        style={{
-                          width: "100%",
-                          borderRadius: "8px",
-                          border: "1px solid #e5e7eb",
-                          background: "#f9fafb",
-                          color: "#111827",
-                          padding: "8px",
-                          fontSize: "13px",
-                        }}
-                      />
-                    )}
+                    <input
+                      value={selected.apiKey}
+                      onChange={(e) => updateSelected({ apiKey: e.target.value })}
+                      placeholder={isZendesk ? "paste your Zendesk API token" : "sk-..."}
+                      style={{
+                        width: "100%",
+                        borderRadius: "8px",
+                        border: "1px solid #e5e7eb",
+                        background: "#f9fafb",
+                        color: "#111827",
+                        padding: "8px",
+                        fontSize: "13px",
+                      }}
+                    />
                   </div>
                   <div>
                     <div style={{ fontSize: 13, marginBottom: 4, color: "#374151" }}>
