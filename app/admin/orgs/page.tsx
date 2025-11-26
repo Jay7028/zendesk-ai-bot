@@ -313,6 +313,7 @@ export default function OrgPage() {
               ) : (
                 orgs.map((o) => {
                   const active = o.orgId === selectedOrgId;
+                  const selectable = o.role === "owner";
                   return (
                     <div
                       key={o.orgId}
@@ -325,28 +326,29 @@ export default function OrgPage() {
                         justifyContent: "space-between",
                         alignItems: "center",
                       }}
-                    >
-                      <div>
-                        <div style={{ fontWeight: 700 }}>{o.name || "Org"}</div>
-                        <div style={{ color: "#6b7280", fontSize: 12 }}>
-                          Role: {o.role} {o.slug ? `· ${o.slug}` : ""}
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => handleSelectOrg(o.orgId)}
-                        style={{
-                          padding: "6px 10px",
-                          borderRadius: 8,
-                          border: "1px solid #c7d2fe",
-                          background: active ? "#c7d2fe" : "#fff",
-                          color: "#1d4ed8",
-                          cursor: "pointer",
-                          fontSize: 12,
-                          fontWeight: 600,
-                        }}
                       >
-                        {active ? "Active" : "Select"}
-                      </button>
+                        <div>
+                          <div style={{ fontWeight: 700 }}>{o.name || "Org"}</div>
+                          <div style={{ color: "#6b7280", fontSize: 12 }}>
+                            Role: {o.role} {o.slug ? `· ${o.slug}` : ""}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => selectable && handleSelectOrg(o.orgId)}
+                          disabled={!selectable}
+                          style={{
+                            padding: "6px 10px",
+                            borderRadius: 8,
+                            border: "1px solid #c7d2fe",
+                            background: active ? "#c7d2fe" : "#fff",
+                            color: selectable ? "#1d4ed8" : "#9ca3af",
+                            cursor: selectable ? "pointer" : "not-allowed",
+                            fontSize: 12,
+                            fontWeight: 600,
+                          }}
+                        >
+                          {active ? "Active" : selectable ? "Select" : "Locked"}
+                        </button>
                     </div>
                   );
                 })

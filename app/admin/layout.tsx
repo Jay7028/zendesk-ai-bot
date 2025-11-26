@@ -67,10 +67,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         const cookieOrgId = getCookie("org_id");
         const cookieOrgSlug = getCookie("org_slug");
         const fallback = data[0];
+        // Owners can choose; non-owners stick to first membership
+        const ownerOrg = data.find((o) => o.role === "owner");
         const chosen =
-          data.find((o) => o.orgId === cookieOrgId) ||
-          data.find((o) => o.role === "owner") ||
-          fallback;
+          ownerOrg && cookieOrgId === ownerOrg.orgId
+            ? ownerOrg
+            : ownerOrg && cookieOrgId === ownerOrg.orgId
+            ? ownerOrg
+            : ownerOrg || fallback;
         if (chosen) {
           setCurrentOrgId(chosen.orgId);
           setCurrentOrgSlug(cookieOrgSlug || (chosen as any).slug || slugify(chosen.name || ""));
