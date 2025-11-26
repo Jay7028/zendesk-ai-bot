@@ -204,6 +204,8 @@ async function getZendeskCredentials(orgId: string) {
     .eq("org_id", orgId)
     .eq("type", "zendesk")
     .eq("enabled", true)
+    .order("created_at", { ascending: false })
+    .limit(1)
     .maybeSingle();
   if (error) throw error;
   if (!data) {
@@ -220,6 +222,8 @@ async function getZendeskCredentials(orgId: string) {
     .select("encrypted_payload")
     .eq("integration_account_id", data.id)
     .eq("org_id", orgId)
+    .order("created_at", { ascending: false })
+    .limit(1)
     .maybeSingle();
   const creds = decryptJSON<{ subdomain?: string; email?: string; token?: string }>(
     credRow?.encrypted_payload || null
@@ -912,7 +916,10 @@ export async function POST(req: NextRequest) {
       console.error("Failed to persist webhook error to logs", logErr);
     }
     return NextResponse.json(
-      { error: "Internal server error", details: String(err) },
+      {
+        error: "Internal server error",
+        details: err?.message || String(err),
+      },
       { status: 500 }
     );
   }
