@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { apiFetch } from "../../../lib/api-client";
-import { withOrgPrefix } from "../../../lib/org-path";
+import { withOrgPrefix, getCookie } from "../../../lib/org-path";
 
 type InviteRow = {
   id: string;
@@ -84,7 +84,9 @@ export default function OrgPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [orgs, setOrgs] = useState<OrgRow[]>([]);
-  const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null);
+  const [selectedOrgId, setSelectedOrgId] = useState<string | null>(
+    typeof document !== "undefined" ? getCookie("org_id") : null
+  );
 
   const activeNav = useMemo(
     () =>
@@ -94,6 +96,14 @@ export default function OrgPage() {
       })),
     []
   );
+
+  const slugify = (input: string) =>
+    input
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 60);
 
   async function loadData() {
     try {
@@ -181,7 +191,9 @@ export default function OrgPage() {
     setSelectedOrgId(orgId);
     // switch active org cookie
     try {
-      await apiFetch("/api/orgs", { method: "POST", body: JSON.stringify({ orgId }) });
+      const org = orgs.find((o) => o.orgId === orgId);
+      const slug = org?.slug || slugify(org?.name || "");
+      await apiFetch("/api/orgs", { method: "POST", body: JSON.stringify({ orgId, orgSlug: slug }) });
     } catch {
       // ignore
     }

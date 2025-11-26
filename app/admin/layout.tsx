@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { supabaseBrowser } from "../../lib/supabase-browser";
 import { apiFetch } from "../../lib/api-client";
-import { withOrgPrefix } from "../../lib/org-path";
+import { withOrgPrefix, getCookie } from "../../lib/org-path";
 
 type OrgOption = { orgId: string; name: string; role: string };
 
@@ -64,10 +64,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         if (!res.ok) return;
         const data = (await res.json()) as OrgOption[];
         setOrgs(data);
-        if (!currentOrgId && data[0]) {
-          const slug = (data[0] as any).slug || slugify(data[0].name || "org");
-          setCurrentOrgId(data[0].orgId);
-          setCurrentOrgSlug(slug);
+        const cookieOrgId = getCookie("org_id");
+        const cookieOrgSlug = getCookie("org_slug");
+        const fallback = data[0];
+        const chosen =
+          data.find((o) => o.orgId === cookieOrgId) ||
+          data.find((o) => o.role === "owner") ||
+          fallback;
+        if (chosen) {
+          setCurrentOrgId(chosen.orgId);
+          setCurrentOrgSlug(cookieOrgSlug || (chosen as any).slug || slugify(chosen.name || ""));
         }
       } catch {
         // ignore
