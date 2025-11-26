@@ -5,6 +5,7 @@ import { buildKnowledgeContext } from "../../../../lib/knowledge";
 import { HttpError } from "../../../../lib/auth";
 import { decryptJSON } from "../../../../lib/credentials";
 
+// Note: Zendesk webhooks don't send our auth headers; we resolve org by subdomain/integration.
 type SpecialistRow = {
   id: string;
   name: string;
