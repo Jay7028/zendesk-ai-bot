@@ -3,6 +3,7 @@ import { supabaseAdmin } from "../../../../lib/supabase";
 import { trackOnce, summarizeParcel, type ParcelSummary } from "../../../../lib/parcelsapp";
 import { buildKnowledgeContext } from "../../../../lib/knowledge";
 import { HttpError, requireOrgContext } from "../../../../lib/auth";
+import { decryptJSON } from "../../../../lib/credentials";
 
 type SpecialistRow = {
   id: string;
@@ -211,11 +212,32 @@ async function getZendeskCredentials(orgId: string) {
     .maybeSingle();
   if (error) throw error;
   if (!data) return null;
-  return {
-    subdomain: normalizeSubdomain(data.base_url || ""),
-    email: data.description || "",
-    token: data.api_key || "",
-  };
+
+  let subdomain = normalizeSubdomain(data.base_url || "");
+  let email = data.description || "";
+  let token = data.api_key || "";
+
+  const { data: credRow } = await supabaseAdmin
+    .from("integration_credentials")
+    .select("encrypted_payload")
+    .eq("integration_account_id", data.id)
+    .eq("org_id", orgId)
+    .maybeSingle();
+  const creds = decryptJSON<{ subdomain?: string; email?: string; token?: string }>(
+    credRow?.encrypted_payload || null
+  );
+  if (creds) {
+    subdomain = normalizeSubdomain(creds.subdomain || subdomain);
+    email = creds.email || email;
+    token = creds.token || token;
+  }
+  return subdomain && email && token
+    ? {
+        subdomain,
+        email,
+        token,
+      }
+    : null;
 }
 
 export async function POST(req: NextRequest) {

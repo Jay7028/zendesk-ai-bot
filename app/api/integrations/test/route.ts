@@ -12,9 +12,27 @@ async function testZendesk(integrationId: string, orgId: string) {
     .maybeSingle();
   if (error) throw error;
   if (!data) throw new HttpError(404, "Integration not found or disabled");
-  const subdomain = (data.base_url || "").replace(/https?:\/\//i, "").replace(/\.zendesk\.com/i, "").trim();
-  const email = data.description || "";
-  const token = data.api_key || "";
+
+  let subdomain = (data.base_url || "").replace(/https?:\/\//i, "").replace(/\.zendesk\.com/i, "").trim();
+  let email = data.description || "";
+  let token = data.api_key || "";
+
+  // Try credentials table first
+  const { data: credRow } = await supabaseAdmin
+    .from("integration_credentials")
+    .select("encrypted_payload")
+    .eq("integration_account_id", integrationId)
+    .eq("org_id", orgId)
+    .maybeSingle();
+  const creds = decryptJSON<{ subdomain?: string; email?: string; token?: string }>(
+    credRow?.encrypted_payload || null
+  );
+  if (creds) {
+    subdomain = creds.subdomain || subdomain;
+    email = creds.email || email;
+    token = creds.token || token;
+  }
+
   if (!subdomain || !email || !token) throw new HttpError(400, "Zendesk credentials incomplete");
 
   const auth = Buffer.from(`${email}/token:${token}`).toString("base64");
@@ -57,3 +75,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Failed to test integration" }, { status: 500 });
   }
 }
+import { decryptJSON } from "../../../../lib/credentials";
