@@ -1,5 +1,4 @@
 import { supabaseAdmin } from "./supabase";
-import { slugify } from "./org-path";
 
 export class HttpError extends Error {
   status: number;
