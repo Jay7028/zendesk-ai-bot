@@ -4,9 +4,9 @@ import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { supabaseBrowser } from "../../lib/supabase-browser";
 import { apiFetch } from "../../lib/api-client";
-import { withOrgPrefix, getCookie } from "../../lib/org-path";
+import { getCookie } from "../../lib/org-path";
 
-type OrgOption = { orgId: string; name: string; role: string };
+type OrgOption = { orgId: string; name: string; role: string; slug?: string };
 
 function slugify(input: string) {
   return input
@@ -67,17 +67,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         const cookieOrgId = getCookie("org_id");
         const cookieOrgSlug = getCookie("org_slug");
         const fallback = data[0];
-        // Owners can choose; non-owners stick to first membership
-        const ownerOrg = data.find((o) => o.role === "owner");
         const chosen =
-          ownerOrg && cookieOrgId === ownerOrg.orgId
-            ? ownerOrg
-            : ownerOrg && cookieOrgId === ownerOrg.orgId
-            ? ownerOrg
-            : ownerOrg || fallback;
+          data.find((o) => o.orgId === cookieOrgId) ||
+          data.find((o) => o.role === "owner") ||
+          fallback;
         if (chosen) {
           setCurrentOrgId(chosen.orgId);
-          setCurrentOrgSlug(cookieOrgSlug || (chosen as any).slug || slugify(chosen.name || ""));
+          setCurrentOrgSlug(cookieOrgSlug || chosen.slug || slugify(chosen.name || ""));
         }
       } catch {
         // ignore
@@ -85,8 +81,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     }
     if (hasSession) loadOrgs();
   }, [hasSession, pathname]);
-
-  // Selection now happens in Org & Members; no dropdown here.
 
   // Redirect to slugged URL if available
   useEffect(() => {
@@ -126,32 +120,32 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           style={{
             padding: "8px 16px",
             borderBottom: "1px solid #e5e7eb",
-          background: "#f9fafb",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          fontFamily: "Inter, system-ui, -apple-system, 'Segoe UI', sans-serif",
-          gap: 12,
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ fontWeight: 700, color: "#111827" }}>Admin</div>
-          <a
-            href={withOrgPrefix("/admin/orgs", currentOrgSlug)}
-            style={{
-              fontSize: 13,
-              color: "#1d4ed8",
-              textDecoration: "none",
-              border: "1px solid #c7d2fe",
-              padding: "6px 10px",
-              borderRadius: 8,
-              background: "#eef2ff",
-            }}
-          >
-            Org & Members
-          </a>
+            background: "#f9fafb",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            fontFamily: "Inter, system-ui, -apple-system, 'Segoe UI', sans-serif",
+            gap: 12,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ fontWeight: 700, color: "#111827" }}>Admin</div>
+            <a
+              href="/admin/orgs"
+              style={{
+                fontSize: 13,
+                color: "#1d4ed8",
+                textDecoration: "none",
+                border: "1px solid #c7d2fe",
+                padding: "6px 10px",
+                borderRadius: 8,
+                background: "#eef2ff",
+              }}
+            >
+              Org & Members
+            </a>
+          </div>
         </div>
-      </div>
       ) : null}
       {children}
     </>

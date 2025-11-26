@@ -1,4 +1,5 @@
-import { supabaseAdmin, defaultOrgId } from "./supabase";
+import { supabaseAdmin } from "./supabase";
+import { slugify } from "./org-path";
 
 export class HttpError extends Error {
   status: number;
@@ -58,10 +59,35 @@ export async function requireOrgContext(req: Request) {
     throw new HttpError(403, "No organization membership found");
   }
 
+  const pathSlug = (() => {
+    try {
+      const url = new URL(req.url);
+      const segs = url.pathname.split("/").filter(Boolean);
+      return segs[0] || null;
+    } catch {
+      return null;
+    }
+  })();
+
+  if (pathSlug) {
+    const { data: orgRow } = await supabaseAdmin
+      .from("organizations")
+      .select("id, slug")
+      .ilike("slug", slugify(pathSlug))
+      .maybeSingle();
+    if (orgRow) {
+      const member = memberships.find((m) => m.org_id === orgRow.id);
+      const isOwner = memberships.some((m) => m.role === "owner");
+      if (!member && !isOwner) {
+        throw new HttpError(403, "Not a member of this organization");
+      }
+      return { orgId: orgRow.id, userId, role: member?.role || "owner", slug: orgRow.slug || pathSlug };
+    }
+  }
+
   const cookieOrg = getCookie(req, "org_id");
   const selected = memberships.find((m) => m.org_id === cookieOrg);
   const orgId = (selected || memberships[0]).org_id as string;
   const role = (selected || memberships[0]).role as string;
-
-  return { orgId, userId, role };
+  return { orgId, userId, role, slug: pathSlug || null };
 }
