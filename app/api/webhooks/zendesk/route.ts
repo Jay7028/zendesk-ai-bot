@@ -230,11 +230,11 @@ async function getZendeskCredentials(orgId: string) {
   );
   if (creds) {
     subdomain = normalizeSubdomain((creds.subdomain || subdomain || "").trim());
-    email = (creds.email || email || "").trim();
+    email = (creds.email || email || "").trim().toLowerCase();
     token = (creds.token || token || "").trim();
   }
   subdomain = normalizeSubdomain((subdomain || "").trim());
-  email = (email || "").trim();
+  email = (email || "").trim().toLowerCase();
   token = (token || "").trim();
   const ready = subdomain && email && token;
   if (!ready) {
@@ -376,6 +376,14 @@ export async function POST(req: NextRequest) {
         { error: "Zendesk auth failed", details: authCheck.body || authCheck.status },
         { status: 500 }
       );
+    } else {
+      await logTicketEvent({
+        ticketId,
+        eventType: "zendesk_auth_ok",
+        summary: "Zendesk auth ok",
+        detail: `status=${authCheck.status}`,
+        orgId,
+      });
     }
 
     const [{ data: intentRows, error: intentsError }, { data: specRows, error: specsError }] =
@@ -898,6 +906,7 @@ export async function POST(req: NextRequest) {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
+        Accept: "application/json",
         Authorization: `Basic ${authString}`,
       },
       body: JSON.stringify({
