@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { supabaseBrowser } from "../../lib/supabase-browser";
 import { apiFetch } from "../../lib/api-client";
-import { getCookie } from "../../lib/org-path";
+import { getCookie, withOrgPrefix } from "../../lib/org-path";
 
 type OrgOption = { orgId: string; name: string; role: string; slug?: string };
 
@@ -122,7 +122,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <div style={{ fontWeight: 700, color: "#111827" }}>Admin</div>
             <a
-              href="/admin/orgs"
+              href={withOrgPrefix("/admin/orgs", currentOrgSlug || undefined)}
               style={{
                 fontSize: 13,
                 color: "#1d4ed8",

@@ -72,6 +72,14 @@ function Card({ title, children, actions }: { title: string; children: ReactNode
   );
 }
 
+const slugify = (input: string) =>
+  input
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60);
+
 export default function OrgPage() {
   const [invites, setInvites] = useState<InviteRow[]>([]);
   const [members, setMembers] = useState<MemberRow[]>([]);
@@ -84,9 +92,7 @@ export default function OrgPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [orgs, setOrgs] = useState<OrgRow[]>([]);
-  const [selectedOrgId, setSelectedOrgId] = useState<string | null>(
-    typeof document !== "undefined" ? getCookie("org_id") : null
-  );
+  const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null);
 
   const activeNav = useMemo(
     () =>
@@ -97,34 +103,28 @@ export default function OrgPage() {
     []
   );
 
-  const slugify = (input: string) =>
-    input
-      .toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "")
-      .slice(0, 60);
-
   async function loadData() {
     try {
       setLoading(true);
       setError(null);
+
       const orgRes = await apiFetch("/api/orgs");
       const orgData = (await orgRes.json()) as OrgRow[];
       setOrgs(orgData);
-      if (!selectedOrgId && orgData[0]) setSelectedOrgId(orgData[0].orgId);
 
-      const targetOrg = selectedOrgId || orgData[0]?.orgId || null;
+      const cookieSlug = getCookie("org_slug")?.toLowerCase();
+      const chosen = orgData.find((o) => o.slug?.toLowerCase() === cookieSlug) || orgData[0] || null;
+      if (chosen) setSelectedOrgId(chosen.orgId);
+
+      const targetOrg = chosen?.orgId || null;
       const [invRes, memRes] = await Promise.all([
         apiFetch("/api/org-invites"),
         targetOrg ? apiFetch(`/api/org-memberships?orgId=${targetOrg}`) : apiFetch("/api/org-memberships"),
       ]);
       if (!invRes.ok) throw new Error("Failed to load invites");
       if (!memRes.ok) throw new Error("Failed to load members");
-      const invData = (await invRes.json()) as InviteRow[];
-      const memData = (await memRes.json()) as MemberRow[];
-      setInvites(invData);
-      setMembers(memData);
+      setInvites((await invRes.json()) as InviteRow[]);
+      setMembers((await memRes.json()) as MemberRow[]);
     } catch (e: any) {
       setError(e.message || "Failed to load data");
     } finally {
@@ -178,26 +178,13 @@ export default function OrgPage() {
         setError(data?.error || "Failed to create org");
         return;
       }
-      setOrgMessage("Organization created and selected.");
+      setOrgMessage("Organization created.");
       setOrgName("");
       setOrgSlug("");
       await loadData();
     } catch (e: any) {
       setError(e.message || "Failed to create org");
     }
-  }
-
-  async function handleSelectOrg(orgId: string) {
-    setSelectedOrgId(orgId);
-    // switch active org cookie
-    try {
-      const org = orgs.find((o) => o.orgId === orgId);
-      const slug = org?.slug || slugify(org?.name || "");
-      await apiFetch("/api/orgs", { method: "POST", body: JSON.stringify({ orgId, orgSlug: slug }) });
-    } catch {
-      // ignore
-    }
-    await loadData();
   }
 
   async function handleRoleChange(userId: string, nextRole: MemberRow["role"]) {
@@ -300,9 +287,7 @@ export default function OrgPage() {
           </div>
         )}
         {orgMessage && (
-          <div style={{ color: "#166534", background: "#dcfce7", padding: 12, borderRadius: 10 }}>
-            {orgMessage}
-          </div>
+          <div style={{ color: "#166534", background: "#dcfce7", padding: 12, borderRadius: 10 }}>{orgMessage}</div>
         )}
 
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
@@ -313,7 +298,6 @@ export default function OrgPage() {
               ) : (
                 orgs.map((o) => {
                   const active = o.orgId === selectedOrgId;
-                  const selectable = o.role === "owner";
                   return (
                     <div
                       key={o.orgId}
@@ -325,30 +309,30 @@ export default function OrgPage() {
                         display: "flex",
                         justifyContent: "space-between",
                         alignItems: "center",
+                        gap: 10,
                       }}
-                      >
-                        <div>
-                          <div style={{ fontWeight: 700 }}>{o.name || "Org"}</div>
-                          <div style={{ color: "#6b7280", fontSize: 12 }}>
-                            Role: {o.role} {o.slug ? `· ${o.slug}` : ""}
-                          </div>
+                    >
+                      <div>
+                        <div style={{ fontWeight: 700 }}>{o.name || "Org"}</div>
+                        <div style={{ color: "#6b7280", fontSize: 12 }}>
+                          Role: {o.role} {o.slug ? `· ${o.slug}` : ""}
                         </div>
-                        <button
-                          onClick={() => selectable && handleSelectOrg(o.orgId)}
-                          disabled={!selectable}
+                      </div>
+                      {active && (
+                        <span
                           style={{
-                            padding: "6px 10px",
-                            borderRadius: 8,
+                            padding: "4px 10px",
+                            borderRadius: 999,
                             border: "1px solid #c7d2fe",
-                            background: active ? "#c7d2fe" : "#fff",
-                            color: selectable ? "#1d4ed8" : "#9ca3af",
-                            cursor: selectable ? "pointer" : "not-allowed",
+                            background: "#eef2ff",
+                            color: "#4338ca",
                             fontSize: 12,
-                            fontWeight: 600,
+                            fontWeight: 700,
                           }}
                         >
-                          {active ? "Active" : selectable ? "Select" : "Locked"}
-                        </button>
+                          Active
+                        </span>
+                      )}
                     </div>
                   );
                 })
@@ -362,8 +346,11 @@ export default function OrgPage() {
                 <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 4 }}>Name</div>
                 <input
                   value={orgName}
-                  onChange={(e) => setOrgName(e.target.value)}
-                  placeholder="New Brand"
+                  onChange={(e) => {
+                    setOrgName(e.target.value);
+                    if (!orgSlug) setOrgSlug(slugify(e.target.value));
+                  }}
+                  placeholder="Acme Support"
                   style={{
                     width: "100%",
                     padding: "10px 12px",
@@ -378,7 +365,7 @@ export default function OrgPage() {
                 <input
                   value={orgSlug}
                   onChange={(e) => setOrgSlug(e.target.value)}
-                  placeholder="new-brand"
+                  placeholder="acme"
                   style={{
                     width: "100%",
                     padding: "10px 12px",
@@ -462,85 +449,85 @@ export default function OrgPage() {
               </button>
             </div>
           </Card>
+        </div>
 
-          <Card title="Members">
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {members.length === 0 ? (
-                <div style={{ color: "#6b7280", fontSize: 13 }}>No members yet.</div>
-              ) : (
-                members.map((m) => (
-                  <div
-                    key={m.user_id}
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      padding: "10px 12px",
-                      border: "1px solid #e5e7eb",
-                      borderRadius: 10,
-                      background: "#f9fafb",
-                      fontSize: 13,
-                      gap: 12,
-                    }}
-                  >
-                    <div>
-                      <div style={{ fontWeight: 700 }}>{m.profiles?.name || m.user_id}</div>
-                      <div style={{ color: "#6b7280", fontSize: 12 }}>{m.profiles?.email || ""}</div>
-                      <div style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                        <span
-                          style={{
-                            padding: "4px 8px",
-                            borderRadius: 999,
-                            background: "#eef2ff",
-                            border: "1px solid #c7d2fe",
-                            color: "#312e81",
-                            fontSize: 12,
-                            fontWeight: 700,
-                          }}
-                        >
-                          {m.role}
-                        </span>
-                        <select
-                          value={m.role}
-                          onChange={(e) => handleRoleChange(m.user_id, e.target.value as MemberRow["role"])}
-                          style={{
-                            padding: "6px 8px",
-                            borderRadius: 8,
-                            border: "1px solid #d1d5db",
-                            fontSize: 13,
-                          }}
-                        >
-                          <option value="owner">Owner</option>
-                          <option value="admin">Admin</option>
-                          <option value="agent">Agent</option>
-                          <option value="viewer">Viewer</option>
-                        </select>
-                      </div>
-                    </div>
-                    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
-                      <div style={{ color: "#6b7280", fontSize: 12 }}>
-                        Joined {m.created_at ? new Date(m.created_at).toLocaleDateString() : "-"}
-                      </div>
-                      <button
-                        onClick={() => handleRemove(m.user_id)}
+        <Card title="Members">
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {members.length === 0 ? (
+              <div style={{ color: "#6b7280", fontSize: 13 }}>No members yet.</div>
+            ) : (
+              members.map((m) => (
+                <div
+                  key={m.user_id}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    padding: "10px 12px",
+                    border: "1px solid #e5e7eb",
+                    borderRadius: 10,
+                    background: "#f9fafb",
+                    fontSize: 13,
+                    gap: 12,
+                  }}
+                >
+                  <div>
+                    <div style={{ fontWeight: 700 }}>{m.profiles?.name || m.user_id}</div>
+                    <div style={{ color: "#6b7280", fontSize: 12 }}>{m.profiles?.email || ""}</div>
+                    <div style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                      <span
+                        style={{
+                          padding: "4px 8px",
+                          borderRadius: 999,
+                          background: "#eef2ff",
+                          border: "1px solid #c7d2fe",
+                          color: "#312e81",
+                          fontSize: 12,
+                          fontWeight: 700,
+                        }}
+                      >
+                        {m.role}
+                      </span>
+                      <select
+                        value={m.role}
+                        onChange={(e) => handleRoleChange(m.user_id, e.target.value as MemberRow["role"])}
                         style={{
                           padding: "6px 8px",
                           borderRadius: 8,
-                          border: "1px solid #fca5a5",
-                          background: "#fef2f2",
-                          color: "#b91c1c",
-                          cursor: "pointer",
-                          fontSize: 12,
+                          border: "1px solid #d1d5db",
+                          fontSize: 13,
                         }}
                       >
-                        Remove
-                      </button>
+                        <option value="owner">Owner</option>
+                        <option value="admin">Admin</option>
+                        <option value="agent">Agent</option>
+                        <option value="viewer">Viewer</option>
+                      </select>
                     </div>
                   </div>
-                ))
-              )}
-            </div>
-          </Card>
-        </div>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
+                    <div style={{ color: "#6b7280", fontSize: 12 }}>
+                      Joined {m.created_at ? new Date(m.created_at).toLocaleDateString() : "-"}
+                    </div>
+                    <button
+                      onClick={() => handleRemove(m.user_id)}
+                      style={{
+                        padding: "6px 8px",
+                        borderRadius: 8,
+                        border: "1px solid #fca5a5",
+                        background: "#fef2f2",
+                        color: "#b91c1c",
+                        cursor: "pointer",
+                        fontSize: 12,
+                      }}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </Card>
 
         <Card title="Invites">
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -570,8 +557,7 @@ export default function OrgPage() {
                     </div>
                     {inv.token && (
                       <div style={{ color: "#0f172a", marginTop: 4 }}>
-                        Token (for testing):{" "}
-                        <span style={{ fontFamily: "monospace", fontSize: 12 }}>{inv.token}</span>
+                        Token (for testing): <span style={{ fontFamily: "monospace", fontSize: 12 }}>{inv.token}</span>
                       </div>
                     )}
                   </div>

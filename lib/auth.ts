@@ -67,6 +67,8 @@ export async function requireOrgContext(req: Request) {
     throw new HttpError(403, "No organization membership found");
   }
 
+  const headerSlug = req.headers.get("x-org-slug");
+
   const pathSlug = (() => {
     try {
       const url = new URL(req.url);
@@ -77,11 +79,13 @@ export async function requireOrgContext(req: Request) {
     }
   })();
 
-  if (pathSlug) {
+  const slugCandidate = headerSlug || pathSlug;
+
+  if (slugCandidate) {
     const { data: orgRow } = await supabaseAdmin
       .from("organizations")
       .select("id, slug")
-      .ilike("slug", slugify(pathSlug))
+      .ilike("slug", slugify(slugCandidate))
       .maybeSingle();
     if (orgRow) {
       const member = memberships.find((m) => m.org_id === orgRow.id);
@@ -89,7 +93,7 @@ export async function requireOrgContext(req: Request) {
       if (!member && !isOwner) {
         throw new HttpError(403, "Not a member of this organization");
       }
-      return { orgId: orgRow.id, userId, role: member?.role || "owner", slug: orgRow.slug || pathSlug };
+      return { orgId: orgRow.id, userId, role: member?.role || "owner", slug: orgRow.slug || slugCandidate };
     }
   }
 
