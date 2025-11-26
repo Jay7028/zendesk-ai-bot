@@ -261,17 +261,20 @@ async function resolveOrgForZendeskWebhook(subdomainHint?: string | null) {
 }
 
 export async function POST(req: NextRequest) {
+  let orgId: string | null = null;
   try {
     const body = await req.json();
     const subdomainHint = body?.brand_subdomain || body?.subdomain || null;
-    let orgId: string | null = null;
     try {
       orgId = await resolveOrgForZendeskWebhook(subdomainHint);
     } catch (e) {
       console.error("Zendesk webhook could not resolve org", e);
       throw e;
     }
-    const withOrg = <T extends Record<string, any>>(payload: T) => ({ ...payload, orgId });
+    const withOrg = <T extends Record<string, any>>(payload: T) => ({
+      ...payload,
+      orgId: orgId || undefined,
+    });
 
     const ticketId = body.ticket_id ?? body.id;
     const latestComment =
@@ -328,6 +331,11 @@ export async function POST(req: NextRequest) {
     const origin = req.nextUrl.origin;
 
     if (!intents.length || !specialists.length) {
+      console.error("No intents/specialists for org", {
+        orgId,
+        intentsCount: intents.length,
+        specialistsCount: specialists.length,
+      });
       await logRun(withOrg({
         ticketId,
         specialistId: null,
@@ -345,7 +353,12 @@ export async function POST(req: NextRequest) {
         detail: "Nothing to route against.",
       }));
       return NextResponse.json(
-        { error: "No intents or specialists configured" },
+        {
+          error: "No intents or specialists configured",
+          orgId,
+          intentsCount: intents.length,
+          specialistsCount: specialists.length,
+        },
         { status: 500 }
       );
     }
@@ -893,7 +906,7 @@ export async function POST(req: NextRequest) {
         input_summary: "Webhook processing error",
         output_summary: String(err?.message || err).slice(0, 500),
         status: "error",
-        org_id: null,
+        org_id: orgId,
       });
     } catch (logErr) {
       console.error("Failed to persist webhook error to logs", logErr);
