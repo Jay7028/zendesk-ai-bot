@@ -3,4 +3,5 @@ export interface IntentConfig {
   name: string;
   description: string;
   specialistId: string | null;
+  orgId?: string;
 }
