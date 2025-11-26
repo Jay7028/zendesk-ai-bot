@@ -330,12 +330,14 @@ export async function POST(req: NextRequest) {
         inputSummary: String(latestComment).slice(0, 200),
         outputSummary: "No intents or specialists configured.",
         status: "fallback",
+        orgId,
       });
       await logTicketEvent({
         ticketId,
         eventType: "error",
         summary: "No intents/specialists configured",
         detail: "Nothing to route against.",
+        orgId,
       });
       return NextResponse.json(
         { error: "No intents or specialists configured" },
@@ -710,12 +712,14 @@ export async function POST(req: NextRequest) {
         inputSummary: String(latestComment).slice(0, 200),
         outputSummary: `Reply generation failed: ${text.slice(0, 180)}`,
         status: "fallback",
+        orgId,
       });
       await logTicketEvent({
         ticketId,
         eventType: "error",
         summary: "Reply generation failed",
         detail: text.slice(0, 200),
+        orgId,
       });
       return NextResponse.json(
         { error: "OpenAI API error", details: text },
@@ -763,12 +767,14 @@ export async function POST(req: NextRequest) {
         inputSummary: String(latestComment).slice(0, 200),
         outputSummary: `Zendesk API error: ${text.slice(0, 180)}`,
         status: "fallback",
+        orgId,
       });
       await logTicketEvent({
         ticketId,
         eventType: "error",
         summary: "Zendesk API error",
         detail: text.slice(0, 200),
+        orgId,
       });
       return NextResponse.json(
         { error: "Zendesk API error", details: text },
@@ -790,18 +796,21 @@ export async function POST(req: NextRequest) {
         .filter(Boolean)
         .join(" | "),
       status: "success",
+      orgId,
     });
     await logTicketEvent({
       ticketId,
       eventType: "reply_sent",
       summary: "Reply sent to Zendesk",
       detail: `Specialist: ${matchedSpecialist.name}; Intent: ${matchedIntent?.name ?? "unknown"}`,
+      orgId,
     });
     await logTicketEvent({
       ticketId,
       eventType: "zendesk_update",
       summary: "Public reply posted to Zendesk",
       detail: aiReply.slice(0, 240),
+      orgId,
     });
 
     return NextResponse.json({
