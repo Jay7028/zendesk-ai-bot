@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { IntegrationConfig } from "../../api/integrations/types";
-import { apiFetch } from "../../lib/api-client";
+import { apiFetch } from "../../../lib/api-client";
 
 export default function IntegrationsPage() {
   const [items, setItems] = useState<IntegrationConfig[]>([]);

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import type { IntentConfig } from "../../api/intents/types";
 import type { SpecialistConfig } from "../../api/specialists/data";
 import type { IntentSuggestion } from "../../api/intent-suggestions/types";
-import { apiFetch } from "../../lib/api-client";
+import { apiFetch } from "../../../lib/api-client";
 
 export default function IntentsPage() {
   const [intents, setIntents] = useState<IntentConfig[]>([]);

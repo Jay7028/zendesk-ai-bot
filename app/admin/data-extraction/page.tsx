@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { DataField } from "../../api/data-extraction/types";
-import { apiFetch } from "../../lib/api-client";
+import { apiFetch } from "../../../lib/api-client";
 
 export default function DataExtractionPage() {
   const [fields, setFields] = useState<DataField[]>([]);
