@@ -94,6 +94,9 @@ export async function requireOrgContext(req: Request) {
         throw new HttpError(403, "Not a member of this organization");
       }
       return { orgId: orgRow.id, userId, role: member?.role || "owner", slug: orgRow.slug || slugCandidate };
+    } else {
+      // Slug was provided but no org found: deny access to avoid falling back to another org.
+      throw new HttpError(404, "Organization not found");
     }
   }
 
