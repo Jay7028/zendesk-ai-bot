@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { defaultOrgId, supabaseAdmin } from "../../../../lib/supabase";
+import { supabaseAdmin } from "../../../../lib/supabase";
 import { trackOnce, summarizeParcel, type ParcelSummary } from "../../../../lib/parcelsapp";
 import { buildKnowledgeContext } from "../../../../lib/knowledge";
+import { HttpError, requireOrgContext } from "../../../../lib/auth";
 
 type SpecialistRow = {
   id: string;
@@ -34,7 +35,7 @@ async function tagHandover(
     `${zendeskEmail}/token:${zendeskToken}`
   ).toString("base64");
 
-  const zendeskUrl = `https://${zendeskSubdomain}.zendesk.com/api/v2/tickets/${ticketId}.json`;
+    const zendeskUrl = `https://${zendeskCreds.subdomain}.zendesk.com/api/v2/tickets/${ticketId}.json`;
 
   const handoverRes = await fetch(zendeskUrl, {
     method: "PUT",
@@ -188,8 +189,38 @@ function extractTrackingCandidates(text: string): string[] {
   return Array.from(new Set(cleaned));
 }
 
+function normalizeSubdomain(input: string) {
+  if (!input) return "";
+  try {
+    const url = new URL(input.startsWith("http") ? input : `https://${input}.zendesk.com`);
+    const host = url.hostname;
+    const match = host.match(/^([^.]+)/);
+    return match ? match[1] : input;
+  } catch {
+    return input.replace(/https?:\/\//i, "").replace(/\.zendesk\.com/i, "").trim();
+  }
+}
+
+async function getZendeskCredentials(orgId: string) {
+  const { data, error } = await supabaseAdmin
+    .from("integrations")
+    .select("*")
+    .eq("org_id", orgId)
+    .eq("type", "zendesk")
+    .eq("enabled", true)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+  return {
+    subdomain: normalizeSubdomain(data.base_url || ""),
+    email: data.description || "",
+    token: data.api_key || "",
+  };
+}
+
 export async function POST(req: NextRequest) {
   try {
+    const { orgId } = await requireOrgContext(req);
     const body = await req.json();
 
     const ticketId = body.ticket_id ?? body.id;
@@ -212,22 +243,17 @@ export async function POST(req: NextRequest) {
     }
 
     const openaiKey = process.env.OPENAI_API_KEY;
-    const zendeskSubdomain = process.env.ZENDESK_SUBDOMAIN;
-    const zendeskEmail = process.env.ZENDESK_EMAIL;
-    const zendeskToken = process.env.ZENDESK_API_TOKEN;
+    const zendeskCreds = await getZendeskCredentials(orgId);
 
-    if (!openaiKey || !zendeskSubdomain || !zendeskEmail || !zendeskToken) {
-      console.error("Missing Zendesk/OpenAI env vars");
-      return NextResponse.json(
-        { error: "Server not fully configured (env vars missing)" },
-        { status: 500 }
-      );
+    if (!openaiKey || !zendeskCreds?.subdomain || !zendeskCreds.email || !zendeskCreds.token) {
+      console.error("Missing Zendesk/OpenAI creds for org", orgId);
+      return NextResponse.json({ error: "Zendesk not configured for this org" }, { status: 500 });
     }
 
     const [{ data: intentRows, error: intentsError }, { data: specRows, error: specsError }] =
       await Promise.all([
-        supabaseAdmin.from("intents").select("*").eq("org_id", defaultOrgId),
-        supabaseAdmin.from("specialists").select("*").eq("org_id", defaultOrgId),
+        supabaseAdmin.from("intents").select("*").eq("org_id", orgId),
+        supabaseAdmin.from("specialists").select("*").eq("org_id", orgId),
       ]);
 
     if (intentsError || specsError) {
@@ -455,7 +481,12 @@ export async function POST(req: NextRequest) {
       }
 
       if (escalationTriggered) {
-        const { handoverRes } = await tagHandover(ticketId, zendeskSubdomain, zendeskEmail, zendeskToken);
+        const { handoverRes } = await tagHandover(
+          ticketId,
+          zendeskCreds.subdomain,
+          zendeskCreds.email,
+          zendeskCreds.token
+        );
         if (!handoverRes.ok) {
           const text = await handoverRes.text();
           await logTicketEvent(origin, {
@@ -503,10 +534,10 @@ export async function POST(req: NextRequest) {
         openaiKey
       );
       const authString = Buffer.from(
-        `${zendeskEmail}/token:${zendeskToken}`
+        `${zendeskCreds.email}/token:${zendeskCreds.token}`
       ).toString("base64");
 
-      const zendeskUrl = `https://${zendeskSubdomain}.zendesk.com/api/v2/tickets/${ticketId}.json`;
+      const zendeskUrl = `https://${zendeskCreds.subdomain}.zendesk.com/api/v2/tickets/${ticketId}.json`;
 
       const handoverRes = await fetch(zendeskUrl, {
         method: "PUT",
@@ -646,10 +677,10 @@ export async function POST(req: NextRequest) {
 
     // 2) Post reply back to Zendesk as a public comment
     const authString = Buffer.from(
-      `${zendeskEmail}/token:${zendeskToken}`
+      `${zendeskCreds.email}/token:${zendeskCreds.token}`
     ).toString("base64");
 
-    const zendeskUrl = `https://${zendeskSubdomain}.zendesk.com/api/v2/tickets/${ticketId}.json`;
+    const zendeskUrl = `https://${zendeskCreds.subdomain}.zendesk.com/api/v2/tickets/${ticketId}.json`;
 
     const zendeskRes = await fetch(zendeskUrl, {
       method: "PUT",

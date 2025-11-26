@@ -30,6 +30,7 @@ export default function IntegrationsPage() {
   }, []);
 
   const selected = items.find((i) => i.id === selectedId) ?? null;
+  const isZendesk = selected?.type === "zendesk";
 
   function updateSelected(partial: Partial<IntegrationConfig>) {
     if (!selected) return;
@@ -352,12 +353,12 @@ export default function IntegrationsPage() {
                   </div>
                   <div>
                     <div style={{ fontSize: 13, marginBottom: 4, color: "#374151" }}>
-                      Base URL
+                      {isZendesk ? "Zendesk subdomain" : "Base URL"}
                     </div>
                     <input
                       value={selected.baseUrl}
                       onChange={(e) => updateSelected({ baseUrl: e.target.value })}
-                      placeholder="https://api.example.com"
+                      placeholder={isZendesk ? "your-subdomain" : "https://api.example.com"}
                       style={{
                         width: "100%",
                         borderRadius: "8px",
@@ -371,7 +372,7 @@ export default function IntegrationsPage() {
                   </div>
                   <div>
                     <div style={{ fontSize: 13, marginBottom: 4, color: "#374151" }}>
-                      API Key (stored in DB; prefer env vars for prod)
+                      {isZendesk ? "Zendesk API token" : "API Key"}
                     </div>
                     <input
                       value={selected.apiKey}
@@ -389,7 +390,7 @@ export default function IntegrationsPage() {
                   </div>
                   <div>
                     <div style={{ fontSize: 13, marginBottom: 4, color: "#374151" }}>
-                      Description
+                      {isZendesk ? "Zendesk email" : "Description"}
                     </div>
                     <textarea
                       value={selected.description}
