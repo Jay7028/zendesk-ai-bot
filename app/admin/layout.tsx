@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { supabaseBrowser } from "../../lib/supabase-browser";
 import { apiFetch } from "../../lib/api-client";
+import { withOrgPrefix } from "../../lib/org-path";
 
 type OrgOption = { orgId: string; name: string; role: string };
 
@@ -14,7 +15,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [hasSession, setHasSession] = useState<boolean | null>(null);
   const [orgs, setOrgs] = useState<OrgOption[]>([]);
   const [currentOrgId, setCurrentOrgId] = useState<string | null>(null);
-  const inAdmin = useMemo(() => pathname?.startsWith("/admin"), [pathname]);
+  const [currentOrgSlug, setCurrentOrgSlug] = useState<string | null>(null);
+  const inAdmin = useMemo(() => pathname?.includes("/admin"), [pathname]);
 
   useEffect(() => {
     let mounted = true;
@@ -51,9 +53,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       try {
         const res = await apiFetch("/api/orgs");
         if (!res.ok) return;
-        const data = (await res.json()) as OrgOption[];
-        setOrgs(data);
-        if (!currentOrgId && data[0]) setCurrentOrgId(data[0].orgId);
+      const data = (await res.json()) as OrgOption[];
+      setOrgs(data);
+      if (!currentOrgId && data[0]) {
+        setCurrentOrgId(data[0].orgId);
+        setCurrentOrgSlug((data[0] as any).slug || null);
+      }
       } catch {
         // ignore
       }
@@ -62,11 +67,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }, [hasSession, currentOrgId]);
 
   async function handleOrgChange(orgId: string) {
+    const org = orgs.find((o) => o.orgId === orgId);
     setCurrentOrgId(orgId);
+    setCurrentOrgSlug((org as any)?.slug || null);
     try {
       await apiFetch("/api/orgs", {
         method: "POST",
-        body: JSON.stringify({ orgId }),
+        body: JSON.stringify({ orgId, orgSlug: (org as any)?.slug || null }),
       });
       router.refresh();
     } catch {
@@ -113,7 +120,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <div style={{ fontWeight: 700, color: "#111827" }}>Admin</div>
             <a
-              href="/admin/orgs"
+              href={withOrgPrefix("/admin/orgs", currentOrgSlug)}
               style={{
                 fontSize: 13,
                 color: "#1d4ed8",
