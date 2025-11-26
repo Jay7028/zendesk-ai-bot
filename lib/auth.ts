@@ -15,6 +15,16 @@ function getAuthToken(req: Request) {
   return match ? match[1] : null;
 }
 
+function getCookie(req: Request, name: string) {
+  const cookieHeader = req.headers.get("cookie") || "";
+  const cookies = cookieHeader.split(";").map((c) => c.trim());
+  for (const c of cookies) {
+    const [k, ...rest] = c.split("=");
+    if (k === name) return decodeURIComponent(rest.join("="));
+  }
+  return null;
+}
+
 export async function requireOrgContext(req: Request) {
   const token = getAuthToken(req);
   if (!token) throw new HttpError(401, "Unauthorized");
@@ -55,8 +65,10 @@ export async function requireOrgContext(req: Request) {
     throw new HttpError(403, "No organization membership found");
   }
 
-  const orgId = memberships[0].org_id as string;
-  const role = memberships[0].role as string;
+  const cookieOrg = getCookie(req, "org_id");
+  const selected = memberships.find((m) => m.org_id === cookieOrg);
+  const orgId = (selected || memberships[0]).org_id as string;
+  const role = (selected || memberships[0]).role as string;
 
   return { orgId, userId, role };
 }
