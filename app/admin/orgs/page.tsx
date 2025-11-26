@@ -31,6 +31,7 @@ const NAV_ITEMS = [
   { id: "test-ai", label: "Test AI", href: "/admin/test-ai" },
   { id: "track", label: "Track", href: "/admin/track" },
   { id: "orgs", label: "Org & Members", href: "/admin/orgs", active: true },
+  { id: "org-settings", label: "Org Settings", href: "/admin/orgs/settings" },
 ];
 
 function Card({ title, children, actions }: { title: string; children: ReactNode; actions?: ReactNode }) {
