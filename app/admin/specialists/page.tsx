@@ -27,7 +27,7 @@ type KnowledgeChunk = {
   created_at?: string;
 };
 
-type TabKey = "data" | "knowledge" | "escalation" | "personality";
+type TabKey = "info" | "data" | "knowledge" | "escalation" | "personality";
 
 function InlineInput({
   value,
@@ -97,7 +97,7 @@ export default function SpecialistsPage() {
   const [specialists, setSpecialists] = useState<Specialist[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [form, setForm] = useState<Specialist | null>(null);
-  const [tab, setTab] = useState<TabKey>("data");
+  const [tab, setTab] = useState<TabKey>("info");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -585,11 +585,36 @@ export default function SpecialistsPage() {
               </div>
 
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <TabButton keyName="info" label="Info" />
                 <TabButton keyName="data" label="Data Extraction" />
                 <TabButton keyName="knowledge" label="Knowledge Base" />
                 <TabButton keyName="escalation" label="Escalation Rules" />
                 <TabButton keyName="personality" label="Personality" />
               </div>
+
+              {tab === "info" && (
+                <Card title="Basics">
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                    <div>
+                      <FieldLabel label="Name" />
+                      <InlineInput
+                        value={form.name}
+                        onCommit={(val) => handleFieldChange({ name: val })}
+                        placeholder="Specialist name"
+                      />
+                    </div>
+                    <div>
+                      <FieldLabel label="Description" />
+                      <InlineTextarea
+                        value={form.description}
+                        onCommit={(val) => handleFieldChange({ description: val })}
+                        placeholder="What this specialist does"
+                        rows={4}
+                      />
+                    </div>
+                  </div>
+                </Card>
+              )}
 
               {tab === "data" && (
                 <Card title="Extracted Entities">
