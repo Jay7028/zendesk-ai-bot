@@ -7,7 +7,7 @@ export async function GET(req: NextRequest) {
     const { orgId } = await requireOrgContext(req);
     const { data, error } = await supabaseAdmin
       .from("org_memberships")
-      .select("org_id, user_id, role, created_at, profiles: user_profiles(name, avatar_url)")
+      .select("org_id, user_id, role, created_at")
       .eq("org_id", orgId);
     if (error) throw error;
     return NextResponse.json(data || []);
