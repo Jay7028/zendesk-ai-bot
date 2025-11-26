@@ -229,10 +229,13 @@ async function getZendeskCredentials(orgId: string) {
     credRow?.encrypted_payload || null
   );
   if (creds) {
-    subdomain = normalizeSubdomain(creds.subdomain || subdomain);
-    email = creds.email || email;
-    token = creds.token || token;
+    subdomain = normalizeSubdomain((creds.subdomain || subdomain || "").trim());
+    email = (creds.email || email || "").trim();
+    token = (creds.token || token || "").trim();
   }
+  subdomain = normalizeSubdomain((subdomain || "").trim());
+  email = (email || "").trim();
+  token = (token || "").trim();
   const ready = subdomain && email && token;
   if (!ready) {
     console.error("Zendesk creds incomplete", { orgId, subdomain, emailPresent: !!email, tokenPresent: !!token });
@@ -243,6 +246,22 @@ async function getZendeskCredentials(orgId: string) {
     email,
     token,
   };
+}
+
+async function testZendeskAuth(subdomain: string, email: string, token: string) {
+  const authString = Buffer.from(`${email}/token:${token}`).toString("base64");
+  const url = `https://${subdomain}.zendesk.com/api/v2/users/me.json`;
+  try {
+    const res = await fetch(url, {
+      headers: {
+        Authorization: `Basic ${authString}`,
+      },
+    });
+    const text = await res.text();
+    return { ok: res.ok, status: res.status, body: text.slice(0, 400) };
+  } catch (e: any) {
+    return { ok: false, status: 0, body: e?.message || "Auth check failed" };
+  }
 }
 
 async function resolveOrgForZendeskWebhook(subdomainHint?: string | null) {
@@ -341,6 +360,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Zendesk not configured for this org" }, { status: 500 });
     }
     console.log("Zendesk webhook resolved org", { orgId, ticketId, subdomain: zendeskCreds.subdomain });
+
+    // Auth sanity check to catch bad tokens early
+    const authCheck = await testZendeskAuth(zendeskCreds.subdomain, zendeskCreds.email, zendeskCreds.token);
+    if (!authCheck.ok) {
+      console.error("Zendesk auth check failed", authCheck);
+      await logTicketEvent({
+        ticketId,
+        eventType: "error",
+        summary: "Zendesk auth failed",
+        detail: `status=${authCheck.status} body=${authCheck.body}`,
+        orgId,
+      });
+      return NextResponse.json(
+        { error: "Zendesk auth failed", details: authCheck.body || authCheck.status },
+        { status: 500 }
+      );
+    }
 
     const [{ data: intentRows, error: intentsError }, { data: specRows, error: specsError }] =
       await Promise.all([
@@ -850,6 +886,14 @@ export async function POST(req: NextRequest) {
 
     const zendeskUrl = `https://${zendeskCreds.subdomain}.zendesk.com/api/v2/tickets/${ticketId}.json`;
 
+    await logTicketEvent({
+      ticketId,
+      eventType: "zendesk_request",
+      summary: "Attempting Zendesk reply",
+      detail: `PUT ${zendeskCreds.subdomain}.zendesk.com ticket ${ticketId}`,
+      orgId,
+    });
+
     const zendeskRes = await fetch(zendeskUrl, {
       method: "PUT",
       headers: {
@@ -869,6 +913,13 @@ export async function POST(req: NextRequest) {
     if (!zendeskRes.ok) {
       const text = await zendeskRes.text();
       console.error("Zendesk API error:", text);
+      await logTicketEvent({
+        ticketId,
+        eventType: "error",
+        summary: "Zendesk API error (reply)",
+        detail: text.slice(0, 400),
+        orgId,
+      });
       await logRun({
         ticketId,
         specialistId: matchedSpecialist.id,
