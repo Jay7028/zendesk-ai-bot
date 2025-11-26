@@ -25,6 +25,15 @@ function getCookie(req: Request, name: string) {
   return null;
 }
 
+function slugify(input: string) {
+  return input
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60);
+}
+
 export async function requireUser(req: Request) {
   const token = getAuthToken(req);
   if (!token) throw new HttpError(401, "Unauthorized");
