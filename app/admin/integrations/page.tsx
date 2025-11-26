@@ -10,6 +10,7 @@ export default function IntegrationsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [testResult, setTestResult] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadItems() {
@@ -107,6 +108,29 @@ export default function IntegrationsPage() {
       });
     } catch (e: any) {
       setError(e.message ?? "Unexpected error while deleting");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function handleTest() {
+    if (!selected) return;
+    setIsSaving(true);
+    setError(null);
+    setTestResult(null);
+    try {
+      const res = await apiFetch("/api/integrations/test", {
+        method: "POST",
+        body: JSON.stringify({ integrationId: selected.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data?.error || "Test failed");
+        return;
+      }
+      setTestResult("Connection successful");
+    } catch (e: any) {
+      setError(e.message ?? "Test failed");
     } finally {
       setIsSaving(false);
     }
@@ -462,12 +486,34 @@ export default function IntegrationsPage() {
                         opacity: isSaving ? 0.7 : 1,
                       }}
                     >
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              </>
-            )}
+                  Delete
+                </button>
+                {selected?.type === "zendesk" && (
+                  <button
+                    onClick={handleTest}
+                    disabled={isSaving}
+                    style={{
+                      padding: "8px 14px",
+                      borderRadius: "999px",
+                      border: "1px solid #c7d2fe",
+                      background: "#eef2ff",
+                      color: "#1d4ed8",
+                      cursor: isSaving ? "default" : "pointer",
+                      fontSize: "12px",
+                      fontWeight: 600,
+                      opacity: isSaving ? 0.7 : 1,
+                    }}
+                  >
+                    Test connection
+                  </button>
+                )}
+              </div>
+              {selected?.type === "zendesk" && testResult && (
+                <div style={{ marginTop: 8, color: "#166534", fontSize: 13 }}>{testResult}</div>
+              )}
+            </div>
+          </>
+        )}
           </div>
         </main>
       </div>

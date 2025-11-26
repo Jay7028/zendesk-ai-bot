@@ -54,23 +54,6 @@ export async function requireOrgContext(req: Request) {
     throw new HttpError(500, "Failed to load organization membership");
   }
 
-  // Auto-provision into default org if no membership exists.
-  if ((!memberships || memberships.length === 0) && defaultOrgId) {
-    const { data: inserted, error: insertError } = await supabaseAdmin
-      .from("org_memberships")
-      .insert({
-        org_id: defaultOrgId,
-        user_id: userId,
-        role: "owner",
-      })
-      .select("org_id, role")
-      .single();
-    if (insertError) {
-      throw new HttpError(403, "No organization membership found");
-    }
-    memberships = [inserted];
-  }
-
   if (!memberships || memberships.length === 0) {
     throw new HttpError(403, "No organization membership found");
   }
