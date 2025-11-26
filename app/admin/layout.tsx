@@ -76,21 +76,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     if (hasSession) loadOrgs();
   }, [hasSession, currentOrgId]);
 
-  async function handleOrgChange(orgId: string) {
-    const org = orgs.find((o) => o.orgId === orgId);
-    setCurrentOrgId(orgId);
-    const slug = (org as any)?.slug || slugify(org?.name || "");
-    setCurrentOrgSlug(slug || null);
-    try {
-      await apiFetch("/api/orgs", {
-        method: "POST",
-        body: JSON.stringify({ orgId, orgSlug: slug || null }),
-      });
-      router.refresh();
-    } catch {
-      // ignore for now
-    }
-  }
+  // Selection now happens in Org & Members; no dropdown here.
 
   // Redirect to slugged URL if available
   useEffect(() => {
@@ -126,55 +112,36 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   return (
     <>
       {inAdmin && orgs.length > 0 ? (
-        <div
-          style={{
-            padding: "8px 16px",
-            borderBottom: "1px solid #e5e7eb",
-            background: "#f9fafb",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            fontFamily: "Inter, system-ui, -apple-system, 'Segoe UI', sans-serif",
-            gap: 12,
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ fontWeight: 700, color: "#111827" }}>Admin</div>
-            <a
-              href={withOrgPrefix("/admin/orgs", currentOrgSlug)}
-              style={{
-                fontSize: 13,
-                color: "#1d4ed8",
-                textDecoration: "none",
-                border: "1px solid #c7d2fe",
-                padding: "6px 10px",
-                borderRadius: 8,
-                background: "#eef2ff",
-              }}
-            >
-              Org & Members
-            </a>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <label style={{ fontSize: 12, color: "#6b7280" }}>Organization:</label>
-            <select
-              value={currentOrgId || ""}
-              onChange={(e) => handleOrgChange(e.target.value)}
-              style={{
-                padding: "6px 8px",
-                borderRadius: 8,
-                border: "1px solid #d1d5db",
-                fontSize: 13,
-              }}
-            >
-              {orgs.map((o) => (
-                <option key={o.orgId} value={o.orgId}>
-                  {o.name || "Org"} ({o.role})
-                </option>
-              ))}
-            </select>
-          </div>
+      <div
+        style={{
+          padding: "8px 16px",
+          borderBottom: "1px solid #e5e7eb",
+          background: "#f9fafb",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          fontFamily: "Inter, system-ui, -apple-system, 'Segoe UI', sans-serif",
+          gap: 12,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ fontWeight: 700, color: "#111827" }}>Admin</div>
+          <a
+            href={withOrgPrefix("/admin/orgs", currentOrgSlug)}
+            style={{
+              fontSize: 13,
+              color: "#1d4ed8",
+              textDecoration: "none",
+              border: "1px solid #c7d2fe",
+              padding: "6px 10px",
+              borderRadius: 8,
+              background: "#eef2ff",
+            }}
+          >
+            Org & Members
+          </a>
         </div>
+      </div>
       ) : null}
       {children}
     </>
