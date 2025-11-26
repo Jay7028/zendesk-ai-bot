@@ -47,7 +47,7 @@ export function middleware(req: NextRequest) {
         headers: requestHeaders,
       },
     });
-    res.cookies.set("org_slug", maybeOrg);
+    res.cookies.set("org_slug", maybeOrg, { httpOnly: false, path: "/" });
     return res;
   }
 

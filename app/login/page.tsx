@@ -67,6 +67,9 @@ function LoginForm() {
     const computedSlug = slugify(orgName || pathSlug || "");
     const targetPath = computedSlug ? `/${computedSlug}/admin` : nextPath;
     try {
+      if (computedSlug) {
+        document.cookie = `org_slug=${computedSlug}; Path=/; SameSite=Lax`;
+      }
       if (!email || !password) {
         setError("Email and password are required");
         return;
