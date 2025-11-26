@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { defaultOrgId, supabaseAdmin } from "../../../../lib/supabase";
+import { supabaseAdmin } from "../../../../lib/supabase";
+import { requireOrgContext } from "../../../../lib/auth";
 import type { SpecialistConfig } from "../data";
 
 function dbToCamel(row: any): SpecialistConfig {
@@ -34,14 +35,14 @@ function camelToDb(body: Partial<SpecialistConfig>) {
   };
 }
 
-async function logAdminEvent(summary: string, detail?: string) {
+async function logAdminEvent(orgId: string, summary: string, detail?: string) {
   try {
     await supabaseAdmin.from("ticket_events").insert({
       ticket_id: "admin",
       event_type: "admin_change",
       summary,
       detail: detail ?? "",
-      org_id: defaultOrgId,
+      org_id: orgId,
     });
   } catch (e) {
     console.error("Failed to log admin event", e);
@@ -51,16 +52,17 @@ async function logAdminEvent(summary: string, detail?: string) {
 // Note: params is now a Promise, so we await it inside the handler.
 
 export async function GET(
-  _req: Request,
+  req: Request,
   context: { params: Promise<{ id: string }> }
 ) {
+  const { orgId } = await requireOrgContext(req);
   const { id } = await context.params;
 
   const { data, error } = await supabaseAdmin
     .from("specialists")
     .select("*")
     .eq("id", id)
-    .eq("org_id", defaultOrgId)
+    .eq("org_id", orgId)
     .single();
 
   if (error || !data) {
@@ -74,15 +76,16 @@ export async function PUT(
   request: Request,
   context: { params: Promise<{ id: string }> }
 ) {
+  const { orgId } = await requireOrgContext(request);
   const { id } = await context.params;
   const body = (await request.json()) as Partial<SpecialistConfig>;
-  const dbRecord = { ...camelToDb({ ...body, id }), org_id: defaultOrgId };
+  const dbRecord = { ...camelToDb({ ...body, id }), org_id: orgId };
 
   const { data, error } = await supabaseAdmin
     .from("specialists")
     .update(dbRecord)
     .eq("id", id)
-    .eq("org_id", defaultOrgId)
+    .eq("org_id", orgId)
     .select()
     .single();
 
@@ -94,21 +97,22 @@ export async function PUT(
     );
   }
 
-  await logAdminEvent(`Updated specialist "${data.name}"`, `id: ${data.id}`);
+  await logAdminEvent(orgId, `Updated specialist "${data.name}"`, `id: ${data.id}`);
   return NextResponse.json(dbToCamel(data));
 }
 
 export async function DELETE(
-  _req: Request,
+  req: Request,
   context: { params: Promise<{ id: string }> }
 ) {
+  const { orgId } = await requireOrgContext(req);
   const { id } = await context.params;
 
   const { error } = await supabaseAdmin
     .from("specialists")
     .delete()
     .eq("id", id)
-    .eq("org_id", defaultOrgId);
+    .eq("org_id", orgId);
 
   if (error) {
     console.error("Supabase DELETE /specialists/:id error", error);
@@ -118,6 +122,6 @@ export async function DELETE(
     );
   }
 
-  await logAdminEvent(`Deleted specialist "${id}"`);
+  await logAdminEvent(orgId, `Deleted specialist "${id}"`);
   return NextResponse.json({ success: true });
 }

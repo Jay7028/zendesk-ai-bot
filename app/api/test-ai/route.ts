@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { defaultOrgId, supabaseAdmin } from "../../../lib/supabase";
+import { supabaseAdmin } from "../../../lib/supabase";
 import { trackOnce, summarizeParcel, type ParcelSummary } from "../../../lib/parcelsapp";
 import { buildKnowledgeContext } from "../../../lib/knowledge";
+import { requireOrgContext } from "../../../lib/auth";
 
 type SpecialistRow = {
   id: string;
@@ -38,12 +39,16 @@ async function logRun(
     outputSummary: string;
     status: "success" | "fallback" | "escalated";
     knowledgeSources?: string[];
+    authHeader?: string | null;
   }
 ) {
   try {
     await fetch(new URL("/api/logs", origin), {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...(payload.authHeader ? { Authorization: payload.authHeader } : {}),
+      },
       body: JSON.stringify({
         zendeskTicketId: payload.ticketId,
         specialistId: payload.specialistId ?? "unknown",
@@ -63,12 +68,15 @@ async function logRun(
 
 async function logTicketEvent(
   origin: string,
-  payload: { ticketId: string; eventType: string; summary: string; detail?: string }
+  payload: { ticketId: string; eventType: string; summary: string; detail?: string; authHeader?: string | null }
 ) {
   try {
     await fetch(new URL("/api/ticket-events", origin), {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...(payload.authHeader ? { Authorization: payload.authHeader } : {}),
+      },
       body: JSON.stringify({
         ticketId: payload.ticketId,
         eventType: payload.eventType,
@@ -89,7 +97,9 @@ function extractTrackingCandidates(text: string): string[] {
 
 export async function POST(req: NextRequest) {
   try {
+    const { orgId } = await requireOrgContext(req);
     const body = await req.json();
+    const authHeader = req.headers.get("authorization") || req.headers.get("Authorization") || null;
     const messages: Message[] = Array.isArray(body.messages)
       ? body.messages
       : body.message
@@ -114,8 +124,8 @@ export async function POST(req: NextRequest) {
 
     const [{ data: intentRows, error: intentsError }, { data: specRows, error: specsError }] =
       await Promise.all([
-        supabaseAdmin.from("intents").select("*").eq("org_id", defaultOrgId),
-        supabaseAdmin.from("specialists").select("*").eq("org_id", defaultOrgId),
+        supabaseAdmin.from("intents").select("*").eq("org_id", orgId),
+        supabaseAdmin.from("specialists").select("*").eq("org_id", orgId),
       ]);
 
     if (intentsError || specsError) {
@@ -242,6 +252,7 @@ export async function POST(req: NextRequest) {
           eventType: "zendesk_update",
           summary: "Tracking fetched",
           detail: scans.length ? `${summaryText} | Recent: ${scanText}` : summaryText,
+          authHeader,
         });
       } catch (err: any) {
         actions.push(`Tracking lookup failed for ${trackingNumber}: ${err?.message || err}`);
@@ -253,6 +264,7 @@ export async function POST(req: NextRequest) {
       eventType: "intent_detected",
       summary: `Intent: ${matchedIntent?.name ?? "unknown"}`,
       detail: `Confidence: ${confidence.toFixed(2)} | Specialist: ${matchedSpecialist?.name ?? "none"}`,
+      authHeader,
     });
 
     // Knowledge retrieval (intent/specialist scoped)
@@ -260,6 +272,7 @@ export async function POST(req: NextRequest) {
       query: userMessage,
       intentId: matchedIntent?.id ?? undefined,
       specialistId: matchedSpecialist?.id ?? undefined,
+      orgId,
     });
 
     const replyMessages: { role: "system" | "user" | "assistant"; content: string }[] = [
@@ -349,12 +362,14 @@ export async function POST(req: NextRequest) {
       outputSummary: reply.slice(0, 200),
       status: "success",
       knowledgeSources,
+      authHeader,
     });
     await logTicketEvent(origin, {
       ticketId,
       eventType: "reply_sent",
       summary: "Reply generated (test)",
       detail: reply.slice(0, 240),
+      authHeader,
     });
 
     return NextResponse.json({

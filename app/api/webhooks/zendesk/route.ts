@@ -401,6 +401,7 @@ export async function POST(req: NextRequest) {
       query: latestComment,
       intentId: matchedIntent?.id ?? undefined,
       specialistId: matchedSpecialist?.id ?? undefined,
+      orgId,
     });
 
     // Optional tracking enrichment

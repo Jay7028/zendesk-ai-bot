@@ -1,4 +1,4 @@
-import { defaultOrgId, supabaseAdmin } from "./supabase";
+import { supabaseAdmin } from "./supabase";
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || "";
 const EMBEDDING_MODEL = "text-embedding-3-small";
@@ -35,7 +35,13 @@ async function embed(text: string): Promise<number[]> {
   return vector;
 }
 
-async function matchChunks(query: string, intentId?: string, specialistId?: string, matchCount = 5) {
+async function matchChunks(
+  query: string,
+  intentId: string | undefined,
+  specialistId: string | undefined,
+  orgId: string,
+  matchCount = 5
+) {
   try {
     const embedding = await embed(query);
     const { data, error } = await supabaseAdmin.rpc("match_knowledge_chunks", {
@@ -43,7 +49,7 @@ async function matchChunks(query: string, intentId?: string, specialistId?: stri
       match_count: matchCount,
       intent_id: intentId ?? null,
       specialist_id: specialistId ?? null,
-      p_org_id: defaultOrgId,
+      p_org_id: orgId,
     });
     if (error) throw error;
     return (data || []) as ChunkMatch[];
@@ -108,8 +114,9 @@ export async function buildKnowledgeContext(opts: {
   query: string;
   intentId?: string;
   specialistId?: string;
+  orgId: string;
 }) {
-  const matches = await matchChunks(opts.query, opts.intentId, opts.specialistId);
+  const matches = await matchChunks(opts.query, opts.intentId, opts.specialistId, opts.orgId);
   const { summary, used } = await summarizeChunks(matches, opts.query);
   return {
     summary,
