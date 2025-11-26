@@ -94,6 +94,9 @@ export default function SpecialistsPage() {
 
   const handleFieldChange = (patch: Partial<Specialist>) => {
     setDraft((prev) => (prev ? { ...prev, ...patch } : prev));
+    if (selectedId) {
+      setSpecialists((prev) => prev.map((s) => (s.id === selectedId ? { ...s, ...patch } : s)));
+    }
   };
 
   const handleRequiredFieldsChange = (value: string) => {
