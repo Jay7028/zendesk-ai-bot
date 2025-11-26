@@ -8,6 +8,7 @@ function dbToCamel(row: any): IntentConfig {
     name: row.name,
     description: row.description ?? "",
     specialistId: row.specialist_id ?? null,
+    orgId: row.org_id ?? undefined,
   };
 }
 
@@ -17,6 +18,7 @@ function camelToDb(body: Partial<IntentConfig>) {
     name: body.name,
     description: body.description ?? "",
     specialist_id: body.specialistId ?? null,
+    org_id: body.orgId ?? null,
   };
 }
 
@@ -53,7 +55,7 @@ export async function POST(request: Request) {
     name: body.name ?? "New Intent",
     description: body.description ?? "",
     specialistId,
-    org_id: defaultOrgId,
+    orgId: defaultOrgId,
   });
 
   if (!body.id) {
