@@ -43,6 +43,7 @@ async function tagHandover(
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
+      Accept: "application/json",
       Authorization: `Basic ${authString}`,
     },
     body: JSON.stringify({
