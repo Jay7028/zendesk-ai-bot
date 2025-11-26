@@ -387,12 +387,14 @@ export async function POST(req: NextRequest) {
         inputSummary: String(latestComment).slice(0, 200),
         outputSummary: `Intent classification failed: ${text.slice(0, 180)}`,
         status: "fallback",
+        orgId,
       });
       await logTicketEvent({
         ticketId,
         eventType: "error",
         summary: "Intent classification failed",
         detail: text.slice(0, 200),
+        orgId,
       });
       return NextResponse.json(
         { error: "OpenAI intent classify error", details: text },
@@ -472,6 +474,7 @@ export async function POST(req: NextRequest) {
           eventType: "message_received",
           summary: `Tracking detected: ${trackingId}`,
           detail: trackingContextText.slice(0, 400),
+          orgId,
         });
       } catch (e: any) {
         await logTicketEvent({
@@ -479,6 +482,7 @@ export async function POST(req: NextRequest) {
           eventType: "error",
           summary: "Tracking lookup failed",
           detail: (e?.message || "Unknown error").slice(0, 300),
+          orgId,
         });
       }
     }
@@ -488,6 +492,7 @@ export async function POST(req: NextRequest) {
       eventType: "intent_detected",
       summary: `Intent: ${matchedIntent?.name ?? "unknown"}`,
       detail: `Confidence: ${confidence.toFixed(2)} • Specialist: ${matchedSpecialist?.name ?? "none"}`,
+      orgId,
     });
 
     // Escalation rules: if triggered, handover and skip bot reply
@@ -549,6 +554,7 @@ export async function POST(req: NextRequest) {
             eventType: "error",
             summary: "Failed to tag bot-handover (escalation)",
             detail: text.slice(0, 400),
+            orgId,
           });
         }
 
@@ -557,6 +563,7 @@ export async function POST(req: NextRequest) {
           eventType: "handover",
           summary: "Escalation rule triggered",
           detail: escalationReason.slice(0, 400),
+          orgId,
         });
 
         await logRun({
@@ -614,6 +621,7 @@ export async function POST(req: NextRequest) {
           eventType: "error",
           summary: "Failed to tag bot-handover",
           detail: text.slice(0, 400),
+          orgId,
         });
       } else {
         const respText = await handoverRes.text();
@@ -632,6 +640,7 @@ export async function POST(req: NextRequest) {
           eventType: "zendesk_update",
           summary: "Tag added: bot-handover",
           detail: tagsSnippet,
+          orgId,
         });
         await logTicketEvent({
           ticketId,
@@ -641,6 +650,7 @@ export async function POST(req: NextRequest) {
               ? "Low confidence; tagged bot-handover"
               : "No specialist matched; tagged bot-handover",
           detail: `Confidence ${confidence.toFixed(2)}, intent ${matchedIntent?.name ?? "unknown"} • Zendesk response: ${tagsSnippet}`,
+          orgId,
         });
       }
 
@@ -656,6 +666,7 @@ export async function POST(req: NextRequest) {
             ? "Low confidence intent match; handed to human."
             : "No specialist matched; handed to human.",
         status: "fallback",
+        orgId,
       });
 
       return NextResponse.json({
