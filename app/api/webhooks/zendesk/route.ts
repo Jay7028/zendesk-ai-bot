@@ -297,6 +297,15 @@ export async function POST(req: NextRequest) {
       console.log("Zendesk webhook no tracking candidates", { ticketId, orgId });
     }
 
+    // Log receipt of the webhook for visibility in /admin/logs
+    await logTicketEvent({
+      ticketId: ticketId ?? "unknown",
+      eventType: "webhook_received",
+      summary: "Zendesk webhook received",
+      detail: JSON.stringify({ subdomainHint, orgId }).slice(0, 400),
+      orgId,
+    });
+
     if (!ticketId) {
       return NextResponse.json(
         { error: "ticket_id is required in payload" },
@@ -317,6 +326,18 @@ export async function POST(req: NextRequest) {
         subdomainHint,
         ticketId,
       });
+      await logTicketEvent({
+        ticketId,
+        eventType: "error",
+        summary: "Zendesk creds missing",
+        detail: JSON.stringify({
+          hasOpenAI: !!openaiKey,
+          hasSubdomain: !!zendeskCreds?.subdomain,
+          hasEmail: !!zendeskCreds?.email,
+          hasToken: !!zendeskCreds?.token,
+        }).slice(0, 400),
+        orgId,
+      });
       return NextResponse.json({ error: "Zendesk not configured for this org" }, { status: 500 });
     }
     console.log("Zendesk webhook resolved org", { orgId, ticketId, subdomain: zendeskCreds.subdomain });
@@ -329,6 +350,13 @@ export async function POST(req: NextRequest) {
 
     if (intentsError || specsError) {
       console.error("Supabase load error", intentsError || specsError);
+      await logTicketEvent({
+        ticketId,
+        eventType: "error",
+        summary: "Failed to load intents/specialists",
+        detail: JSON.stringify({ intentsError, specsError }).slice(0, 400),
+        orgId,
+      });
       return NextResponse.json(
         { error: "Failed to load intents/specialists" },
         { status: 500 }
@@ -338,6 +366,13 @@ export async function POST(req: NextRequest) {
     const intents: IntentRow[] = intentRows ?? [];
     const specialists: SpecialistRow[] = specRows ?? [];
     const origin = req.nextUrl.origin;
+    await logTicketEvent({
+      ticketId,
+      eventType: "config_loaded",
+      summary: "Loaded intents/specialists",
+      detail: `intents=${intents.length}, specialists=${specialists.length}`,
+      orgId,
+    });
 
     if (!intents.length || !specialists.length) {
       console.error("No intents/specialists for org", {
