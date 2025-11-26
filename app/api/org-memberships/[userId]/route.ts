@@ -39,6 +39,15 @@ export async function DELETE(
     const { orgId, role: myRole } = await requireOrgContext(req);
     if (!["owner", "admin"].includes(myRole)) throw new HttpError(403, "Admin or owner required");
     const { userId } = await context.params;
+    const { data: owners, error: ownersError } = await supabaseAdmin
+      .from("org_memberships")
+      .select("user_id")
+      .eq("org_id", orgId)
+      .eq("role", "owner");
+    if (ownersError) throw ownersError;
+    if (owners && owners.length <= 1 && owners[0]?.user_id === userId) {
+      throw new HttpError(400, "Cannot remove the last owner");
+    }
     const { error } = await supabaseAdmin
       .from("org_memberships")
       .delete()

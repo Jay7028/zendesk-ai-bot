@@ -469,9 +469,21 @@ export default function OrgPage() {
                   >
                     <div>
                       <div style={{ fontWeight: 700 }}>{m.profiles?.name || m.user_id}</div>
-                      <div style={{ color: "#6b7280" }}>Role: {m.role}</div>
-                      <div style={{ marginTop: 6 }}>
-                        <label style={{ fontSize: 12, color: "#6b7280", marginRight: 8 }}>Change role:</label>
+                      <div style={{ color: "#6b7280", fontSize: 12 }}>{m.profiles?.email || ""}</div>
+                      <div style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                        <span
+                          style={{
+                            padding: "4px 8px",
+                            borderRadius: 999,
+                            background: "#eef2ff",
+                            border: "1px solid #c7d2fe",
+                            color: "#312e81",
+                            fontSize: 12,
+                            fontWeight: 700,
+                          }}
+                        >
+                          {m.role}
+                        </span>
                         <select
                           value={m.role}
                           onChange={(e) => handleRoleChange(m.user_id, e.target.value as MemberRow["role"])}

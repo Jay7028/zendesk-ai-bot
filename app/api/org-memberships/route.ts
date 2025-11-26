@@ -38,6 +38,12 @@ export async function GET(req: NextRequest) {
       profileRows?.forEach((p) => {
         profiles[p.user_id] = { name: p.name };
       });
+      const { data: authRows } = await supabaseAdmin.auth.admin.listUsers();
+      authRows?.users?.forEach((u) => {
+        if (userIds.includes(u.id)) {
+          profiles[u.id] = { ...profiles[u.id], email: u.email };
+        }
+      });
     }
 
     return NextResponse.json(
