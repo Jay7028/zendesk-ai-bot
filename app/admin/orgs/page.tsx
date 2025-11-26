@@ -18,6 +18,7 @@ type MemberRow = {
   user_id: string;
   role: string;
   created_at?: string;
+  profiles?: { name?: string | null; avatar_url?: string | null } | null;
 };
 
 const NAV_ITEMS = [
@@ -122,6 +123,49 @@ export default function OrgPage() {
       await loadData();
     } catch (e: any) {
       setError(e.message || "Failed to create invite");
+    }
+  }
+
+  async function handleRoleChange(userId: string, nextRole: MemberRow["role"]) {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await apiFetch(`/api/org-memberships/${encodeURIComponent(userId)}`, {
+        method: "POST",
+        body: JSON.stringify({ role: nextRole }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data?.error || "Failed to update role");
+        return;
+      }
+      await loadData();
+    } catch (e: any) {
+      setError(e.message || "Failed to update role");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleRemove(userId: string) {
+    const confirmed = window.confirm("Remove this member from the org?");
+    if (!confirmed) return;
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await apiFetch(`/api/org-memberships/${encodeURIComponent(userId)}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data?.error || "Failed to remove member");
+        return;
+      }
+      await loadData();
+    } catch (e: any) {
+      setError(e.message || "Failed to remove member");
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -255,14 +299,49 @@ export default function OrgPage() {
                       borderRadius: 10,
                       background: "#f9fafb",
                       fontSize: 13,
+                      gap: 12,
                     }}
                   >
                     <div>
-                      <div style={{ fontWeight: 700 }}>{m.user_id}</div>
+                      <div style={{ fontWeight: 700 }}>{m.profiles?.name || m.user_id}</div>
                       <div style={{ color: "#6b7280" }}>Role: {m.role}</div>
+                      <div style={{ marginTop: 6 }}>
+                        <label style={{ fontSize: 12, color: "#6b7280", marginRight: 8 }}>Change role:</label>
+                        <select
+                          value={m.role}
+                          onChange={(e) => handleRoleChange(m.user_id, e.target.value as MemberRow["role"])}
+                          style={{
+                            padding: "6px 8px",
+                            borderRadius: 8,
+                            border: "1px solid #d1d5db",
+                            fontSize: 13,
+                          }}
+                        >
+                          <option value="owner">Owner</option>
+                          <option value="admin">Admin</option>
+                          <option value="agent">Agent</option>
+                          <option value="viewer">Viewer</option>
+                        </select>
+                      </div>
                     </div>
-                    <div style={{ color: "#6b7280", fontSize: 12 }}>
-                      Joined {m.created_at ? new Date(m.created_at).toLocaleDateString() : "-"}
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
+                      <div style={{ color: "#6b7280", fontSize: 12 }}>
+                        Joined {m.created_at ? new Date(m.created_at).toLocaleDateString() : "-"}
+                      </div>
+                      <button
+                        onClick={() => handleRemove(m.user_id)}
+                        style={{
+                          padding: "6px 8px",
+                          borderRadius: 8,
+                          border: "1px solid #fca5a5",
+                          background: "#fef2f2",
+                          color: "#b91c1c",
+                          cursor: "pointer",
+                          fontSize: 12,
+                        }}
+                      >
+                        Remove
+                      </button>
                     </div>
                   </div>
                 ))
