@@ -44,9 +44,7 @@ export async function GET(
     if (error || !data) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
-    const mapped = dbToCamel(data);
-    if (mapped.type === "zendesk") mapped.apiKey = "";
-    return NextResponse.json(mapped);
+    return NextResponse.json(dbToCamel(data));
   } catch (err: any) {
     if (err instanceof HttpError) {
       return NextResponse.json({ error: err.message }, { status: err.status });
