@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { orgId } = await req.json();
+    const { orgId, orgSlug } = await req.json();
     if (!orgId) throw new HttpError(400, "orgId required");
     const ctx = await requireOrgContext(req);
 
@@ -54,10 +54,16 @@ export async function POST(req: NextRequest) {
     if (!membership) throw new HttpError(403, "Not a member of that org");
 
     const res = NextResponse.json({ ok: true });
-    res.headers.set(
+    res.headers.append(
       "Set-Cookie",
       `org_id=${encodeURIComponent(orgId)}; Path=/; HttpOnly; SameSite=Lax; Secure`
     );
+    if (orgSlug) {
+      res.headers.append(
+        "Set-Cookie",
+        `org_slug=${encodeURIComponent(orgSlug)}; Path=/; HttpOnly; SameSite=Lax; Secure`
+      );
+    }
     return res;
   } catch (e: any) {
     if (e instanceof HttpError) {
