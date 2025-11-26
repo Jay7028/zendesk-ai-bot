@@ -122,10 +122,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   return (
     <>
       {inAdmin && orgs.length > 0 ? (
-      <div
-        style={{
-          padding: "8px 16px",
-          borderBottom: "1px solid #e5e7eb",
+        <div
+          style={{
+            padding: "8px 16px",
+            borderBottom: "1px solid #e5e7eb",
           background: "#f9fafb",
           display: "flex",
           justifyContent: "space-between",
