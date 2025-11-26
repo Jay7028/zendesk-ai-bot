@@ -1,9 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { supabaseBrowser } from "../../lib/supabase-browser";
 
 export default function LoginPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const nextPath = useMemo(() => searchParams.get("next") || "/admin", [searchParams]);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [mode, setMode] = useState<"signIn" | "signUp">("signIn");
@@ -14,7 +18,11 @@ export default function LoginPage() {
 
   useEffect(() => {
     supabaseBrowser.auth.getSession().then(({ data }) => {
-      setSessionUser(data.session?.user?.email ?? null);
+      const email = data.session?.user?.email ?? null;
+      setSessionUser(email);
+      if (email) {
+        router.replace(nextPath);
+      }
     });
     const {
       data: { subscription },
@@ -54,6 +62,7 @@ export default function LoginPage() {
         });
         if (signInError) throw signInError;
         setMessage("Signed in");
+        router.replace(nextPath);
       }
     } catch (e: any) {
       setError(e.message || "Auth failed");
@@ -101,8 +110,8 @@ export default function LoginPage() {
       >
         <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 6 }}>Sign in</h1>
         <p style={{ color: "#6b7280", marginBottom: 16 }}>
-          Use your email/password to manage the admin tools.
-        </p>
+            Use your email/password to manage the admin tools.
+            </p>
 
         <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
           <button
