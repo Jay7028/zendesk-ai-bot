@@ -73,3 +73,43 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Failed to select org" }, { status: 500 });
   }
 }
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const { orgId } = await req.json();
+    if (!orgId) throw new HttpError(400, "orgId required");
+
+    const token = req.headers.get("authorization") || req.headers.get("Authorization");
+    if (!token) throw new HttpError(401, "Unauthorized");
+    const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(token.replace(/^Bearer\s+/i, ""));
+    if (userError || !userData?.user) throw new HttpError(401, "Unauthorized");
+
+    const userId = userData.user.id;
+    const { data: membership, error } = await supabaseAdmin
+      .from("org_memberships")
+      .select("role")
+      .eq("user_id", userId)
+      .eq("org_id", orgId)
+      .maybeSingle();
+    if (error) throw error;
+    if (!membership) throw new HttpError(403, "Not a member of that org");
+    if (membership.role !== "owner") throw new HttpError(403, "Only owners can delete an org");
+
+    const { error: updateError } = await supabaseAdmin
+      .from("organizations")
+      .update({ status: "deleted" })
+      .eq("id", orgId);
+    if (updateError) throw updateError;
+
+    const res = NextResponse.json({ ok: true });
+    res.headers.append("Set-Cookie", `org_id=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax; Secure`);
+    res.headers.append("Set-Cookie", `org_slug=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax; Secure`);
+    return res;
+  } catch (e: any) {
+    if (e instanceof HttpError) {
+      return NextResponse.json({ error: e.message }, { status: e.status });
+    }
+    console.error("DELETE /api/orgs error", e);
+    return NextResponse.json({ error: "Failed to delete org" }, { status: 500 });
+  }
+}

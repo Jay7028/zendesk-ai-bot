@@ -93,6 +93,7 @@ export default function OrgPage() {
   const [error, setError] = useState<string | null>(null);
   const [orgs, setOrgs] = useState<OrgRow[]>([]);
   const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null);
+  const selectedOrg = useMemo(() => orgs.find((o) => o.orgId === selectedOrgId) || null, [orgs, selectedOrgId]);
 
   const activeNav = useMemo(
     () =>
@@ -110,10 +111,11 @@ export default function OrgPage() {
 
       const orgRes = await apiFetch("/api/orgs");
       const orgData = (await orgRes.json()) as OrgRow[];
-      setOrgs(orgData);
+      const filtered = (orgData || []).filter((o) => o.status !== "deleted");
+      setOrgs(filtered);
 
       const cookieSlug = getCookie("org_slug")?.toLowerCase();
-      const chosen = orgData.find((o) => o.slug?.toLowerCase() === cookieSlug) || orgData[0] || null;
+      const chosen = filtered.find((o) => o.slug?.toLowerCase() === cookieSlug) || filtered[0] || null;
       if (chosen) setSelectedOrgId(chosen.orgId);
 
       const targetOrg = chosen?.orgId || null;
@@ -184,6 +186,31 @@ export default function OrgPage() {
       await loadData();
     } catch (e: any) {
       setError(e.message || "Failed to create org");
+    }
+  }
+
+  async function handleDeleteOrg() {
+    if (!selectedOrgId) return;
+    const confirmed = window.confirm("Delete this organization? This cannot be undone.");
+    if (!confirmed) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await apiFetch("/api/orgs", {
+        method: "DELETE",
+        body: JSON.stringify({ orgId: selectedOrgId }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data?.error || "Failed to delete org");
+        return;
+      }
+      setOrgMessage("Organization deleted.");
+      await loadData();
+    } catch (e: any) {
+      setError(e.message || "Failed to delete org");
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -390,6 +417,30 @@ export default function OrgPage() {
                 }}
               >
                 {loading ? "Working..." : "Create org"}
+              </button>
+            </div>
+          </Card>
+
+          <Card title="Delete organization (owner only)">
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <div style={{ color: "#b91c1c", fontSize: 13 }}>
+                This will mark the organization as deleted. You can’t undo this.
+              </div>
+              <button
+                onClick={handleDeleteOrg}
+                disabled={loading || !selectedOrg || selectedOrg.role !== "owner"}
+                style={{
+                  padding: "10px 12px",
+                  borderRadius: 10,
+                  border: "1px solid #fca5a5",
+                  background: "#fef2f2",
+                  color: "#b91c1c",
+                  fontWeight: 700,
+                  cursor: loading || !selectedOrg || selectedOrg.role !== "owner" ? "not-allowed" : "pointer",
+                  alignSelf: "flex-start",
+                }}
+              >
+                {loading ? "Working..." : "Delete org"}
               </button>
             </div>
           </Card>
