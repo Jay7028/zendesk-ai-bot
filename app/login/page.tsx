@@ -70,6 +70,20 @@ function LoginForm() {
       if (computedSlug) {
         document.cookie = `org_slug=${computedSlug}; Path=/; SameSite=Lax`;
       }
+      // Verify org exists before attempting auth
+      if (computedSlug) {
+        const res = await fetch(`/api/orgs/exists?slug=${encodeURIComponent(computedSlug)}`);
+        const data = await res.json();
+        if (!data?.exists) {
+          setError("Incorrect Organisation Name");
+          setLoading(false);
+          return;
+        }
+      } else {
+        setError("Organisation name is required");
+        setLoading(false);
+        return;
+      }
       if (!email || !password) {
         setError("Email and password are required");
         return;
