@@ -72,6 +72,11 @@ export async function PUT(
       org_id: orgId,
     };
 
+    // If this is Zendesk and no new apiKey was provided, do NOT overwrite existing api_key
+    if (body.type === "zendesk" && (body.apiKey === undefined || body.apiKey === null || body.apiKey === "")) {
+      delete (record as any).api_key;
+    }
+
     const { data, error } = await supabaseAdmin
       .from("integrations")
       .update(record)
@@ -88,22 +93,20 @@ export async function PUT(
       );
     }
 
-    if (body.type === "zendesk") {
-      if (body.apiKey) {
-        const payload = encryptJSON({
-          subdomain: body.baseUrl || data.base_url || "",
-          email: body.description || data.description || "",
-          token: body.apiKey || "",
+    if (body.type === "zendesk" && body.apiKey) {
+      const payload = encryptJSON({
+        subdomain: body.baseUrl || data.base_url || "",
+        email: body.description || data.description || "",
+        token: body.apiKey || "",
+      });
+      if (payload) {
+        await supabaseAdmin.from("integration_credentials").upsert({
+          integration_account_id: data.id,
+          org_id: orgId,
+          kind: "api_key",
+          encrypted_payload: payload,
+          last4: body.apiKey.slice(-4),
         });
-        if (payload) {
-          await supabaseAdmin.from("integration_credentials").upsert({
-            integration_account_id: data.id,
-            org_id: orgId,
-            kind: "api_key",
-            encrypted_payload: payload,
-            last4: body.apiKey.slice(-4),
-          });
-        }
       }
     }
 
