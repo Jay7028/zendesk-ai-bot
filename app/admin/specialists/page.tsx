@@ -411,7 +411,7 @@ export default function SpecialistsPage() {
       >
         <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 8, fontWeight: 600 }}>Navigation</div>
         {leftNavItems.map((item) => (
-          <a key={item.id} href={item.href} style={{ textDecoration: "none" }}>
+          <a key={item.id} href={withOrgPrefix(item.href)} style={{ textDecoration: "none" }}>
             <div
               style={{
                 padding: "10px 12px",

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { DataField } from "../../api/data-extraction/types";
 import { apiFetch } from "../../../lib/api-client";
+import { withOrgPrefix } from "../../../lib/org-path";
 
 export default function DataExtractionPage() {
   const [fields, setFields] = useState<DataField[]>([]);
@@ -167,16 +168,16 @@ export default function DataExtractionPage() {
             { id: "specialists", label: "AI Specialists", href: "/admin/specialists" },
             { id: "intents", label: "Intents", href: "/admin/intents" },
             { id: "data-extraction", label: "Data Extraction", href: "/admin/data-extraction", active: true },
-          { id: "integrations", label: "Integrations", href: "/admin/integrations" },
-          { id: "logs", label: "Logs", href: "/admin/logs" },
-          { id: "test-ai", label: "Test AI", href: "/admin/test-ai" },
-          { id: "track", label: "Track", href: "/admin/track" },
-          { id: "orgs", label: "Org & Members", href: "/admin/orgs" },
-          { id: "org-settings", label: "Org Settings", href: "/admin/orgs/settings" },
-        ].map((item) => (
+            { id: "integrations", label: "Integrations", href: "/admin/integrations" },
+            { id: "logs", label: "Logs", href: "/admin/logs" },
+            { id: "test-ai", label: "Test AI", href: "/admin/test-ai" },
+            { id: "track", label: "Track", href: "/admin/track" },
+            { id: "orgs", label: "Org & Members", href: "/admin/orgs" },
+            { id: "org-settings", label: "Org Settings", href: "/admin/orgs/settings" },
+          ].map((item) => (
             <a
               key={item.id}
-              href={item.href}
+              href={withOrgPrefix(item.href)}
               style={{ textDecoration: "none" }}
             >
               <div

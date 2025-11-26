@@ -5,6 +5,7 @@ import type { IntentConfig } from "../../api/intents/types";
 import type { SpecialistConfig } from "../../api/specialists/data";
 import type { IntentSuggestion } from "../../api/intent-suggestions/types";
 import { apiFetch } from "../../../lib/api-client";
+import { withOrgPrefix } from "../../../lib/org-path";
 
 export default function IntentsPage() {
   const [intents, setIntents] = useState<IntentConfig[]>([]);
@@ -324,7 +325,7 @@ export default function IntentsPage() {
         ].map((item) => (
             <a
               key={item.id}
-              href={item.href}
+              href={withOrgPrefix(item.href)}
               style={{ textDecoration: "none" }}
             >
               <div

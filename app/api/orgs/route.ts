@@ -46,12 +46,13 @@ export async function POST(req: NextRequest) {
 
     const { data: membership, error } = await supabaseAdmin
       .from("org_memberships")
-      .select("org_id")
+      .select("org_id, role")
       .eq("user_id", ctx.userId)
       .eq("org_id", orgId)
       .maybeSingle();
     if (error) throw error;
     if (!membership) throw new HttpError(403, "Not a member of that org");
+    if (membership.role !== "owner") throw new HttpError(403, "Only owners can switch orgs");
 
     const res = NextResponse.json({ ok: true });
     res.headers.append(
