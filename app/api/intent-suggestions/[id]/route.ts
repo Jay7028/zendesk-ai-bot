@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "../../../../lib/supabase";
+import { defaultOrgId, supabaseAdmin } from "../../../../lib/supabase";
 
 export async function DELETE(
   _req: Request,
@@ -9,7 +9,8 @@ export async function DELETE(
   const { error } = await supabaseAdmin
     .from("intent_suggestions")
     .delete()
-    .eq("id", id);
+    .eq("id", id)
+    .eq("org_id", defaultOrgId);
 
   if (error) {
     console.error("Supabase DELETE /intent-suggestions/:id error", error);

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "../../../lib/supabase";
+import { defaultOrgId, supabaseAdmin } from "../../../lib/supabase";
 
 type DbLog = {
   id: string;
@@ -54,6 +54,7 @@ function camelToDb(body: LogPayload) {
     knowledge_sources: body.knowledgeSources ?? [],
     output_summary: body.outputSummary,
     status: body.status,
+    org_id: defaultOrgId,
   };
 }
 
@@ -61,6 +62,7 @@ export async function GET() {
   const { data, error } = await supabaseAdmin
     .from("logs")
     .select("*")
+    .eq("org_id", defaultOrgId)
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -103,7 +105,11 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: "id is required" }, { status: 400 });
     }
 
-    const { error } = await supabaseAdmin.from("logs").delete().eq("id", id);
+    const { error } = await supabaseAdmin
+      .from("logs")
+      .delete()
+      .eq("id", id)
+      .eq("org_id", defaultOrgId);
     if (error) {
       console.error("Supabase DELETE /logs error", error);
       return NextResponse.json(

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "../../../lib/supabase";
+import { defaultOrgId, supabaseAdmin } from "../../../lib/supabase";
 import type { SpecialistConfig } from "./data";
 
 function dbToCamel(row: any): SpecialistConfig {
@@ -41,6 +41,7 @@ async function logAdminEvent(summary: string, detail?: string) {
       event_type: "admin_change",
       summary,
       detail: detail ?? "",
+      org_id: defaultOrgId,
     });
   } catch (e) {
     console.error("Failed to log admin event", e);
@@ -48,7 +49,10 @@ async function logAdminEvent(summary: string, detail?: string) {
 }
 
 export async function GET() {
-  const { data, error } = await supabaseAdmin.from("specialists").select("*");
+  const { data, error } = await supabaseAdmin
+    .from("specialists")
+    .select("*")
+    .eq("org_id", defaultOrgId);
 
   if (error) {
     console.error("Supabase GET /specialists error", error);
@@ -63,19 +67,22 @@ export async function GET() {
 
 export async function POST(request: Request) {
   const body = (await request.json()) as Partial<SpecialistConfig>;
-  const dbRecord = camelToDb({
-    // supply safe defaults for NOT NULL columns
-    name: body.name ?? "New Specialist",
-    description: body.description ?? "",
-    active: body.active ?? false,
-    docsCount: body.docsCount ?? 0,
-    rulesCount: body.rulesCount ?? 0,
-    dataExtractionPrompt: body.dataExtractionPrompt ?? "",
-    requiredFields: body.requiredFields ?? [],
-    knowledgeBaseNotes: body.knowledgeBaseNotes ?? "",
-    escalationRules: body.escalationRules ?? "",
-    personalityNotes: body.personalityNotes ?? "",
-  });
+  const dbRecord = {
+    ...camelToDb({
+      // supply safe defaults for NOT NULL columns
+      name: body.name ?? "New Specialist",
+      description: body.description ?? "",
+      active: body.active ?? false,
+      docsCount: body.docsCount ?? 0,
+      rulesCount: body.rulesCount ?? 0,
+      dataExtractionPrompt: body.dataExtractionPrompt ?? "",
+      requiredFields: body.requiredFields ?? [],
+      knowledgeBaseNotes: body.knowledgeBaseNotes ?? "",
+      escalationRules: body.escalationRules ?? "",
+      personalityNotes: body.personalityNotes ?? "",
+    }),
+    org_id: defaultOrgId,
+  };
 
   // Update if id is provided, otherwise insert new
   if (body.id) {
@@ -83,6 +90,7 @@ export async function POST(request: Request) {
       .from("specialists")
       .update(dbRecord)
       .eq("id", body.id)
+      .eq("org_id", defaultOrgId)
       .select()
       .single();
 
@@ -134,7 +142,8 @@ export async function DELETE(request: Request) {
   const { error } = await supabaseAdmin
     .from("specialists")
     .delete()
-    .eq("id", id);
+    .eq("id", id)
+    .eq("org_id", defaultOrgId);
 
   if (error) {
     console.error("Supabase DELETE /specialists error", error);

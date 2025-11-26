@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { trackOnce, summarizeParcel } from "../../../lib/parcelsapp";
-import { supabaseAdmin } from "../../../lib/supabase";
+import { defaultOrgId, supabaseAdmin } from "../../../lib/supabase";
 
 type TrackRequest = {
   tracking_number?: string;
@@ -55,6 +55,7 @@ export async function POST(req: NextRequest) {
           .filter(Boolean)
           .join(" | "),
         status: "success",
+        org_id: defaultOrgId,
       });
     } catch (e) {
       console.error("Failed to log tracking lookup", e);

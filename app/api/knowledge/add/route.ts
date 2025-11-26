@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseAdmin } from "../../../../lib/supabase";
+import { defaultOrgId, supabaseAdmin } from "../../../../lib/supabase";
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || "";
 
@@ -46,6 +46,7 @@ export async function POST(req: NextRequest) {
         content,
         intent_id: intentId,
         specialist_id: specialistId,
+        org_id: defaultOrgId,
         embedding,
       })
       .select()

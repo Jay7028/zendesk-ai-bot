@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseAdmin } from "../../../lib/supabase";
+import { defaultOrgId, supabaseAdmin } from "../../../lib/supabase";
 import { trackOnce, summarizeParcel, type ParcelSummary } from "../../../lib/parcelsapp";
 import { buildKnowledgeContext } from "../../../lib/knowledge";
 
@@ -114,8 +114,8 @@ export async function POST(req: NextRequest) {
 
     const [{ data: intentRows, error: intentsError }, { data: specRows, error: specsError }] =
       await Promise.all([
-        supabaseAdmin.from("intents").select("*"),
-        supabaseAdmin.from("specialists").select("*"),
+        supabaseAdmin.from("intents").select("*").eq("org_id", defaultOrgId),
+        supabaseAdmin.from("specialists").select("*").eq("org_id", defaultOrgId),
       ]);
 
     if (intentsError || specsError) {

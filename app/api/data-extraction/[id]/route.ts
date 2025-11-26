@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "../../../../lib/supabase";
+import { defaultOrgId, supabaseAdmin } from "../../../../lib/supabase";
 import type { DataField } from "../types";
 
 function dbToCamel(row: any): DataField {
@@ -33,6 +33,7 @@ export async function GET(
     .from("data_fields")
     .select("*")
     .eq("id", id)
+    .eq("org_id", defaultOrgId)
     .single();
   if (error || !data) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -46,12 +47,13 @@ export async function PUT(
 ) {
   const { id } = await context.params;
   const body = (await request.json()) as Partial<DataField>;
-  const record = camelToDb({ ...body, id });
+  const record = { ...camelToDb({ ...body, id }), org_id: defaultOrgId };
 
   const { data, error } = await supabaseAdmin
     .from("data_fields")
     .update(record)
     .eq("id", id)
+    .eq("org_id", defaultOrgId)
     .select()
     .single();
 
@@ -71,7 +73,11 @@ export async function DELETE(
   context: { params: Promise<{ id: string }> }
 ) {
   const { id } = await context.params;
-  const { error } = await supabaseAdmin.from("data_fields").delete().eq("id", id);
+  const { error } = await supabaseAdmin
+    .from("data_fields")
+    .delete()
+    .eq("id", id)
+    .eq("org_id", defaultOrgId);
 
   if (error) {
     console.error("Supabase DELETE /data-extraction/:id error", error);

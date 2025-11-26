@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "../../../lib/supabase";
+import { defaultOrgId, supabaseAdmin } from "../../../lib/supabase";
 import type { DataField } from "./types";
 
 function dbToCamel(row: any): DataField {
@@ -25,7 +25,7 @@ function camelToDb(body: Partial<DataField>) {
 }
 
 export async function GET() {
-  const { data, error } = await supabaseAdmin.from("data_fields").select("*");
+  const { data, error } = await supabaseAdmin.from("data_fields").select("*").eq("org_id", defaultOrgId);
   if (error) {
     console.error("Supabase GET /data-extraction error", error);
     return NextResponse.json(
@@ -38,13 +38,16 @@ export async function GET() {
 
 export async function POST(request: Request) {
   const body = (await request.json()) as Partial<DataField>;
-  const record = camelToDb({
-    name: body.name ?? "field_key",
-    label: body.label ?? "New Field",
-    description: body.description ?? "",
-    example: body.example ?? "",
-    required: body.required ?? false,
-  });
+  const record = {
+    ...camelToDb({
+      name: body.name ?? "field_key",
+      label: body.label ?? "New Field",
+      description: body.description ?? "",
+      example: body.example ?? "",
+      required: body.required ?? false,
+    }),
+    org_id: defaultOrgId,
+  };
 
   if (!body.id) {
     delete (record as any).id;

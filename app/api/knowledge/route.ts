@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseAdmin } from "../../../lib/supabase";
+import { defaultOrgId, supabaseAdmin } from "../../../lib/supabase";
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || "";
 
@@ -29,7 +29,11 @@ async function embed(text: string): Promise<number[]> {
 export async function GET(req: NextRequest) {
   const specialistId = req.nextUrl.searchParams.get("specialistId");
   const intentId = req.nextUrl.searchParams.get("intentId");
-  const query = supabaseAdmin.from("knowledge_chunks").select("*").order("created_at", { ascending: false });
+  const query = supabaseAdmin
+    .from("knowledge_chunks")
+    .select("*")
+    .eq("org_id", defaultOrgId)
+    .order("created_at", { ascending: false });
   const { data, error } =
     specialistId || intentId
       ? await query.match({
@@ -64,8 +68,10 @@ export async function PATCH(req: NextRequest) {
         intent_id: intentId,
         specialist_id: specialistId,
         embedding,
+        org_id: defaultOrgId,
       })
       .eq("id", id)
+      .eq("org_id", defaultOrgId)
       .select()
       .single();
     if (error) throw new Error(error.message);
@@ -79,7 +85,11 @@ export async function DELETE(req: NextRequest) {
   try {
     const id = req.nextUrl.searchParams.get("id");
     if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
-    const { error } = await supabaseAdmin.from("knowledge_chunks").delete().eq("id", id);
+    const { error } = await supabaseAdmin
+      .from("knowledge_chunks")
+      .delete()
+      .eq("id", id)
+      .eq("org_id", defaultOrgId);
     if (error) throw new Error(error.message);
     return NextResponse.json({ ok: true });
   } catch (e: any) {

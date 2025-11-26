@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "../../../../lib/supabase";
+import { defaultOrgId, supabaseAdmin } from "../../../../lib/supabase";
 import type { IntentConfig } from "../types";
 
 function dbToCamel(row: any): IntentConfig {
@@ -30,6 +30,7 @@ export async function GET(
     .from("intents")
     .select("*")
     .eq("id", id)
+    .eq("org_id", defaultOrgId)
     .single();
 
   if (error || !data) {
@@ -45,12 +46,13 @@ export async function PUT(
 ) {
   const { id } = await context.params;
   const body = (await request.json()) as Partial<IntentConfig>;
-  const dbRecord = camelToDb({ ...body, id });
+  const dbRecord = { ...camelToDb({ ...body, id }), org_id: defaultOrgId };
 
   const { data, error } = await supabaseAdmin
     .from("intents")
     .update(dbRecord)
     .eq("id", id)
+    .eq("org_id", defaultOrgId)
     .select()
     .single();
 
@@ -71,7 +73,11 @@ export async function DELETE(
 ) {
   const { id } = await context.params;
 
-  const { error } = await supabaseAdmin.from("intents").delete().eq("id", id);
+  const { error } = await supabaseAdmin
+    .from("intents")
+    .delete()
+    .eq("id", id)
+    .eq("org_id", defaultOrgId);
 
   if (error) {
     console.error("Supabase DELETE /intents/:id error", error);

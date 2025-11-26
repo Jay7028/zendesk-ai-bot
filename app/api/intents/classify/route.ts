@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "../../../../lib/supabase";
+import { defaultOrgId, supabaseAdmin } from "../../../../lib/supabase";
 
 type IntentRow = {
   id: string;
@@ -23,7 +23,8 @@ export async function POST(request: Request) {
 
     const { data: intentRows, error } = await supabaseAdmin
       .from("intents")
-      .select("*");
+      .select("*")
+      .eq("org_id", defaultOrgId);
     if (error) {
       console.error("Supabase load intents error", error);
       return NextResponse.json(

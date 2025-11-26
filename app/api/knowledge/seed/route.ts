@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseAdmin } from "../../../../lib/supabase";
+import { defaultOrgId, supabaseAdmin } from "../../../../lib/supabase";
 
 const SEEDS = [
   {
@@ -84,6 +84,7 @@ export async function POST(req: NextRequest) {
         content: seed.content,
         intent_id: null,
         specialist_id: null,
+        org_id: defaultOrgId,
         embedding,
       });
     }

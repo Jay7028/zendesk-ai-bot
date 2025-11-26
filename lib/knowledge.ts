@@ -1,4 +1,4 @@
-import { supabaseAdmin } from "./supabase";
+import { defaultOrgId, supabaseAdmin } from "./supabase";
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || "";
 const EMBEDDING_MODEL = "text-embedding-3-small";
@@ -43,6 +43,7 @@ async function matchChunks(query: string, intentId?: string, specialistId?: stri
       match_count: matchCount,
       intent_id: intentId ?? null,
       specialist_id: specialistId ?? null,
+      p_org_id: defaultOrgId,
     });
     if (error) throw error;
     return (data || []) as ChunkMatch[];

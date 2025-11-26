@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "../../../../lib/supabase";
+import { defaultOrgId, supabaseAdmin } from "../../../../lib/supabase";
 import type { SpecialistConfig } from "../data";
 
 function dbToCamel(row: any): SpecialistConfig {
@@ -41,6 +41,7 @@ async function logAdminEvent(summary: string, detail?: string) {
       event_type: "admin_change",
       summary,
       detail: detail ?? "",
+      org_id: defaultOrgId,
     });
   } catch (e) {
     console.error("Failed to log admin event", e);
@@ -59,6 +60,7 @@ export async function GET(
     .from("specialists")
     .select("*")
     .eq("id", id)
+    .eq("org_id", defaultOrgId)
     .single();
 
   if (error || !data) {
@@ -74,12 +76,13 @@ export async function PUT(
 ) {
   const { id } = await context.params;
   const body = (await request.json()) as Partial<SpecialistConfig>;
-  const dbRecord = camelToDb({ ...body, id });
+  const dbRecord = { ...camelToDb({ ...body, id }), org_id: defaultOrgId };
 
   const { data, error } = await supabaseAdmin
     .from("specialists")
     .update(dbRecord)
     .eq("id", id)
+    .eq("org_id", defaultOrgId)
     .select()
     .single();
 
@@ -104,7 +107,8 @@ export async function DELETE(
   const { error } = await supabaseAdmin
     .from("specialists")
     .delete()
-    .eq("id", id);
+    .eq("id", id)
+    .eq("org_id", defaultOrgId);
 
   if (error) {
     console.error("Supabase DELETE /specialists/:id error", error);

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "../../../lib/supabase";
+import { defaultOrgId, supabaseAdmin } from "../../../lib/supabase";
 import type { IntentSuggestion } from "./types";
 
 function dbToCamel(row: any): IntentSuggestion {
@@ -18,7 +18,8 @@ export async function GET() {
   const { data, error } = await supabaseAdmin
     .from("intent_suggestions")
     .select("*")
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .eq("org_id", defaultOrgId);
 
   if (error) {
     console.error("Supabase GET /intent-suggestions error", error);
@@ -40,6 +41,7 @@ export async function POST(request: Request) {
     suggested_name: body.suggestedName ?? "Unknown intent",
     suggested_description: body.suggestedDescription ?? "",
     confidence: body.confidence ?? 0,
+    org_id: defaultOrgId,
   };
 
   const { data, error } = await supabaseAdmin

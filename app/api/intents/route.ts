@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "../../../lib/supabase";
+import { defaultOrgId, supabaseAdmin } from "../../../lib/supabase";
 import type { IntentConfig } from "./types";
 
 function dbToCamel(row: any): IntentConfig {
@@ -21,7 +21,7 @@ function camelToDb(body: Partial<IntentConfig>) {
 }
 
 export async function GET() {
-  const { data, error } = await supabaseAdmin.from("intents").select("*");
+  const { data, error } = await supabaseAdmin.from("intents").select("*").eq("org_id", defaultOrgId);
 
   if (error) {
     console.error("Supabase GET /intents error", error);
@@ -41,6 +41,7 @@ export async function POST(request: Request) {
       .from("specialists")
       .select("id")
       .eq("name", "Default Specialist")
+      .eq("org_id", defaultOrgId)
       .limit(1)
       .single();
     if (specData?.id) {
@@ -52,6 +53,7 @@ export async function POST(request: Request) {
     name: body.name ?? "New Intent",
     description: body.description ?? "",
     specialistId,
+    org_id: defaultOrgId,
   });
 
   if (!body.id) {

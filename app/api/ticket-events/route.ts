@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "../../../lib/supabase";
+import { defaultOrgId, supabaseAdmin } from "../../../lib/supabase";
 import type { TicketEvent } from "./types";
 
 type DbEvent = {
@@ -26,7 +26,8 @@ export async function GET() {
   const { data, error } = await supabaseAdmin
     .from("ticket_events")
     .select("*")
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .eq("org_id", defaultOrgId);
 
   if (error) {
     console.error("Supabase GET /ticket-events error", error);
@@ -54,6 +55,7 @@ export async function POST(request: Request) {
       event_type: body.eventType,
       summary: body.summary,
       detail: body.detail ?? "",
+      org_id: defaultOrgId,
     })
     .select()
     .single();

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "../../../lib/supabase";
+import { defaultOrgId, supabaseAdmin } from "../../../lib/supabase";
 import type { IntegrationConfig } from "./types";
 
 function dbToCamel(row: any): IntegrationConfig {
@@ -27,7 +27,7 @@ function camelToDb(body: Partial<IntegrationConfig>) {
 }
 
 export async function GET() {
-  const { data, error } = await supabaseAdmin.from("integrations").select("*");
+  const { data, error } = await supabaseAdmin.from("integrations").select("*").eq("org_id", defaultOrgId);
   if (error) {
     console.error("Supabase GET /integrations error", error);
     return NextResponse.json({ error: "Failed to load integrations" }, { status: 500 });
@@ -37,14 +37,17 @@ export async function GET() {
 
 export async function POST(request: Request) {
   const body = (await request.json()) as Partial<IntegrationConfig>;
-  const record = camelToDb({
-    name: body.name ?? "New Integration",
-    type: body.type ?? "custom",
-    description: body.description ?? "",
-    apiKey: body.apiKey ?? "",
-    baseUrl: body.baseUrl ?? "",
-    enabled: body.enabled ?? false,
-  });
+  const record = {
+    ...camelToDb({
+      name: body.name ?? "New Integration",
+      type: body.type ?? "custom",
+      description: body.description ?? "",
+      apiKey: body.apiKey ?? "",
+      baseUrl: body.baseUrl ?? "",
+      enabled: body.enabled ?? false,
+    }),
+    org_id: defaultOrgId,
+  };
 
   if (!body.id) {
     delete (record as any).id;
