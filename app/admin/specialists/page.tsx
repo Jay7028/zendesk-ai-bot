@@ -28,10 +28,73 @@ type KnowledgeChunk = {
 
 type TabKey = "data" | "knowledge" | "escalation" | "personality";
 
+function InlineInput({
+  value,
+  onCommit,
+  placeholder,
+}: {
+  value: string;
+  onCommit: (val: string) => void;
+  placeholder?: string;
+}) {
+  const [local, setLocal] = useState(value);
+  useEffect(() => {
+    setLocal(value);
+  }, [value]);
+  return (
+    <input
+      value={local}
+      onChange={(e) => setLocal(e.target.value)}
+      onBlur={() => onCommit(local)}
+      placeholder={placeholder}
+      style={{
+        width: "100%",
+        padding: "10px 12px",
+        borderRadius: 10,
+        border: "1px solid #e5e7eb",
+        fontSize: 14,
+      }}
+    />
+  );
+}
+
+function InlineTextarea({
+  value,
+  onCommit,
+  placeholder,
+  rows = 4,
+}: {
+  value: string;
+  onCommit: (val: string) => void;
+  placeholder?: string;
+  rows?: number;
+}) {
+  const [local, setLocal] = useState(value);
+  useEffect(() => {
+    setLocal(value);
+  }, [value]);
+  return (
+    <textarea
+      value={local}
+      onChange={(e) => setLocal(e.target.value)}
+      onBlur={() => onCommit(local)}
+      rows={rows}
+      placeholder={placeholder}
+      style={{
+        width: "100%",
+        padding: "10px 12px",
+        borderRadius: 10,
+        border: "1px solid #e5e7eb",
+        fontSize: 14,
+        fontFamily: "inherit",
+      }}
+    />
+  );
+}
+
 export default function SpecialistsPage() {
   const [specialists, setSpecialists] = useState<Specialist[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [draft, setDraft] = useState<Specialist | null>(null);
   const [form, setForm] = useState<Specialist | null>(null);
   const [tab, setTab] = useState<TabKey>("data");
   const [isLoading, setIsLoading] = useState(true);
@@ -173,7 +236,6 @@ export default function SpecialistsPage() {
       });
       if (!res.ok) throw new Error("Failed to delete specialist");
       setSpecialists((prev) => prev.filter((s) => s.id !== selectedSpecialist.id));
-      setDraft(null);
       const remaining = specialists.filter((s) => s.id !== selectedSpecialist.id);
       setSelectedId(remaining[0]?.id ?? null);
       setKnowledge([]);
@@ -531,48 +593,26 @@ export default function SpecialistsPage() {
                   <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                     <div>
                       <FieldLabel label="Description" />
-                      <input
+                      <InlineInput
                         value={form.description || ""}
-                        onChange={(e) => handleFieldChange({ description: e.target.value })}
-                        style={{
-                          width: "100%",
-                          padding: "10px 12px",
-                          borderRadius: 10,
-                          border: "1px solid #e5e7eb",
-                          fontSize: 14,
-                        }}
+                        onCommit={(val) => handleFieldChange({ description: val })}
                         placeholder="e.g. Handles billing disputes and refund requests"
                       />
                     </div>
                     <div>
                       <FieldLabel label="Data extraction prompt" />
-                      <textarea
+                      <InlineTextarea
                         value={form.dataExtractionPrompt || ""}
-                        onChange={(e) => handleFieldChange({ dataExtractionPrompt: e.target.value })}
+                        onCommit={(val) => handleFieldChange({ dataExtractionPrompt: val })}
                         rows={4}
-                        style={{
-                          width: "100%",
-                          padding: "10px 12px",
-                          borderRadius: 10,
-                          border: "1px solid #e5e7eb",
-                          fontSize: 14,
-                          fontFamily: "inherit",
-                        }}
                         placeholder="Tell the AI what fields to pull out of a message."
                       />
                     </div>
                     <div>
                       <FieldLabel label="Required fields (comma separated)" />
-                      <input
+                      <InlineInput
                         value={form.requiredFields?.join(", ") || ""}
-                        onChange={(e) => handleRequiredFieldsChange(e.target.value)}
-                        style={{
-                          width: "100%",
-                          padding: "10px 12px",
-                          borderRadius: 10,
-                          border: "1px solid #e5e7eb",
-                          fontSize: 14,
-                        }}
+                        onCommit={(val) => handleRequiredFieldsChange(val)}
                         placeholder="tracking_number, postcode"
                       />
                     </div>
@@ -796,18 +836,10 @@ export default function SpecialistsPage() {
               {tab === "escalation" && (
                 <Card title="Escalation rules">
                   <FieldLabel label="Rules" />
-                  <textarea
+                  <InlineTextarea
                     value={form.escalationRules || ""}
-                    onChange={(e) => handleFieldChange({ escalationRules: e.target.value })}
+                    onCommit={(val) => handleFieldChange({ escalationRules: val })}
                     rows={6}
-                    style={{
-                      width: "100%",
-                      padding: "10px 12px",
-                      borderRadius: 10,
-                      border: "1px solid #e5e7eb",
-                      fontSize: 14,
-                      fontFamily: "inherit",
-                    }}
                     placeholder="Describe when to hand off to a human."
                   />
                 </Card>
@@ -816,18 +848,10 @@ export default function SpecialistsPage() {
               {tab === "personality" && (
                 <Card title="Personality">
                   <FieldLabel label="Voice and tone" />
-                  <textarea
+                  <InlineTextarea
                     value={form.personalityNotes || ""}
-                    onChange={(e) => handleFieldChange({ personalityNotes: e.target.value })}
+                    onCommit={(val) => handleFieldChange({ personalityNotes: val })}
                     rows={6}
-                    style={{
-                      width: "100%",
-                      padding: "10px 12px",
-                      borderRadius: 10,
-                      border: "1px solid #e5e7eb",
-                      fontSize: 14,
-                      fontFamily: "inherit",
-                    }}
                     placeholder="How should this specialist speak?"
                   />
                 </Card>
