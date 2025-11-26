@@ -316,10 +316,12 @@ export default function IntentsPage() {
             { id: "intents", label: "Intents", href: "/admin/intents", active: true },
             { id: "data-extraction", label: "Data Extraction", href: "/admin/data-extraction" },
             { id: "integrations", label: "Integrations", href: "/admin/integrations" },
-            { id: "logs", label: "Logs", href: "/admin/logs" },
-            { id: "test-ai", label: "Test AI", href: "/admin/test-ai" },
-            { id: "track", label: "Track", href: "/admin/track" },
-          ].map((item) => (
+          { id: "logs", label: "Logs", href: "/admin/logs" },
+          { id: "test-ai", label: "Test AI", href: "/admin/test-ai" },
+          { id: "track", label: "Track", href: "/admin/track" },
+          { id: "orgs", label: "Org & Members", href: "/admin/orgs" },
+          { id: "org-settings", label: "Org Settings", href: "/admin/orgs/settings" },
+        ].map((item) => (
             <a
               key={item.id}
               href={item.href}

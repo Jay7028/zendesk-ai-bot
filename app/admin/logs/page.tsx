@@ -200,11 +200,13 @@ export default function LogsPage() {
             { id: "specialists", label: "AI Specialists", href: "/admin/specialists" },
             { id: "intents", label: "Intents", href: "/admin/intents" },
             { id: "data-extraction", label: "Data Extraction", href: "/admin/data-extraction" },
-            { id: "integrations", label: "Integrations", href: "/admin/integrations" },
-            { id: "logs", label: "Logs", href: "/admin/logs", active: true },
-            { id: "test-ai", label: "Test AI", href: "/admin/test-ai" },
-            { id: "track", label: "Track", href: "/admin/track" },
-          ].map((item) => (
+          { id: "integrations", label: "Integrations", href: "/admin/integrations" },
+          { id: "logs", label: "Logs", href: "/admin/logs", active: true },
+          { id: "test-ai", label: "Test AI", href: "/admin/test-ai" },
+          { id: "track", label: "Track", href: "/admin/track" },
+          { id: "orgs", label: "Org & Members", href: "/admin/orgs" },
+          { id: "org-settings", label: "Org Settings", href: "/admin/orgs/settings" },
+        ].map((item) => (
             <a
               key={item.id}
               href={item.href}

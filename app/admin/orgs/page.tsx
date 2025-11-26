@@ -21,6 +21,15 @@ type MemberRow = {
   profiles?: { name?: string | null; avatar_url?: string | null } | null;
 };
 
+type OrgRow = {
+  orgId: string;
+  name: string;
+  role: string;
+  slug?: string;
+  plan?: string;
+  status?: string;
+};
+
 const NAV_ITEMS = [
   { id: "home", label: "Home", href: "/" },
   { id: "specialists", label: "AI Specialists", href: "/admin/specialists" },
@@ -73,6 +82,8 @@ export default function OrgPage() {
   const [orgMessage, setOrgMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [orgs, setOrgs] = useState<OrgRow[]>([]);
+  const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null);
 
   const activeNav = useMemo(
     () =>
@@ -87,7 +98,16 @@ export default function OrgPage() {
     try {
       setLoading(true);
       setError(null);
-      const [invRes, memRes] = await Promise.all([apiFetch("/api/org-invites"), apiFetch("/api/org-memberships")]);
+      const orgRes = await apiFetch("/api/orgs");
+      const orgData = (await orgRes.json()) as OrgRow[];
+      setOrgs(orgData);
+      if (!selectedOrgId && orgData[0]) setSelectedOrgId(orgData[0].orgId);
+
+      const targetOrg = selectedOrgId || orgData[0]?.orgId || null;
+      const [invRes, memRes] = await Promise.all([
+        apiFetch("/api/org-invites"),
+        targetOrg ? apiFetch(`/api/org-memberships?orgId=${targetOrg}`) : apiFetch("/api/org-memberships"),
+      ]);
       if (!invRes.ok) throw new Error("Failed to load invites");
       if (!memRes.ok) throw new Error("Failed to load members");
       const invData = (await invRes.json()) as InviteRow[];
@@ -154,6 +174,17 @@ export default function OrgPage() {
     } catch (e: any) {
       setError(e.message || "Failed to create org");
     }
+  }
+
+  async function handleSelectOrg(orgId: string) {
+    setSelectedOrgId(orgId);
+    // switch active org cookie
+    try {
+      await apiFetch("/api/orgs", { method: "POST", body: JSON.stringify({ orgId }) });
+    } catch {
+      // ignore
+    }
+    await loadData();
   }
 
   async function handleRoleChange(userId: string, nextRole: MemberRow["role"]) {
@@ -262,6 +293,54 @@ export default function OrgPage() {
         )}
 
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+          <Card title="Your organizations">
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {orgs.length === 0 ? (
+                <div style={{ color: "#6b7280", fontSize: 13 }}>No orgs yet.</div>
+              ) : (
+                orgs.map((o) => {
+                  const active = o.orgId === selectedOrgId;
+                  return (
+                    <div
+                      key={o.orgId}
+                      style={{
+                        border: active ? "1px solid #c7d2fe" : "1px solid #e5e7eb",
+                        background: active ? "#eef2ff" : "#f9fafb",
+                        borderRadius: 10,
+                        padding: 10,
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontWeight: 700 }}>{o.name || "Org"}</div>
+                        <div style={{ color: "#6b7280", fontSize: 12 }}>
+                          Role: {o.role} {o.slug ? `· ${o.slug}` : ""}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleSelectOrg(o.orgId)}
+                        style={{
+                          padding: "6px 10px",
+                          borderRadius: 8,
+                          border: "1px solid #c7d2fe",
+                          background: active ? "#c7d2fe" : "#fff",
+                          color: "#1d4ed8",
+                          cursor: "pointer",
+                          fontSize: 12,
+                          fontWeight: 600,
+                        }}
+                      >
+                        {active ? "Active" : "Select"}
+                      </button>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </Card>
+
           <Card title="Create organization">
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               <div>
