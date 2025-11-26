@@ -18,7 +18,7 @@ type MemberRow = {
   user_id: string;
   role: string;
   created_at?: string;
-  profiles?: { name?: string | null; avatar_url?: string | null } | null;
+  profiles?: { name?: string | null; email?: string | null } | null;
 };
 
 type OrgRow = {
