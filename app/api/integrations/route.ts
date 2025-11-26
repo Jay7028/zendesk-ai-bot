@@ -65,7 +65,7 @@ export async function POST(request: Request) {
         name: body.name ?? "New Integration",
         type: body.type ?? "custom",
         description: body.type === "zendesk" ? body.description ?? "" : body.description ?? "",
-        apiKey: body.type === "zendesk" ? "" : body.apiKey ?? "",
+        apiKey: body.apiKey ?? "",
         baseUrl: body.baseUrl ?? "",
         enabled: body.enabled ?? false,
       }),

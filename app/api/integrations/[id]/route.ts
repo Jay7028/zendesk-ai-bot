@@ -67,7 +67,7 @@ export async function PUT(
       ...camelToDb({
         ...body,
         id,
-        apiKey: body.type === "zendesk" ? "" : body.apiKey,
+        apiKey: body.apiKey ?? undefined,
       }),
       org_id: orgId,
     };

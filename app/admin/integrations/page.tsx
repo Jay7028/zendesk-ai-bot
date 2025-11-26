@@ -79,7 +79,9 @@ export default function IntegrationsPage() {
       setError(null);
       const body =
         selected.type === "zendesk"
-          ? { ...selected, apiKey: zendeskToken }
+          ? zendeskToken
+            ? { ...selected, apiKey: zendeskToken }
+            : { ...selected, apiKey: undefined }
           : selected;
       const res = await apiFetch(`/api/integrations/${selected.id}`, {
         method: "PUT",
