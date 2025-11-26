@@ -168,18 +168,21 @@ export default function OrgPage() {
       setOrgMessage("Name is required");
       return;
     }
+    // Always keep slug in sync with name (lowercase, hyphenated)
+    const finalSlug = orgSlug || slugify(orgName);
+    setOrgSlug(finalSlug);
     setOrgMessage(null);
     setError(null);
     try {
       const res = await apiFetch("/api/orgs/create", {
         method: "POST",
-        body: JSON.stringify({ name: orgName, slug: orgSlug }),
+        body: JSON.stringify({ name: orgName, slug: finalSlug }),
       });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data?.error || "Failed to create org");
-        return;
-      }
+        const data = await res.json();
+        if (!res.ok) {
+          setError(data?.error || "Failed to create org");
+          return;
+        }
       setOrgMessage("Organization created.");
       setOrgName("");
       setOrgSlug("");
@@ -373,26 +376,27 @@ export default function OrgPage() {
                 <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 4 }}>Name</div>
                 <input
                   value={orgName}
-                  onChange={(e) => {
-                    setOrgName(e.target.value);
-                    if (!orgSlug) setOrgSlug(slugify(e.target.value));
-                  }}
-                  placeholder="Acme Support"
-                  style={{
-                    width: "100%",
-                    padding: "10px 12px",
-                    borderRadius: 10,
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setOrgName(val);
+                      setOrgSlug(slugify(val));
+                    }}
+                    placeholder="Acme Support"
+                    style={{
+                      width: "100%",
+                      padding: "10px 12px",
+                      borderRadius: 10,
                     border: "1px solid #e5e7eb",
                     fontSize: 14,
                   }}
                 />
               </div>
               <div>
-                <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 4 }}>Slug (optional)</div>
+                <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 4 }}>Slug</div>
                 <input
                   value={orgSlug}
-                  onChange={(e) => setOrgSlug(e.target.value)}
-                  placeholder="acme"
+                  onChange={(e) => setOrgSlug(slugify(e.target.value))}
+                  placeholder="acme or foot-asylum"
                   style={{
                     width: "100%",
                     padding: "10px 12px",
