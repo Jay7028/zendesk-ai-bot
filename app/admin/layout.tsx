@@ -138,6 +138,33 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
         </div>
       ) : null}
+      {hasSession ? (
+        <button
+          onClick={async () => {
+            try {
+              await supabaseBrowser.auth.signOut();
+            } finally {
+              router.replace("/login");
+            }
+          }}
+          style={{
+            position: "fixed",
+            left: 16,
+            bottom: 16,
+            padding: "10px 12px",
+            borderRadius: 10,
+            border: "1px solid #e5e7eb",
+            background: "#ffffff",
+            color: "#111827",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.06)",
+            cursor: "pointer",
+            fontSize: 13,
+            zIndex: 20,
+          }}
+        >
+          Sign out
+        </button>
+      ) : null}
       {children}
     </>
   );
