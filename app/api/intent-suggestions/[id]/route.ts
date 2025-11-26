@@ -1,24 +1,33 @@
 import { NextResponse } from "next/server";
-import { defaultOrgId, supabaseAdmin } from "../../../../lib/supabase";
+import { supabaseAdmin } from "../../../../lib/supabase";
+import { HttpError, requireOrgContext } from "../../../../lib/auth";
 
 export async function DELETE(
-  _req: Request,
+  req: Request,
   context: { params: Promise<{ id: string }> }
 ) {
-  const { id } = await context.params;
-  const { error } = await supabaseAdmin
-    .from("intent_suggestions")
-    .delete()
-    .eq("id", id)
-    .eq("org_id", defaultOrgId);
+  try {
+    const { orgId } = await requireOrgContext(req);
+    const { id } = await context.params;
+    const { error } = await supabaseAdmin
+      .from("intent_suggestions")
+      .delete()
+      .eq("id", id)
+      .eq("org_id", orgId);
 
-  if (error) {
-    console.error("Supabase DELETE /intent-suggestions/:id error", error);
-    return NextResponse.json(
-      { error: "Failed to delete intent suggestion", details: error.message },
-      { status: 500 }
-    );
+    if (error) {
+      console.error("Supabase DELETE /intent-suggestions/:id error", error);
+      return NextResponse.json(
+        { error: "Failed to delete intent suggestion", details: error.message },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (err: any) {
+    if (err instanceof HttpError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
-
-  return NextResponse.json({ success: true });
 }

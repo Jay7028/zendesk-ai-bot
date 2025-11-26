@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { IntegrationConfig } from "../../api/integrations/types";
+import { apiFetch } from "../../lib/api-client";
 
 export default function IntegrationsPage() {
   const [items, setItems] = useState<IntegrationConfig[]>([]);
@@ -14,7 +15,7 @@ export default function IntegrationsPage() {
     async function loadItems() {
       try {
         setIsLoading(true);
-        const res = await fetch("/api/integrations");
+        const res = await apiFetch("/api/integrations");
         if (!res.ok) throw new Error("Failed to load integrations");
         const data: IntegrationConfig[] = await res.json();
         setItems(data);
@@ -49,9 +50,8 @@ export default function IntegrationsPage() {
     try {
       setIsSaving(true);
       setError(null);
-      const res = await fetch("/api/integrations", {
+      const res = await apiFetch("/api/integrations", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(draft),
       });
       if (!res.ok) throw new Error("Failed to create integration");
@@ -70,9 +70,8 @@ export default function IntegrationsPage() {
     try {
       setIsSaving(true);
       setError(null);
-      const res = await fetch(`/api/integrations/${selected.id}`, {
+      const res = await apiFetch(`/api/integrations/${selected.id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(selected),
       });
       if (!res.ok) throw new Error("Failed to save integration");
@@ -96,7 +95,7 @@ export default function IntegrationsPage() {
     try {
       setIsSaving(true);
       setError(null);
-      const res = await fetch(`/api/integrations/${selected.id}`, {
+      const res = await apiFetch(`/api/integrations/${selected.id}`, {
         method: "DELETE",
       });
       if (!res.ok) throw new Error("Failed to delete integration");

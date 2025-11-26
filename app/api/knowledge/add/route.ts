@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { defaultOrgId, supabaseAdmin } from "../../../../lib/supabase";
+import { supabaseAdmin } from "../../../../lib/supabase";
+import { HttpError, requireOrgContext } from "../../../../lib/auth";
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || "";
 
@@ -28,6 +29,7 @@ async function embed(text: string): Promise<number[]> {
 
 export async function POST(req: NextRequest) {
   try {
+    const { orgId } = await requireOrgContext(req);
     const body = await req.json();
     const title = (body.title || "").toString().trim();
     const content = (body.content || "").toString().trim();
@@ -46,7 +48,7 @@ export async function POST(req: NextRequest) {
         content,
         intent_id: intentId,
         specialist_id: specialistId,
-        org_id: defaultOrgId,
+        org_id: orgId,
         embedding,
       })
       .select()
@@ -56,6 +58,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ok: true, chunk: data });
   } catch (e: any) {
+    if (e instanceof HttpError) {
+      return NextResponse.json({ error: e.message }, { status: e.status });
+    }
     console.error("knowledge/add error", e);
     return NextResponse.json({ error: e?.message || "Failed to add knowledge" }, { status: 500 });
   }

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { IntentConfig } from "../../api/intents/types";
 import type { SpecialistConfig } from "../../api/specialists/data";
 import type { IntentSuggestion } from "../../api/intent-suggestions/types";
+import { apiFetch } from "../../lib/api-client";
 
 export default function IntentsPage() {
   const [intents, setIntents] = useState<IntentConfig[]>([]);
@@ -34,9 +35,9 @@ export default function IntentsPage() {
       try {
         setIsLoading(true);
         const [intentRes, specRes, suggestionsRes] = await Promise.all([
-          fetch("/api/intents"),
-          fetch("/api/specialists"),
-          fetch("/api/intent-suggestions"),
+          apiFetch("/api/intents"),
+          apiFetch("/api/specialists"),
+          apiFetch("/api/intent-suggestions"),
         ]);
         if (!intentRes.ok) throw new Error("Failed to load intents");
         if (!specRes.ok) throw new Error("Failed to load specialists");
@@ -80,9 +81,8 @@ export default function IntentsPage() {
     try {
       setIsSaving(true);
       setError(null);
-      const res = await fetch("/api/intents", {
+      const res = await apiFetch("/api/intents", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, description, specialistId }),
       });
       if (!res.ok) throw new Error("Failed to create intent");
@@ -108,9 +108,8 @@ export default function IntentsPage() {
     try {
       setIsSaving(true);
       setError(null);
-      const res = await fetch("/api/intents", {
+      const res = await apiFetch("/api/intents", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(draft),
       });
       if (!res.ok) throw new Error("Failed to create intent");
@@ -129,9 +128,8 @@ export default function IntentsPage() {
     try {
       setIsSaving(true);
       setError(null);
-      const res = await fetch(`/api/intents/${selectedIntent.id}`, {
+      const res = await apiFetch(`/api/intents/${selectedIntent.id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(selectedIntent),
       });
       if (!res.ok) throw new Error("Failed to save intent");
@@ -155,7 +153,7 @@ export default function IntentsPage() {
     try {
       setIsSaving(true);
       setError(null);
-      const res = await fetch(`/api/intents/${selectedIntent.id}`, {
+      const res = await apiFetch(`/api/intents/${selectedIntent.id}`, {
         method: "DELETE",
       });
       if (!res.ok) throw new Error("Failed to delete intent");
@@ -179,9 +177,8 @@ export default function IntentsPage() {
     try {
       setIsSaving(true);
       setError(null);
-      const res = await fetch("/api/intents", {
+      const res = await apiFetch("/api/intents", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name,
           description,
@@ -193,7 +190,7 @@ export default function IntentsPage() {
       setIntents((prev) => [...prev, created]);
       setSelectedIntentId(created.id);
       // remove suggestion
-      await fetch(`/api/intent-suggestions/${s.id}`, { method: "DELETE" });
+      await apiFetch(`/api/intent-suggestions/${s.id}`, { method: "DELETE" });
       setSuggestions((prev) => prev.filter((x) => x.id !== s.id));
     } catch (e: any) {
       setError(e.message ?? "Unexpected error while creating from suggestion");
@@ -204,7 +201,7 @@ export default function IntentsPage() {
 
   async function handleDismissSuggestion(id: string) {
     try {
-      await fetch(`/api/intent-suggestions/${id}`, { method: "DELETE" });
+      await apiFetch(`/api/intent-suggestions/${id}`, { method: "DELETE" });
       setSuggestions((prev) => prev.filter((x) => x.id !== id));
     } catch (e) {
       console.error("Failed to dismiss suggestion", e);
@@ -218,9 +215,8 @@ export default function IntentsPage() {
       setError(null);
       setTestResult(null);
 
-      const res = await fetch("/api/intents/classify", {
+      const res = await apiFetch("/api/intents/classify", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: testMessage }),
       });
       const data = await res.json();

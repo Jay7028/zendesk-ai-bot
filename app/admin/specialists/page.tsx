@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { apiFetch } from "../../lib/api-client";
 
 type Specialist = {
   id: string;
@@ -64,7 +65,7 @@ export default function SpecialistsPage() {
     try {
       setIsLoading(true);
       setError(null);
-      const res = await fetch("/api/specialists");
+      const res = await apiFetch("/api/specialists");
       if (!res.ok) throw new Error("Failed to load specialists");
       const data: Specialist[] = await res.json();
       setSpecialists(data);
@@ -80,7 +81,7 @@ export default function SpecialistsPage() {
     try {
       setKnowledgeLoading(true);
       setKnowledgeError(null);
-      const res = await fetch(`/api/knowledge?specialistId=${encodeURIComponent(specialistId)}`);
+      const res = await apiFetch(`/api/knowledge?specialistId=${encodeURIComponent(specialistId)}`);
       if (!res.ok) throw new Error("Failed to load knowledge");
       const data: KnowledgeChunk[] = await res.json();
       setKnowledge(data);
@@ -108,9 +109,8 @@ export default function SpecialistsPage() {
     try {
       setIsSaving(true);
       setError(null);
-      const res = await fetch("/api/specialists", {
+      const res = await apiFetch("/api/specialists", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(draft),
       });
       if (!res.ok) throw new Error("Failed to save specialist");
@@ -133,9 +133,8 @@ export default function SpecialistsPage() {
     try {
       setIsSaving(true);
       setError(null);
-      const res = await fetch("/api/specialists", {
+      const res = await apiFetch("/api/specialists", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: "New Specialist",
           description: "",
@@ -168,7 +167,7 @@ export default function SpecialistsPage() {
     try {
       setIsSaving(true);
       setError(null);
-      const res = await fetch(`/api/specialists?id=${encodeURIComponent(selectedSpecialist.id)}`, {
+      const res = await apiFetch(`/api/specialists?id=${encodeURIComponent(selectedSpecialist.id)}`, {
         method: "DELETE",
       });
       if (!res.ok) throw new Error("Failed to delete specialist");
@@ -193,9 +192,8 @@ export default function SpecialistsPage() {
     try {
       setKnowledgeLoading(true);
       setKnowledgeError(null);
-      const res = await fetch("/api/knowledge/add", {
+      const res = await apiFetch("/api/knowledge/add", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: newKbTitle,
           content: newKbContent,
@@ -221,9 +219,8 @@ export default function SpecialistsPage() {
     try {
       setKnowledgeLoading(true);
       setKnowledgeError(null);
-      const res = await fetch(`/api/knowledge?id=${encodeURIComponent(chunk.id)}`, {
+      const res = await apiFetch(`/api/knowledge?id=${encodeURIComponent(chunk.id)}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: updates.title,
           content: updates.content,
@@ -247,7 +244,7 @@ export default function SpecialistsPage() {
     try {
       setKnowledgeLoading(true);
       setKnowledgeError(null);
-      const res = await fetch(`/api/knowledge?id=${encodeURIComponent(id)}`, {
+      const res = await apiFetch(`/api/knowledge?id=${encodeURIComponent(id)}`, {
         method: "DELETE",
       });
       if (!res.ok) throw new Error("Failed to delete knowledge");

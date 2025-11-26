@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { defaultOrgId, supabaseAdmin } from "../../../../lib/supabase";
+import { supabaseAdmin } from "../../../../lib/supabase";
+import { HttpError, requireOrgContext } from "../../../../lib/auth";
 
 type IntentRow = {
   id: string;
@@ -21,10 +22,11 @@ export async function POST(request: Request) {
       );
     }
 
+    const { orgId } = await requireOrgContext(request);
     const { data: intentRows, error } = await supabaseAdmin
       .from("intents")
       .select("*")
-      .eq("org_id", defaultOrgId);
+      .eq("org_id", orgId);
     if (error) {
       console.error("Supabase load intents error", error);
       return NextResponse.json(
@@ -103,6 +105,9 @@ export async function POST(request: Request) {
       raw: classifyJson.choices?.[0]?.message?.content ?? null,
     });
   } catch (err: any) {
+    if (err instanceof HttpError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
     console.error("Error in /api/intents/classify:", err);
     return NextResponse.json(
       { error: "Internal server error", details: String(err) },

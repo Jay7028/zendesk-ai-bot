@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { defaultOrgId, supabaseAdmin } from "../../../lib/supabase";
+import { supabaseAdmin } from "../../../lib/supabase";
+import { HttpError, requireOrgContext } from "../../../lib/auth";
 
 type DbLog = {
   id: string;
@@ -54,51 +55,67 @@ function camelToDb(body: LogPayload) {
     knowledge_sources: body.knowledgeSources ?? [],
     output_summary: body.outputSummary,
     status: body.status,
-    org_id: defaultOrgId,
   };
 }
 
-export async function GET() {
-  const { data, error } = await supabaseAdmin
-    .from("logs")
-    .select("*")
-    .eq("org_id", defaultOrgId)
-    .order("created_at", { ascending: false });
+export async function GET(req: Request) {
+  try {
+    const { orgId } = await requireOrgContext(req);
+    const { data, error } = await supabaseAdmin
+      .from("logs")
+      .select("*")
+      .eq("org_id", orgId)
+      .order("created_at", { ascending: false });
 
-  if (error) {
-    console.error("Supabase GET /logs error", error);
-    return NextResponse.json(
-      { error: "Failed to load logs" },
-      { status: 500 }
-    );
+    if (error) {
+      console.error("Supabase GET /logs error", error);
+      return NextResponse.json(
+        { error: "Failed to load logs" },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json((data ?? []).map(dbToCamel));
+  } catch (err: any) {
+    if (err instanceof HttpError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
-
-  return NextResponse.json((data ?? []).map(dbToCamel));
 }
 
 export async function POST(request: Request) {
-  const body = (await request.json()) as LogPayload;
-  const record = camelToDb(body);
+  try {
+    const { orgId } = await requireOrgContext(request);
+    const body = (await request.json()) as LogPayload;
+    const record = { ...camelToDb(body), org_id: orgId };
 
-  const { data, error } = await supabaseAdmin
-    .from("logs")
-    .insert(record)
-    .select()
-    .single();
+    const { data, error } = await supabaseAdmin
+      .from("logs")
+      .insert(record)
+      .select()
+      .single();
 
-  if (error || !data) {
-    console.error("Supabase POST /logs error", error);
-    return NextResponse.json(
-      { error: "Failed to create log", details: error?.message },
-      { status: 500 }
-    );
+    if (error || !data) {
+      console.error("Supabase POST /logs error", error);
+      return NextResponse.json(
+        { error: "Failed to create log", details: error?.message },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json(dbToCamel(data), { status: 201 });
+  } catch (err: any) {
+    if (err instanceof HttpError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
-
-  return NextResponse.json(dbToCamel(data), { status: 201 });
 }
 
 export async function DELETE(request: Request) {
   try {
+    const { orgId } = await requireOrgContext(request);
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
     if (!id) {
@@ -109,7 +126,7 @@ export async function DELETE(request: Request) {
       .from("logs")
       .delete()
       .eq("id", id)
-      .eq("org_id", defaultOrgId);
+      .eq("org_id", orgId);
     if (error) {
       console.error("Supabase DELETE /logs error", error);
       return NextResponse.json(

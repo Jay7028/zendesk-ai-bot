@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { apiFetch } from "../../lib/api-client";
 
 type LogStatus = "success" | "fallback" | "escalated";
 
@@ -42,8 +43,8 @@ export default function LogsPage() {
       try {
         setIsLoading(true);
         const [logRes, eventRes] = await Promise.all([
-          fetch("/api/logs"),
-          fetch("/api/ticket-events"),
+          apiFetch("/api/logs"),
+          apiFetch("/api/ticket-events"),
         ]);
         if (!logRes.ok) throw new Error("Failed to load logs");
         if (!eventRes.ok) throw new Error("Failed to load ticket events");

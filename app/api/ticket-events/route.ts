@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { defaultOrgId, supabaseAdmin } from "../../../lib/supabase";
+import { supabaseAdmin } from "../../../lib/supabase";
 import type { TicketEvent } from "./types";
+import { HttpError, requireOrgContext } from "../../../lib/auth";
 
 type DbEvent = {
   id: string;
@@ -22,51 +23,67 @@ function dbToCamel(row: DbEvent): TicketEvent {
   };
 }
 
-export async function GET() {
-  const { data, error } = await supabaseAdmin
-    .from("ticket_events")
-    .select("*")
-    .order("created_at", { ascending: false })
-    .eq("org_id", defaultOrgId);
+export async function GET(req: Request) {
+  try {
+    const { orgId } = await requireOrgContext(req);
+    const { data, error } = await supabaseAdmin
+      .from("ticket_events")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .eq("org_id", orgId);
 
-  if (error) {
-    console.error("Supabase GET /ticket-events error", error);
-    return NextResponse.json(
-      { error: "Failed to load ticket events" },
-      { status: 500 }
-    );
+    if (error) {
+      console.error("Supabase GET /ticket-events error", error);
+      return NextResponse.json(
+        { error: "Failed to load ticket events" },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json((data ?? []).map(dbToCamel));
+  } catch (err: any) {
+    if (err instanceof HttpError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
-
-  return NextResponse.json((data ?? []).map(dbToCamel));
 }
 
 export async function POST(request: Request) {
-  const body = (await request.json()) as {
-    ticketId: string;
-    eventType: string;
-    summary: string;
-    detail?: string;
-  };
+  try {
+    const { orgId } = await requireOrgContext(request);
+    const body = (await request.json()) as {
+      ticketId: string;
+      eventType: string;
+      summary: string;
+      detail?: string;
+    };
 
-  const { data, error } = await supabaseAdmin
-    .from("ticket_events")
-    .insert({
-      ticket_id: body.ticketId,
-      event_type: body.eventType,
-      summary: body.summary,
-      detail: body.detail ?? "",
-      org_id: defaultOrgId,
-    })
-    .select()
-    .single();
+    const { data, error } = await supabaseAdmin
+      .from("ticket_events")
+      .insert({
+        ticket_id: body.ticketId,
+        event_type: body.eventType,
+        summary: body.summary,
+        detail: body.detail ?? "",
+        org_id: orgId,
+      })
+      .select()
+      .single();
 
-  if (error || !data) {
-    console.error("Supabase POST /ticket-events error", error);
-    return NextResponse.json(
-      { error: "Failed to create ticket event", details: error?.message },
-      { status: 500 }
-    );
+    if (error || !data) {
+      console.error("Supabase POST /ticket-events error", error);
+      return NextResponse.json(
+        { error: "Failed to create ticket event", details: error?.message },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json(dbToCamel(data), { status: 201 });
+  } catch (err: any) {
+    if (err instanceof HttpError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
-
-  return NextResponse.json(dbToCamel(data), { status: 201 });
 }

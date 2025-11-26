@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { defaultOrgId, supabaseAdmin } from "../../../../lib/supabase";
+import { supabaseAdmin } from "../../../../lib/supabase";
+import { requireOrgContext, HttpError } from "../../../../lib/auth";
 
 const SEEDS = [
   {
@@ -76,6 +77,7 @@ export async function POST(req: NextRequest) {
     );
   }
   try {
+    const { orgId } = await requireOrgContext(req);
     const rows = [];
     for (const seed of SEEDS) {
       const embedding = await embed(seed.content);
@@ -84,7 +86,7 @@ export async function POST(req: NextRequest) {
         content: seed.content,
         intent_id: null,
         specialist_id: null,
-        org_id: defaultOrgId,
+        org_id: orgId,
         embedding,
       });
     }
@@ -94,6 +96,9 @@ export async function POST(req: NextRequest) {
     }
     return NextResponse.json({ inserted: rows.length });
   } catch (e: any) {
+    if (e instanceof HttpError) {
+      return NextResponse.json({ error: e.message }, { status: e.status });
+    }
     return NextResponse.json({ error: e?.message || "Seed failed" }, { status: 500 });
   }
 }

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { DataField } from "../../api/data-extraction/types";
+import { apiFetch } from "../../lib/api-client";
 
 export default function DataExtractionPage() {
   const [fields, setFields] = useState<DataField[]>([]);
@@ -14,7 +15,7 @@ export default function DataExtractionPage() {
     async function loadFields() {
       try {
         setIsLoading(true);
-        const res = await fetch("/api/data-extraction");
+        const res = await apiFetch("/api/data-extraction");
         if (!res.ok) throw new Error("Failed to load fields");
         const data: DataField[] = await res.json();
         setFields(data);
@@ -48,9 +49,8 @@ export default function DataExtractionPage() {
     try {
       setIsSaving(true);
       setError(null);
-      const res = await fetch("/api/data-extraction", {
+      const res = await apiFetch("/api/data-extraction", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(draft),
       });
       if (!res.ok) throw new Error("Failed to create field");
@@ -69,9 +69,8 @@ export default function DataExtractionPage() {
     try {
       setIsSaving(true);
       setError(null);
-      const res = await fetch(`/api/data-extraction/${selected.id}`, {
+      const res = await apiFetch(`/api/data-extraction/${selected.id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(selected),
       });
       if (!res.ok) throw new Error("Failed to save field");
@@ -95,7 +94,7 @@ export default function DataExtractionPage() {
     try {
       setIsSaving(true);
       setError(null);
-      const res = await fetch(`/api/data-extraction/${selected.id}`, {
+      const res = await apiFetch(`/api/data-extraction/${selected.id}`, {
         method: "DELETE",
       });
       if (!res.ok) throw new Error("Failed to delete field");

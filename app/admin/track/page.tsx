@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { apiFetch } from "../../lib/api-client";
 
 type TrackResponse = {
   info?: unknown;
@@ -44,9 +45,8 @@ export default function AdminTrackPage() {
     }
     setLoading(true);
     try {
-      const res = await fetch("/api/track", {
+      const res = await apiFetch("/api/track", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           tracking_number: id,
           destinationCountry: destinationCountry || undefined,

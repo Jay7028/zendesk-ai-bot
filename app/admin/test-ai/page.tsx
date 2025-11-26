@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { apiFetch } from "../../lib/api-client";
 
 type ConversationMessage = { role: "user" | "assistant"; content: string };
 
@@ -72,9 +73,8 @@ export default function TestAiPage() {
     setMessages(nextMessages);
     setIsLoading(true);
     try {
-      const res = await fetch("/api/test-ai", {
+      const res = await apiFetch("/api/test-ai", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           messages: nextMessages,
           ticketId: ticketId || undefined,
