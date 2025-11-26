@@ -391,21 +391,8 @@ export default function OrgPage() {
                   }}
                 />
               </div>
-              <div>
-                <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 4 }}>Slug</div>
-                <input
-                  value={orgSlug}
-                  onChange={(e) => setOrgSlug(slugify(e.target.value))}
-                  placeholder="acme or foot-asylum"
-                  style={{
-                    width: "100%",
-                    padding: "10px 12px",
-                    borderRadius: 10,
-                    border: "1px solid #e5e7eb",
-                    fontSize: 14,
-                  }}
-                />
-              </div>
+              {/* Slug is kept in sync with name; no need to expose it */}
+              <input type="hidden" value={orgSlug} readOnly />
               <button
                 onClick={handleCreateOrg}
                 disabled={loading}
