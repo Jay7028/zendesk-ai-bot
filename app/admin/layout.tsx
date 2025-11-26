@@ -80,7 +80,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       }
     }
     if (hasSession) loadOrgs();
-  }, [hasSession, currentOrgId]);
+  }, [hasSession, pathname]);
 
   // Selection now happens in Org & Members; no dropdown here.
 

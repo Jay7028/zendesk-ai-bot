@@ -52,7 +52,6 @@ export async function POST(req: NextRequest) {
       .maybeSingle();
     if (error) throw error;
     if (!membership) throw new HttpError(403, "Not a member of that org");
-    if (membership.role !== "owner") throw new HttpError(403, "Only owners can switch orgs");
 
     const res = NextResponse.json({ ok: true });
     res.headers.append(
