@@ -205,7 +205,10 @@ async function getZendeskCredentials(orgId: string) {
     .eq("enabled", true)
     .maybeSingle();
   if (error) throw error;
-  if (!data) return null;
+  if (!data) {
+    console.error("Zendesk integration not found for org", orgId);
+    return null;
+  }
 
   let subdomain = normalizeSubdomain(data.base_url || "");
   let email = data.description || "";
@@ -225,13 +228,16 @@ async function getZendeskCredentials(orgId: string) {
     email = creds.email || email;
     token = creds.token || token;
   }
-  return subdomain && email && token
-    ? {
-        subdomain,
-        email,
-        token,
-      }
-    : null;
+  const ready = subdomain && email && token;
+  if (!ready) {
+    console.error("Zendesk creds incomplete", { orgId, subdomain, emailPresent: !!email, tokenPresent: !!token });
+    return null;
+  }
+  return {
+    subdomain,
+    email,
+    token,
+  };
 }
 
 async function resolveOrgForZendeskWebhook(subdomainHint?: string | null) {
@@ -289,9 +295,11 @@ export async function POST(req: NextRequest) {
         hasEmail: !!zendeskCreds?.email,
         hasToken: !!zendeskCreds?.token,
         subdomainHint,
+        ticketId,
       });
       return NextResponse.json({ error: "Zendesk not configured for this org" }, { status: 500 });
     }
+    console.log("Zendesk webhook resolved org", { orgId, ticketId, subdomain: zendeskCreds.subdomain });
 
     const [{ data: intentRows, error: intentsError }, { data: specRows, error: specsError }] =
       await Promise.all([
