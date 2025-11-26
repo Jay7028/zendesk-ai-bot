@@ -344,6 +344,12 @@ export async function POST(req: NextRequest) {
         { status: 500 }
       );
     }
+    console.log("Zendesk webhook loaded config", {
+      orgId,
+      ticketId,
+      intents: intents.length,
+      specialists: specialists.length,
+    });
 
     const intentListForPrompt = intents
       .map((i) => `- ${i.id}: ${i.name} — ${i.description}`)
@@ -493,6 +499,13 @@ export async function POST(req: NextRequest) {
       summary: `Intent: ${matchedIntent?.name ?? "unknown"}`,
       detail: `Confidence: ${confidence.toFixed(2)} • Specialist: ${matchedSpecialist?.name ?? "none"}`,
       orgId,
+    });
+    console.log("Zendesk classify result", {
+      orgId,
+      ticketId,
+      intentId: matchedIntent?.id,
+      specialistId: matchedSpecialist?.id,
+      confidence,
     });
 
     // Escalation rules: if triggered, handover and skip bot reply
@@ -668,6 +681,12 @@ export async function POST(req: NextRequest) {
         status: "fallback",
         orgId,
       });
+      console.log("Zendesk webhook fallback (handover)", {
+        orgId,
+        ticketId,
+        reason: confidence < CONFIDENCE_THRESHOLD ? "low_confidence" : "no_specialist",
+        confidence,
+      });
 
       return NextResponse.json({
         status: "handover",
@@ -742,6 +761,12 @@ export async function POST(req: NextRequest) {
     const aiReply: string =
       openaiData.choices?.[0]?.message?.content?.trim() ||
       "Sorry, I could not generate a reply.";
+    console.log("Zendesk webhook generated reply", {
+      orgId,
+      ticketId,
+      intentId: matchedIntent?.id,
+      specialistId: matchedSpecialist.id,
+    });
 
     // 2) Post reply back to Zendesk as a public comment
     const authString = Buffer.from(
@@ -822,6 +847,12 @@ export async function POST(req: NextRequest) {
       summary: "Public reply posted to Zendesk",
       detail: aiReply.slice(0, 240),
       orgId,
+    });
+    console.log("Zendesk webhook completed", {
+      orgId,
+      ticketId,
+      intentId: matchedIntent?.id,
+      specialistId: matchedSpecialist.id,
     });
 
     return NextResponse.json({
