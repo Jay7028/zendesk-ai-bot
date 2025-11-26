@@ -53,7 +53,6 @@ export default function SpecialistsPage() {
   useEffect(() => {
     if (!selectedId) return;
     const found = specialists.find((s) => s.id === selectedId) ?? null;
-    setDraft(found ? { ...found } : null);
     setForm(found ? { ...found } : null);
     loadKnowledge(selectedId);
   }, [selectedId]);
@@ -107,7 +106,7 @@ export default function SpecialistsPage() {
   };
 
   const handleSave = async () => {
-    if (!draft) return;
+    if (!form) return;
     try {
       setIsSaving(true);
       setError(null);
@@ -123,7 +122,6 @@ export default function SpecialistsPage() {
         return [saved, ...prev];
       });
       setSelectedId(saved.id);
-      setDraft(saved);
       setForm(saved);
     } catch (e: any) {
       setError(e.message ?? "Unexpected error");
@@ -155,7 +153,6 @@ export default function SpecialistsPage() {
       const created: Specialist = await res.json();
       setSpecialists((prev) => [created, ...prev]);
       setSelectedId(created.id);
-      setDraft(created);
       setForm(created);
     } catch (e: any) {
       setError(e.message ?? "Unexpected error");
@@ -235,6 +232,11 @@ export default function SpecialistsPage() {
       const json = await res.json();
       setKnowledge((prev) => prev.map((k) => (k.id === chunk.id ? json.chunk : k)));
       setEditingKbId(null);
+      setKbEdits((prev) => {
+        const copy = { ...prev };
+        delete copy[chunk.id];
+        return copy;
+      });
     } catch (e: any) {
       setKnowledgeError(e.message ?? "Unexpected error");
     } finally {
@@ -451,11 +453,11 @@ export default function SpecialistsPage() {
               {error}
             </div>
           )}
-          {!selectedSpecialist && !isLoading ? (
+          {!form && !isLoading ? (
             <div style={{ color: "#6b7280" }}>Select or create a specialist to begin.</div>
           ) : null}
 
-              {form && (
+          {form && (
                 <>
               <div
                 style={{
