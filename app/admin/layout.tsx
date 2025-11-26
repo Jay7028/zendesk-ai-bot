@@ -83,15 +83,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }, [hasSession, pathname]);
 
   // Redirect to slugged URL if available
-  useEffect(() => {
-    if (!currentOrgSlug) return;
-    if (!pathname?.startsWith("/admin")) return;
-    const first = pathname.split("/")[1];
-    if (first === currentOrgSlug) return;
-    const nextPath = `/${currentOrgSlug}${pathname}`;
-    router.replace(nextPath);
-  }, [pathname, router, currentOrgSlug]);
-
   if (checking || hasSession === null) {
     return (
       <div
