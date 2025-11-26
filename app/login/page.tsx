@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabaseBrowser } from "../../lib/supabase-browser";
+import { getCookie } from "../../lib/org-path";
 
 function LoginForm() {
   const router = useRouter();
@@ -10,11 +11,26 @@ function LoginForm() {
   const nextPath = useMemo(() => searchParams.get("next") || "/admin", [searchParams]);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [orgName, setOrgName] = useState("");
   const [mode, setMode] = useState<"signIn" | "signUp">("signIn");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [sessionUser, setSessionUser] = useState<string | null>(null);
+
+  const slugify = (input: string) =>
+    input
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 60);
+
+  const pathSlug = useMemo(() => {
+    if (typeof window === "undefined") return null;
+    const segs = window.location.pathname.split("/").filter(Boolean);
+    return segs[0] || null;
+  }, []);
 
   useEffect(() => {
     supabaseBrowser.auth.getSession().then(({ data }) => {
@@ -37,11 +53,19 @@ function LoginForm() {
     };
   }, [nextPath, router]);
 
+  useEffect(() => {
+    const cookieSlug = getCookie("org_slug");
+    const initial = pathSlug || cookieSlug || "";
+    if (initial) setOrgName(initial);
+  }, [pathSlug]);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setMessage(null);
     setLoading(true);
+    const computedSlug = slugify(orgName || pathSlug || "");
+    const targetPath = computedSlug ? `/${computedSlug}/admin` : nextPath;
     try {
       if (!email || !password) {
         setError("Email and password are required");
@@ -62,7 +86,7 @@ function LoginForm() {
         });
         if (signInError) throw signInError;
         setMessage("Signed in");
-        router.replace(nextPath);
+        router.replace(targetPath);
       }
     } catch (e: any) {
       setError(e.message || "Auth failed");
@@ -105,11 +129,11 @@ function LoginForm() {
           border: "1px solid #e5e7eb",
           borderRadius: 16,
           boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
-          padding: 24,
-        }}
-      >
-        <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 6 }}>Sign in</h1>
-        <p style={{ color: "#6b7280", marginBottom: 16 }}>
+        padding: 24,
+      }}
+    >
+      <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 6 }}>Sign in</h1>
+      <p style={{ color: "#6b7280", marginBottom: 16 }}>
           Use your email/password to manage the admin tools.
         </p>
 
@@ -145,6 +169,21 @@ function LoginForm() {
         </div>
 
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div>
+            <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 4 }}>Organisation name</div>
+            <input
+              value={orgName}
+              onChange={(e) => setOrgName(e.target.value)}
+              placeholder="Your brand (used for the URL)"
+              style={{
+                width: "100%",
+                padding: "10px 12px",
+                borderRadius: 10,
+                border: "1px solid #e5e7eb",
+                fontSize: 14,
+              }}
+            />
+          </div>
           <div>
             <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 4 }}>Email</div>
             <input
