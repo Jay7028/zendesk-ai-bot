@@ -68,6 +68,9 @@ export default function OrgPage() {
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<"owner" | "admin" | "agent" | "viewer">("agent");
   const [inviteMessage, setInviteMessage] = useState<string | null>(null);
+  const [orgName, setOrgName] = useState("");
+  const [orgSlug, setOrgSlug] = useState("");
+  const [orgMessage, setOrgMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -124,6 +127,32 @@ export default function OrgPage() {
       await loadData();
     } catch (e: any) {
       setError(e.message || "Failed to create invite");
+    }
+  }
+
+  async function handleCreateOrg() {
+    if (!orgName.trim()) {
+      setOrgMessage("Name is required");
+      return;
+    }
+    setOrgMessage(null);
+    setError(null);
+    try {
+      const res = await apiFetch("/api/orgs/create", {
+        method: "POST",
+        body: JSON.stringify({ name: orgName, slug: orgSlug }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data?.error || "Failed to create org");
+        return;
+      }
+      setOrgMessage("Organization created and selected.");
+      setOrgName("");
+      setOrgSlug("");
+      await loadData();
+    } catch (e: any) {
+      setError(e.message || "Failed to create org");
     }
   }
 
@@ -226,8 +255,64 @@ export default function OrgPage() {
             {inviteMessage}
           </div>
         )}
+        {orgMessage && (
+          <div style={{ color: "#166534", background: "#dcfce7", padding: 12, borderRadius: 10 }}>
+            {orgMessage}
+          </div>
+        )}
 
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+          <Card title="Create organization">
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <div>
+                <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 4 }}>Name</div>
+                <input
+                  value={orgName}
+                  onChange={(e) => setOrgName(e.target.value)}
+                  placeholder="New Brand"
+                  style={{
+                    width: "100%",
+                    padding: "10px 12px",
+                    borderRadius: 10,
+                    border: "1px solid #e5e7eb",
+                    fontSize: 14,
+                  }}
+                />
+              </div>
+              <div>
+                <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 4 }}>Slug (optional)</div>
+                <input
+                  value={orgSlug}
+                  onChange={(e) => setOrgSlug(e.target.value)}
+                  placeholder="new-brand"
+                  style={{
+                    width: "100%",
+                    padding: "10px 12px",
+                    borderRadius: 10,
+                    border: "1px solid #e5e7eb",
+                    fontSize: 14,
+                  }}
+                />
+              </div>
+              <button
+                onClick={handleCreateOrg}
+                disabled={loading}
+                style={{
+                  padding: "10px 12px",
+                  borderRadius: 10,
+                  border: "1px solid #c7d2fe",
+                  background: "#eef2ff",
+                  color: "#1d4ed8",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  alignSelf: "flex-start",
+                }}
+              >
+                {loading ? "Working..." : "Create org"}
+              </button>
+            </div>
+          </Card>
+
           <Card title="Invite user">
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               <div>
