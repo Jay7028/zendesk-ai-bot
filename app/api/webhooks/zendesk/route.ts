@@ -35,7 +35,7 @@ async function tagHandover(
     `${zendeskEmail}/token:${zendeskToken}`
   ).toString("base64");
 
-    const zendeskUrl = `https://${zendeskCreds.subdomain}.zendesk.com/api/v2/tickets/${ticketId}.json`;
+  const zendeskUrl = `https://${zendeskSubdomain}.zendesk.com/api/v2/tickets/${ticketId}.json`;
 
   const handoverRes = await fetch(zendeskUrl, {
     method: "PUT",
