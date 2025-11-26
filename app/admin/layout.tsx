@@ -8,6 +8,15 @@ import { withOrgPrefix } from "../../lib/org-path";
 
 type OrgOption = { orgId: string; name: string; role: string };
 
+function slugify(input: string) {
+  return input
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60);
+}
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -53,12 +62,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       try {
         const res = await apiFetch("/api/orgs");
         if (!res.ok) return;
-      const data = (await res.json()) as OrgOption[];
-      setOrgs(data);
-      if (!currentOrgId && data[0]) {
-        setCurrentOrgId(data[0].orgId);
-        setCurrentOrgSlug((data[0] as any).slug || null);
-      }
+        const data = (await res.json()) as OrgOption[];
+        setOrgs(data);
+        if (!currentOrgId && data[0]) {
+          const slug = (data[0] as any).slug || slugify(data[0].name || "org");
+          setCurrentOrgId(data[0].orgId);
+          setCurrentOrgSlug(slug);
+        }
       } catch {
         // ignore
       }
@@ -69,17 +79,28 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   async function handleOrgChange(orgId: string) {
     const org = orgs.find((o) => o.orgId === orgId);
     setCurrentOrgId(orgId);
-    setCurrentOrgSlug((org as any)?.slug || null);
+    const slug = (org as any)?.slug || slugify(org?.name || "");
+    setCurrentOrgSlug(slug || null);
     try {
       await apiFetch("/api/orgs", {
         method: "POST",
-        body: JSON.stringify({ orgId, orgSlug: (org as any)?.slug || null }),
+        body: JSON.stringify({ orgId, orgSlug: slug || null }),
       });
       router.refresh();
     } catch {
       // ignore for now
     }
   }
+
+  // Redirect to slugged URL if available
+  useEffect(() => {
+    if (!currentOrgSlug) return;
+    if (!pathname?.startsWith("/admin")) return;
+    const first = pathname.split("/")[1];
+    if (first === currentOrgSlug) return;
+    const nextPath = `/${currentOrgSlug}${pathname}`;
+    router.replace(nextPath);
+  }, [pathname, router, currentOrgSlug]);
 
   if (checking || hasSession === null) {
     return (
