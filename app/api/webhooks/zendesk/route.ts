@@ -249,9 +249,8 @@ async function resolveOrgForZendeskWebhook(subdomainHint?: string | null) {
     const matched = rows.find((r) => normalizeSubdomain(r.base_url || "") === normalized);
     if (matched) return matched.org_id as string;
   }
-  // Fallback to single integration
-  if (rows.length === 1) return rows[0].org_id as string;
-  throw new HttpError(400, "Multiple Zendesk integrations; subdomain required to route webhook");
+  // Fallback to first integration if subdomain not provided/matched
+  return rows[0].org_id as string;
 }
 
 export async function POST(req: NextRequest) {
@@ -283,7 +282,14 @@ export async function POST(req: NextRequest) {
     const zendeskCreds = await getZendeskCredentials(orgId);
 
     if (!openaiKey || !zendeskCreds?.subdomain || !zendeskCreds.email || !zendeskCreds.token) {
-      console.error("Missing Zendesk/OpenAI creds for org", orgId);
+      console.error("Missing Zendesk/OpenAI creds", {
+        orgId,
+        hasOpenAI: !!openaiKey,
+        hasSubdomain: !!zendeskCreds?.subdomain,
+        hasEmail: !!zendeskCreds?.email,
+        hasToken: !!zendeskCreds?.token,
+        subdomainHint,
+      });
       return NextResponse.json({ error: "Zendesk not configured for this org" }, { status: 500 });
     }
 
