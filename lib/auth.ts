@@ -25,6 +25,16 @@ function getCookie(req: Request, name: string) {
   return null;
 }
 
+export async function requireUser(req: Request) {
+  const token = getAuthToken(req);
+  if (!token) throw new HttpError(401, "Unauthorized");
+  const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(token);
+  if (userError || !userData?.user) {
+    throw new HttpError(401, "Invalid or expired token");
+  }
+  return userData.user;
+}
+
 export async function requireOrgContext(req: Request) {
   const token = getAuthToken(req);
   if (!token) throw new HttpError(401, "Unauthorized");
