@@ -245,6 +245,7 @@ async function getZendeskCredentials(orgId: string) {
     subdomain,
     email,
     token,
+    tokenLast4: token.slice(-4),
   };
 }
 
@@ -381,7 +382,7 @@ export async function POST(req: NextRequest) {
         ticketId,
         eventType: "zendesk_auth_ok",
         summary: "Zendesk auth ok",
-        detail: `status=${authCheck.status}`,
+        detail: `status=${authCheck.status} email=${zendeskCreds.email} token_last4=${zendeskCreds.tokenLast4}`,
         orgId,
       });
     }
@@ -898,7 +899,7 @@ export async function POST(req: NextRequest) {
       ticketId,
       eventType: "zendesk_request",
       summary: "Attempting Zendesk reply",
-      detail: `PUT ${zendeskCreds.subdomain}.zendesk.com ticket ${ticketId}`,
+      detail: `PUT ${zendeskCreds.subdomain}.zendesk.com ticket ${ticketId} email=${zendeskCreds.email} token_last4=${zendeskCreds.tokenLast4}`,
       orgId,
     });
 
@@ -926,7 +927,7 @@ export async function POST(req: NextRequest) {
         ticketId,
         eventType: "error",
         summary: "Zendesk API error (reply)",
-        detail: text.slice(0, 400),
+        detail: `status=${zendeskRes.status} body=${text.slice(0, 400)} email=${zendeskCreds.email} token_last4=${zendeskCreds.tokenLast4}`,
         orgId,
       });
       await logRun({
