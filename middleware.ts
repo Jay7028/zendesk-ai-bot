@@ -16,6 +16,17 @@ export function middleware(req: NextRequest) {
   }
 
   const segments = pathname.split("/").filter(Boolean);
+
+  // If user hits /admin/... without a slug but has org_slug cookie, redirect them to their org-scoped URL
+  if (segments[0] === "admin" && segments.length >= 1) {
+    const cookieSlug = req.cookies.get("org_slug")?.value;
+    if (cookieSlug) {
+      const url = req.nextUrl.clone();
+      url.pathname = `/${cookieSlug}${pathname}`;
+      return NextResponse.redirect(url);
+    }
+  }
+
   if (segments.length < 2) {
     return NextResponse.next();
   }
