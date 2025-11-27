@@ -138,7 +138,7 @@ export async function POST(request: Request) {
     }
 
     await logAdminEvent(orgId, `Updated specialist "${data.name}"`, `id: ${data.id}`);
-    return NextResponse.json(dbToCamel(data), { status: 200 });
+    return NextResponse.json(dbToCamel(data, hasPublicReplyColumn), { status: 200 });
   } else {
     delete (dbRecord as any).id; // let Supabase generate
     const { data, error } = await supabaseAdmin
@@ -156,7 +156,7 @@ export async function POST(request: Request) {
     }
 
     await logAdminEvent(orgId, `Created specialist "${data.name}"`, `id: ${data.id}`);
-    return NextResponse.json(dbToCamel(data), { status: 201 });
+    return NextResponse.json(dbToCamel(data, hasPublicReplyColumn), { status: 201 });
   }
 }
 
