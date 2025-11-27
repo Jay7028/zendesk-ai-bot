@@ -1,12 +1,31 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import { supabaseBrowser } from "../../lib/supabase-browser";
+
+const NAV_ITEMS = [
+  { id: "home", label: "Home", href: "/" },
+  { id: "specialists", label: "AI Specialists", href: "/admin/specialists" },
+  { id: "intents", label: "Intents", href: "/admin/intents" },
+  { id: "data-extraction", label: "Data Extraction", href: "/admin/data-extraction" },
+  { id: "integrations", label: "Integrations", href: "/admin/integrations" },
+  { id: "logs", label: "Logs", href: "/admin/logs" },
+  { id: "test-ai", label: "Test AI", href: "/admin/test-ai" },
+  { id: "track", label: "Track", href: "/admin/track" },
+];
+
 export default function HomeContent() {
+  const router = useRouter();
+
   return (
-    <main
+    <div
       style={{
         minHeight: "100vh",
         display: "flex",
         fontFamily: "Inter, system-ui, -apple-system, 'Segoe UI', sans-serif",
         background: "#f5f7fb",
         color: "#111827",
+        position: "relative",
       }}
     >
       <aside
@@ -21,18 +40,9 @@ export default function HomeContent() {
         }}
       >
         <div style={{ fontSize: "12px", color: "#6b7280", marginBottom: 8, fontWeight: 600 }}>
-          Navigation
+          Workspace
         </div>
-        {[
-          { id: "home", label: "Home", href: "/", active: true },
-          { id: "specialists", label: "AI Specialists", href: "/admin/specialists" },
-          { id: "intents", label: "Intents", href: "/admin/intents" },
-          { id: "data-extraction", label: "Data Extraction", href: "/admin/data-extraction" },
-          { id: "integrations", label: "Integrations", href: "/admin/integrations" },
-          { id: "logs", label: "Logs", href: "/admin/logs" },
-          { id: "test-ai", label: "Test AI", href: "/admin/test-ai" },
-          { id: "track", label: "Track", href: "/admin/track" },
-        ].map((item) => (
+        {NAV_ITEMS.map((item) => (
           <a key={item.id} href={item.href} style={{ textDecoration: "none" }}>
             <div
               style={{
@@ -40,10 +50,10 @@ export default function HomeContent() {
                 borderRadius: "10px",
                 cursor: "pointer",
                 fontSize: "13px",
-                background: item.active ? "#eef2ff" : "transparent",
-                color: item.active ? "#1f2937" : "#6b7280",
-                fontWeight: item.active ? 600 : 500,
-                border: item.active ? "1px solid #c7d2fe" : "1px solid transparent",
+                background: item.id === "home" ? "#eef2ff" : "transparent",
+                color: item.id === "home" ? "#1f2937" : "#6b7280",
+                fontWeight: item.id === "home" ? 600 : 500,
+                border: item.id === "home" ? "1px solid #c7d2fe" : "1px solid transparent",
               }}
             >
               {item.label}
@@ -66,11 +76,48 @@ export default function HomeContent() {
             paddingBottom: 8,
             borderBottom: "1px solid #e5e7eb",
             marginBottom: 8,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
           }}
         >
-          <div style={{ fontSize: 26, fontWeight: 700 }}>Welcome</div>
-          <div style={{ color: "#6b7280", marginTop: 4 }}>
-            Quick links and setup notes for your AI workspace.
+          <div>
+            <div style={{ fontSize: 26, fontWeight: 700 }}>Welcome</div>
+            <div style={{ color: "#6b7280", marginTop: 4 }}>
+              Quick links and setup notes for your AI workspace.
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <a
+              href="/admin/orgs"
+              style={{
+                fontSize: 12,
+                padding: "6px 10px",
+                borderRadius: 8,
+                border: "1px solid #c7d2fe",
+                background: "#eef2ff",
+                color: "#1d4ed8",
+                textDecoration: "none",
+                fontWeight: 600,
+              }}
+            >
+              Org & Members
+            </a>
+            <a
+              href="/admin/orgs/settings"
+              style={{
+                fontSize: 12,
+                padding: "6px 10px",
+                borderRadius: 8,
+                border: "1px solid #e5e7eb",
+                background: "#ffffff",
+                color: "#111827",
+                textDecoration: "none",
+                fontWeight: 600,
+              }}
+            >
+              Org Settings
+            </a>
           </div>
         </header>
 
@@ -100,10 +147,32 @@ export default function HomeContent() {
             <li>Track parcels under Track and review recent activity in Logs.</li>
           </ul>
           <p style={{ marginBottom: 0, color: "#6b7280" }}>
-            This page will evolve into a setup checklist and quick-start guide.
+            This page is a setup hub—check back as we expand onboarding guidance.
           </p>
         </div>
       </div>
-    </main>
+
+      <button
+        onClick={async () => {
+          await supabaseBrowser.auth.signOut();
+          router.replace("/login");
+        }}
+        style={{
+          position: "fixed",
+          right: 16,
+          bottom: 16,
+          padding: "10px 12px",
+          borderRadius: 10,
+          border: "1px solid #e5e7eb",
+          background: "#ffffff",
+          color: "#111827",
+          boxShadow: "0 4px 12px rgba(0,0,0,0.06)",
+          cursor: "pointer",
+          fontSize: 13,
+        }}
+      >
+        Sign out
+      </button>
+    </div>
   );
 }
