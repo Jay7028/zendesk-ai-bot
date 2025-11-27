@@ -1,0 +1,109 @@
+export default function HomeContent() {
+  return (
+    <main
+      style={{
+        minHeight: "100vh",
+        display: "flex",
+        fontFamily: "Inter, system-ui, -apple-system, 'Segoe UI', sans-serif",
+        background: "#f5f7fb",
+        color: "#111827",
+      }}
+    >
+      <aside
+        style={{
+          width: "220px",
+          borderRight: "1px solid #e5e7eb",
+          padding: "16px 12px",
+          display: "flex",
+          flexDirection: "column",
+          gap: 8,
+          background: "#f9fafb",
+        }}
+      >
+        <div style={{ fontSize: "12px", color: "#6b7280", marginBottom: 8, fontWeight: 600 }}>
+          Navigation
+        </div>
+        {[
+          { id: "home", label: "Home", href: "/", active: true },
+          { id: "specialists", label: "AI Specialists", href: "/admin/specialists" },
+          { id: "intents", label: "Intents", href: "/admin/intents" },
+          { id: "data-extraction", label: "Data Extraction", href: "/admin/data-extraction" },
+          { id: "integrations", label: "Integrations", href: "/admin/integrations" },
+          { id: "logs", label: "Logs", href: "/admin/logs" },
+          { id: "test-ai", label: "Test AI", href: "/admin/test-ai" },
+          { id: "track", label: "Track", href: "/admin/track" },
+        ].map((item) => (
+          <a key={item.id} href={item.href} style={{ textDecoration: "none" }}>
+            <div
+              style={{
+                padding: "10px 12px",
+                borderRadius: "10px",
+                cursor: "pointer",
+                fontSize: "13px",
+                background: item.active ? "#eef2ff" : "transparent",
+                color: item.active ? "#1f2937" : "#6b7280",
+                fontWeight: item.active ? 600 : 500,
+                border: item.active ? "1px solid #c7d2fe" : "1px solid transparent",
+              }}
+            >
+              {item.label}
+            </div>
+          </a>
+        ))}
+      </aside>
+
+      <div
+        style={{
+          flex: 1,
+          padding: "24px 20px",
+          display: "flex",
+          flexDirection: "column",
+          gap: 16,
+        }}
+      >
+        <header
+          style={{
+            paddingBottom: 8,
+            borderBottom: "1px solid #e5e7eb",
+            marginBottom: 8,
+          }}
+        >
+          <div style={{ fontSize: 26, fontWeight: 700 }}>Welcome</div>
+          <div style={{ color: "#6b7280", marginTop: 4 }}>
+            Quick links and setup notes for your AI workspace.
+          </div>
+        </header>
+
+        <div
+          style={{
+            border: "1px solid #e5e7eb",
+            borderRadius: "12px",
+            padding: "16px",
+            background: "#ffffff",
+            boxShadow: "0 1px 4px rgba(15,23,42,0.06)",
+            maxWidth: 900,
+            lineHeight: 1.6,
+            fontSize: 14,
+          }}
+        >
+          <p style={{ marginBottom: 12 }}>
+            Use the navigation on the left to configure AI specialists, intents, data extraction, integrations,
+            and to review logs, run tests, or track parcels.
+          </p>
+          <p style={{ marginBottom: 12, color: "#374151" }}>
+            Next steps:
+          </p>
+          <ul style={{ margin: "0 0 12px 18px", color: "#4b5563" }}>
+            <li>Confirm environment keys (Parcelsapp, OpenAI, Supabase).</li>
+            <li>Build out AI Specialists with knowledge and escalation notes.</li>
+            <li>Map intents to specialists; test flows under Test AI.</li>
+            <li>Track parcels under Track and review recent activity in Logs.</li>
+          </ul>
+          <p style={{ marginBottom: 0, color: "#6b7280" }}>
+            This page will evolve into a setup checklist and quick-start guide.
+          </p>
+        </div>
+      </div>
+    </main>
+  );
+}
