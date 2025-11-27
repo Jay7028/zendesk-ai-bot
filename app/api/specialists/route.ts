@@ -16,6 +16,7 @@ function dbToCamel(row: any): SpecialistConfig {
     knowledgeBaseNotes: row.knowledge_base_notes ?? "",
     escalationRules: row.escalation_rules ?? "",
     personalityNotes: row.personality_notes ?? "",
+    publicReply: row.public_reply ?? true,
   };
 }
 
@@ -32,6 +33,7 @@ function camelToDb(body: Partial<SpecialistConfig>) {
     knowledge_base_notes: body.knowledgeBaseNotes ?? "",
     escalation_rules: body.escalationRules ?? "",
     personality_notes: body.personalityNotes ?? "",
+    public_reply: body.publicReply ?? true,
   };
 }
 

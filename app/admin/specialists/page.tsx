@@ -16,6 +16,7 @@ type Specialist = {
   knowledgeBaseNotes?: string;
   escalationRules: string;
   personalityNotes: string;
+  publicReply?: boolean;
 };
 
 type KnowledgeChunk = {
@@ -948,29 +949,37 @@ export default function SpecialistsPage() {
                 <TabButton keyName="personality" label="Personality" />
               </div>
 
-              {tab === "info" && (
-                <Card title="Basics">
-                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                    <div>
-                      <FieldLabel label="Name" />
-                      <InlineInput
-                        value={form.name}
-                        onCommit={(val) => handleFieldChange({ name: val })}
-                        placeholder="Specialist name"
-                      />
-                    </div>
-                    <div>
-                      <FieldLabel label="Description" />
-                      <InlineTextarea
-                        value={form.description}
-                        onCommit={(val) => handleFieldChange({ description: val })}
-                        placeholder="What this specialist does"
-                        rows={4}
-                      />
-                    </div>
-                  </div>
-                </Card>
-              )}
+          {tab === "info" && (
+            <Card title="Basics">
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <div>
+                  <FieldLabel label="Name" />
+                  <InlineInput
+                    value={form.name}
+                    onCommit={(val) => handleFieldChange({ name: val })}
+                    placeholder="Specialist name"
+                  />
+                </div>
+                <div>
+                  <FieldLabel label="Description" />
+                  <InlineTextarea
+                    value={form.description}
+                    onCommit={(val) => handleFieldChange({ description: val })}
+                    placeholder="What this specialist does"
+                    rows={4}
+                  />
+                </div>
+                <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <input
+                    type="checkbox"
+                    checked={form.publicReply ?? true}
+                    onChange={(e) => handleFieldChange({ publicReply: e.target.checked })}
+                  />
+                  Post replies as public comments (uncheck to send as internal note only)
+                </label>
+              </div>
+            </Card>
+          )}
 
               {tab === "data" && (
                 <Card title="Extracted Entities">

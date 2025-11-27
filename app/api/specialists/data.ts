@@ -14,6 +14,7 @@ export interface SpecialistConfig {
   knowledgeBaseNotes: string;
   escalationRules: string;
   personalityNotes: string;
+  publicReply?: boolean;
 }
 
 // pretend database
@@ -34,6 +35,7 @@ let specialists: SpecialistConfig[] = [
       "Escalate if refund value > £250, repeated disputes on same customer, or fraud suspected.",
     personalityNotes:
       "Empathetic, concise, clear about what can and cannot be done.",
+    publicReply: true,
   },
   {
     id: "order-tracker",
@@ -51,6 +53,7 @@ let specialists: SpecialistConfig[] = [
       "Escalate if parcel shows delivered but customer claims non-receipt.",
     personalityNotes:
       "Practical, reassuring, focuses on next steps and timeframes.",
+    publicReply: true,
   },
 ];
 

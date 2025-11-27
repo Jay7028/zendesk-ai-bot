@@ -18,6 +18,7 @@ type SpecialistRow = {
   knowledge_base_notes: string;
   escalation_rules: string;
   personality_notes: string;
+  public_reply?: boolean;
 };
 
 type IntentRow = {
@@ -956,11 +957,12 @@ export async function POST(req: NextRequest) {
       orgId,
     });
 
+    const replyPublic = matchedSpecialist?.public_reply ?? true;
     const replyPayload = {
       ticket: {
         comment: {
           body: aiReply,
-          public: true,
+          public: replyPublic,
         },
         ...(firstIntentTag ? { tags: [firstIntentTag] } : {}),
       },
