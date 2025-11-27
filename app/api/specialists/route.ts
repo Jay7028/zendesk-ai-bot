@@ -3,7 +3,24 @@ import { supabaseAdmin } from "../../../lib/supabase";
 import { requireOrgContext } from "../../../lib/auth";
 import type { SpecialistConfig } from "./data";
 
-function dbToCamel(row: any): SpecialistConfig {
+let hasPublicReplyColumnCache: boolean | null = null;
+
+async function ensurePublicReplyColumn() {
+  if (hasPublicReplyColumnCache !== null) return hasPublicReplyColumnCache;
+  try {
+    await supabaseAdmin.from("specialists").select("public_reply").limit(1).maybeSingle();
+    hasPublicReplyColumnCache = true;
+  } catch (err: any) {
+    if (err?.code === "42703") {
+      hasPublicReplyColumnCache = false;
+    } else {
+      throw err;
+    }
+  }
+  return hasPublicReplyColumnCache;
+}
+
+function dbToCamel(row: any, hasPublicReplyColumn: boolean): SpecialistConfig {
   return {
     id: row.id,
     name: row.name,
@@ -16,12 +33,12 @@ function dbToCamel(row: any): SpecialistConfig {
     knowledgeBaseNotes: row.knowledge_base_notes ?? "",
     escalationRules: row.escalation_rules ?? "",
     personalityNotes: row.personality_notes ?? "",
-    publicReply: row.public_reply ?? true,
+    publicReply: hasPublicReplyColumn ? (row.public_reply ?? true) : true,
   };
 }
 
-function camelToDb(body: Partial<SpecialistConfig>) {
-  return {
+function camelToDb(body: Partial<SpecialistConfig>, hasPublicReplyColumn: boolean) {
+  const record: any = {
     id: body.id,
     name: body.name,
     description: body.description,
@@ -33,8 +50,11 @@ function camelToDb(body: Partial<SpecialistConfig>) {
     knowledge_base_notes: body.knowledgeBaseNotes ?? "",
     escalation_rules: body.escalationRules ?? "",
     personality_notes: body.personalityNotes ?? "",
-    public_reply: body.publicReply ?? true,
   };
+  if (hasPublicReplyColumn && typeof body.publicReply === "boolean") {
+    record.public_reply = body.publicReply;
+  }
+  return record;
 }
 
 async function logAdminEvent(orgId: string, summary: string, detail?: string) {
@@ -53,6 +73,7 @@ async function logAdminEvent(orgId: string, summary: string, detail?: string) {
 
 export async function GET(request: Request) {
   const { orgId } = await requireOrgContext(request);
+  const hasPublicReplyColumn = await ensurePublicReplyColumn();
   const { data, error } = await supabaseAdmin
     .from("specialists")
     .select("*")
@@ -66,26 +87,35 @@ export async function GET(request: Request) {
     );
   }
 
-  return NextResponse.json((data ?? []).map(dbToCamel));
+  return NextResponse.json(
+    (data ?? []).map((row) => dbToCamel(row, hasPublicReplyColumn))
+  );
 }
 
 export async function POST(request: Request) {
   const { orgId } = await requireOrgContext(request);
   const body = (await request.json()) as Partial<SpecialistConfig>;
+  const hasPublicReplyColumn = await ensurePublicReplyColumn();
+  const payload: Partial<SpecialistConfig> = {
+    name: body.name ?? "New Specialist",
+    description: body.description ?? "",
+    active: body.active ?? false,
+    docsCount: body.docsCount ?? 0,
+    rulesCount: body.rulesCount ?? 0,
+    dataExtractionPrompt: body.dataExtractionPrompt ?? "",
+    requiredFields: body.requiredFields ?? [],
+    knowledgeBaseNotes: body.knowledgeBaseNotes ?? "",
+    escalationRules: body.escalationRules ?? "",
+    personalityNotes: body.personalityNotes ?? "",
+    publicReply:
+      typeof body.publicReply === "boolean"
+        ? body.publicReply
+        : body.id
+        ? undefined
+        : true,
+  };
   const dbRecord = {
-    ...camelToDb({
-      // supply safe defaults for NOT NULL columns
-      name: body.name ?? "New Specialist",
-      description: body.description ?? "",
-      active: body.active ?? false,
-      docsCount: body.docsCount ?? 0,
-      rulesCount: body.rulesCount ?? 0,
-      dataExtractionPrompt: body.dataExtractionPrompt ?? "",
-      requiredFields: body.requiredFields ?? [],
-      knowledgeBaseNotes: body.knowledgeBaseNotes ?? "",
-      escalationRules: body.escalationRules ?? "",
-      personalityNotes: body.personalityNotes ?? "",
-    }),
+    ...camelToDb(payload, hasPublicReplyColumn),
     org_id: orgId,
   };
 
