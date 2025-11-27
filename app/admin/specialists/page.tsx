@@ -93,6 +93,92 @@ function InlineTextarea({
   );
 }
 
+function KnowledgeEditor({
+  chunk,
+  onCancel,
+  onSave,
+}: {
+  chunk: KnowledgeChunk;
+  onCancel: () => void;
+  onSave: (payload: { title: string; content: string }) => void;
+}) {
+  const [title, setTitle] = useState(chunk.title);
+  const [content, setContent] = useState(chunk.content);
+  useEffect(() => {
+    setTitle(chunk.title);
+    setContent(chunk.content);
+  }, [chunk.id, chunk.title, chunk.content]);
+
+  return (
+    <div
+      style={{
+        border: "1px solid #e5e7eb",
+        borderRadius: 12,
+        padding: 12,
+        background: "#f9fafb",
+        display: "flex",
+        flexDirection: "column",
+        gap: 8,
+      }}
+    >
+      <input
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        style={{
+          width: "100%",
+          padding: "10px 12px",
+          borderRadius: 10,
+          border: "1px solid #e5e7eb",
+          fontSize: 14,
+        }}
+      />
+      <textarea
+        value={content}
+        onChange={(e) => setContent(e.target.value)}
+        rows={3}
+        style={{
+          width: "100%",
+          padding: "10px 12px",
+          borderRadius: 10,
+          border: "1px solid #e5e7eb",
+          fontSize: 14,
+          fontFamily: "inherit",
+        }}
+      />
+      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+        <button
+          type="button"
+          onClick={onCancel}
+          style={{
+            padding: "8px 10px",
+            borderRadius: 10,
+            border: "1px solid #e5e7eb",
+            background: "#fff",
+            cursor: "pointer",
+          }}
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          onClick={() => onSave({ title: title || "", content: content || "" })}
+          style={{
+            padding: "8px 10px",
+            borderRadius: 10,
+            border: "1px solid #22c55e",
+            background: "#dcfce7",
+            color: "#166534",
+            cursor: "pointer",
+            fontWeight: 700,
+          }}
+        >
+          Save
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function SpecialistsPage() {
   const [specialists, setSpecialists] = useState<Specialist[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -108,8 +194,6 @@ export default function SpecialistsPage() {
   const [newKbTitle, setNewKbTitle] = useState("");
   const [newKbContent, setNewKbContent] = useState("");
   const [editingKbId, setEditingKbId] = useState<string | null>(null);
-  const [editTitle, setEditTitle] = useState("");
-  const [editContent, setEditContent] = useState("");
 
   useEffect(() => {
     loadSpecialists();
@@ -296,8 +380,6 @@ export default function SpecialistsPage() {
       const json = await res.json();
       setKnowledge((prev) => prev.map((k) => (k.id === chunk.id ? json.chunk : k)));
       setEditingKbId(null);
-      setEditTitle("");
-      setEditContent("");
     } catch (e: any) {
       setKnowledgeError(e.message ?? "Unexpected error");
     } finally {
@@ -729,79 +811,12 @@ export default function SpecialistsPage() {
                       const isEditing = editingKbId === chunk.id;
 
                       return isEditing ? (
-                        <div
+                        <KnowledgeEditor
                           key={chunk.id}
-                          style={{
-                            border: "1px solid #e5e7eb",
-                            borderRadius: 12,
-                            padding: 12,
-                            background: "#f9fafb",
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: 8,
-                          }}
-                        >
-                          <input
-                            value={editTitle}
-                            onChange={(e) => setEditTitle(e.target.value)}
-                            style={{
-                              width: "100%",
-                              padding: "10px 12px",
-                              borderRadius: 10,
-                              border: "1px solid #e5e7eb",
-                              fontSize: 14,
-                            }}
-                          />
-                          <textarea
-                            value={editContent}
-                            onChange={(e) => setEditContent(e.target.value)}
-                            rows={3}
-                            style={{
-                              width: "100%",
-                              padding: "10px 12px",
-                              borderRadius: 10,
-                              border: "1px solid #e5e7eb",
-                              fontSize: 14,
-                              fontFamily: "inherit",
-                            }}
-                          />
-                          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setEditingKbId(null);
-                                setEditTitle("");
-                                setEditContent("");
-                              }}
-                              style={{
-                                padding: "8px 10px",
-                                borderRadius: 10,
-                                border: "1px solid #e5e7eb",
-                                background: "#fff",
-                                cursor: "pointer",
-                              }}
-                            >
-                              Cancel
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                handleUpdateKnowledge(chunk, { title: editTitle, content: editContent });
-                              }}
-                              style={{
-                                padding: "8px 10px",
-                                borderRadius: 10,
-                                border: "1px solid #22c55e",
-                                background: "#dcfce7",
-                                color: "#166534",
-                                cursor: "pointer",
-                                fontWeight: 700,
-                              }}
-                              >
-                                Save
-                              </button>
-                          </div>
-                        </div>
+                          chunk={chunk}
+                          onCancel={() => setEditingKbId(null)}
+                          onSave={(payload) => handleUpdateKnowledge(chunk, payload)}
+                        />
                       ) : (
                         <div
                           key={chunk.id}
@@ -821,8 +836,6 @@ export default function SpecialistsPage() {
                               <button
                                 type="button"
                                 onClick={() => {
-                                  setEditTitle(chunk.title);
-                                  setEditContent(chunk.content);
                                   setEditingKbId(chunk.id);
                                 }}
                                 style={{
