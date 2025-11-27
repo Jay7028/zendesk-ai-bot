@@ -4,13 +4,14 @@ import type { IntegrationConfig } from "./types";
 import { HttpError, requireOrgContext } from "../../../lib/auth";
 import { encryptJSON } from "../../../lib/credentials";
 
-function dbToCamel(row: any): IntegrationConfig {
+function dbToCamel(row: any, last4?: string): IntegrationConfig {
   return {
     id: row.id,
     name: row.name,
     type: row.type,
     description: row.description ?? "",
-    apiKey: row.api_key ?? "",
+    apiKey: "", // never return full secret
+    apiKeyLast4: last4 || (row.api_key ? String(row.api_key).slice(-4) : undefined),
     baseUrl: row.base_url ?? "",
     enabled: !!row.enabled,
   };
@@ -41,8 +42,20 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Failed to load integrations" }, { status: 500 });
     }
 
-    // Return raw values (including apiKey) so the UI can show what is stored
-    return NextResponse.json((data ?? []).map((row) => dbToCamel(row)));
+    const ids = (data ?? []).map((r) => r.id);
+    let last4Map: Record<string, string | undefined> = {};
+    if (ids.length) {
+      const { data: credRows } = await supabaseAdmin
+        .from("integration_credentials")
+        .select("integration_account_id,last4")
+        .in("integration_account_id", ids)
+        .eq("org_id", orgId);
+      (credRows || []).forEach((c) => {
+        if (c?.integration_account_id) last4Map[c.integration_account_id] = c.last4 || undefined;
+      });
+    }
+
+    return NextResponse.json((data ?? []).map((row) => dbToCamel(row, last4Map[row.id])));
   } catch (err: any) {
     if (err instanceof HttpError) {
       return NextResponse.json({ error: err.message }, { status: err.status });

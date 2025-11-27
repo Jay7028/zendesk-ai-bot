@@ -418,6 +418,11 @@ export default function IntegrationsPage() {
                         fontSize: "13px",
                       }}
                     />
+                    {selected.apiKeyLast4 && !selected.apiKey && (
+                      <div style={{ marginTop: 4, fontSize: 11, color: "#6b7280" }}>
+                        Stored token: ****{selected.apiKeyLast4} (leave blank to keep)
+                      </div>
+                    )}
                   </div>
                   <div>
                     <div style={{ fontSize: 13, marginBottom: 4, color: "#374151" }}>

@@ -4,13 +4,14 @@ import type { IntegrationConfig } from "../types";
 import { HttpError, requireOrgContext } from "../../../../lib/auth";
 import { encryptJSON } from "../../../../lib/credentials";
 
-function dbToCamel(row: any): IntegrationConfig {
+function dbToCamel(row: any, last4?: string): IntegrationConfig {
   return {
     id: row.id,
     name: row.name,
     type: row.type,
     description: row.description ?? "",
-    apiKey: row.api_key ?? "",
+    apiKey: "",
+    apiKeyLast4: last4 || (row.api_key ? String(row.api_key).slice(-4) : undefined),
     baseUrl: row.base_url ?? "",
     enabled: !!row.enabled,
   };
@@ -44,7 +45,15 @@ export async function GET(
     if (error || !data) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
-    return NextResponse.json(dbToCamel(data));
+    let last4: string | undefined;
+    const { data: credRow } = await supabaseAdmin
+      .from("integration_credentials")
+      .select("last4")
+      .eq("integration_account_id", id)
+      .eq("org_id", orgId)
+      .maybeSingle();
+    if (credRow?.last4) last4 = credRow.last4;
+    return NextResponse.json(dbToCamel(data, last4));
   } catch (err: any) {
     if (err instanceof HttpError) {
       return NextResponse.json({ error: err.message }, { status: err.status });
@@ -108,7 +117,16 @@ export async function PUT(
       }
     }
 
-    return NextResponse.json(dbToCamel(data));
+    let last4: string | undefined;
+    const { data: credRow } = await supabaseAdmin
+      .from("integration_credentials")
+      .select("last4")
+      .eq("integration_account_id", data.id)
+      .eq("org_id", orgId)
+      .maybeSingle();
+    if (credRow?.last4) last4 = credRow.last4;
+
+    return NextResponse.json(dbToCamel(data, last4));
   } catch (err: any) {
     if (err instanceof HttpError) {
       return NextResponse.json({ error: err.message }, { status: err.status });
