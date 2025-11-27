@@ -192,8 +192,6 @@ export default function SpecialistsPage() {
   const [knowledge, setKnowledge] = useState<KnowledgeChunk[]>([]);
   const [knowledgeLoading, setKnowledgeLoading] = useState(false);
   const [knowledgeError, setKnowledgeError] = useState<string | null>(null);
-  const [newKbTitle, setNewKbTitle] = useState("");
-  const [newKbContent, setNewKbContent] = useState("");
   const [editingKbId, setEditingKbId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -333,9 +331,9 @@ export default function SpecialistsPage() {
     }
   };
 
-  const handleAddKnowledge = async () => {
+  const handleAddKnowledge = async (payload: { title: string; content: string }) => {
     if (!selectedId) return;
-    if (!newKbTitle.trim() || !newKbContent.trim()) {
+    if (!payload.title.trim() || !payload.content.trim()) {
       setKnowledgeError("Title and content are required");
       return;
     }
@@ -345,16 +343,14 @@ export default function SpecialistsPage() {
       const res = await apiFetch("/api/knowledge/add", {
         method: "POST",
         body: JSON.stringify({
-          title: newKbTitle,
-          content: newKbContent,
+          title: payload.title,
+          content: payload.content,
           specialistId: selectedId,
         }),
       });
       if (!res.ok) throw new Error("Failed to add knowledge");
       const json = await res.json();
       setKnowledge((prev) => [json.chunk, ...prev]);
-      setNewKbTitle("");
-      setNewKbContent("");
     } catch (e: any) {
       setKnowledgeError(e.message ?? "Unexpected error");
     } finally {
@@ -409,6 +405,76 @@ export default function SpecialistsPage() {
   const FieldLabel = ({ label }: { label: string }) => (
     <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 6 }}>{label}</div>
   );
+
+  const NewKnowledgeEditor = memo(function NewKnowledgeEditor({
+    onCommit,
+    disabled,
+  }: {
+    onCommit: (payload: { title: string; content: string }) => void;
+    disabled: boolean;
+  }) {
+    const [title, setTitle] = useState("");
+    const [content, setContent] = useState("");
+
+    const handleAdd = () => {
+      if (!title.trim() || !content.trim()) return;
+      onCommit({ title: title.trim(), content: content.trim() });
+      setTitle("");
+      setContent("");
+    };
+
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 12 }}>
+        <FieldLabel label="Title" />
+        <input
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="e.g. Disputed delivery with signature"
+          style={{
+            width: "100%",
+            padding: "10px 12px",
+            borderRadius: 10,
+            border: "1px solid #e5e7eb",
+            fontSize: 14,
+          }}
+        />
+        <FieldLabel label="Content" />
+        <textarea
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+          rows={3}
+          placeholder="Key policy details, escalation steps, SLAs..."
+          style={{
+            width: "100%",
+            padding: "10px 12px",
+            borderRadius: 10,
+            border: "1px solid #e5e7eb",
+            fontSize: 14,
+            fontFamily: "inherit",
+          }}
+        />
+        <div style={{ display: "flex", justifyContent: "flex-end" }}>
+          <button
+            type="button"
+            onClick={handleAdd}
+            disabled={disabled}
+            style={{
+              padding: "10px 12px",
+              borderRadius: 10,
+              border: "1px solid #c7d2fe",
+              background: "#eef2ff",
+              color: "#1d4ed8",
+              fontWeight: 700,
+              cursor: disabled ? "not-allowed" : "pointer",
+              opacity: disabled ? 0.7 : 1,
+            }}
+          >
+            Add snippet
+          </button>
+        </div>
+      </div>
+    );
+  });
 
   const TabButton = ({ keyName, label }: { keyName: TabKey; label: string }) => {
     const active = tab === keyName;
@@ -752,51 +818,7 @@ export default function SpecialistsPage() {
                         gap: 8,
                       }}
                     >
-                      <FieldLabel label="Title" />
-                      <input
-                        value={newKbTitle}
-                        onChange={(e) => setNewKbTitle(e.target.value)}
-                        placeholder="e.g. Disputed delivery with signature"
-                        style={{
-                          width: "100%",
-                          padding: "10px 12px",
-                          borderRadius: 10,
-                          border: "1px solid #e5e7eb",
-                          fontSize: 14,
-                        }}
-                      />
-                      <FieldLabel label="Content" />
-                      <textarea
-                        value={newKbContent}
-                        onChange={(e) => setNewKbContent(e.target.value)}
-                        rows={3}
-                        placeholder="Guidance or policy snippet"
-                        style={{
-                          width: "100%",
-                          padding: "10px 12px",
-                          borderRadius: 10,
-                          border: "1px solid #e5e7eb",
-                          fontSize: 14,
-                          fontFamily: "inherit",
-                        }}
-                      />
-                      <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                        <button
-                          onClick={handleAddKnowledge}
-                          disabled={knowledgeLoading}
-                          style={{
-                            padding: "10px 12px",
-                            borderRadius: 10,
-                            border: "1px solid #c7d2fe",
-                            background: "#eef2ff",
-                            color: "#1d4ed8",
-                            fontWeight: 700,
-                            cursor: "pointer",
-                          }}
-                        >
-                          Add snippet
-                        </button>
-                      </div>
+                      <NewKnowledgeEditor onCommit={handleAddKnowledge} disabled={knowledgeLoading} />
                     </div>
 
                     {knowledgeLoading && knowledge.length === 0 && (
