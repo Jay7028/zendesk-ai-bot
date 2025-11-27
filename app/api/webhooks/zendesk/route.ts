@@ -28,6 +28,30 @@ type IntentRow = {
   specialist_id: string;
 };
 
+type ConversationEntry = {
+  customer?: string | null;
+  assistant?: string | null;
+};
+
+async function getConversationHistory(ticketId: string | number, orgId?: string | null) {
+  let query = supabaseAdmin
+    .from("logs")
+    .select("input_summary, output_summary")
+    .eq("zendesk_ticket_id", ticketId.toString())
+    .order("created_at", { ascending: true })
+    .limit(12);
+  if (orgId) {
+    query = query.eq("org_id", orgId);
+  }
+  const { data } = await query;
+  return (data ?? [])
+    .map((row: any) => ({
+      customer: (row.input_summary ?? "").toString().trim() || null,
+      assistant: (row.output_summary ?? "").toString().trim() || null,
+    }))
+    .filter((entry) => entry.customer || entry.assistant);
+}
+
 async function getTicketEventCount(ticketId: string | number) {
   const { count } = await supabaseAdmin
     .from("ticket_events")
@@ -644,6 +668,20 @@ export async function POST(req: NextRequest) {
     }
 
     // Knowledge retrieval (intent/specialist scoped)
+    const conversationHistoryEntries = await getConversationHistory(ticketId, orgId);
+    const conversationHistoryLines = conversationHistoryEntries
+      .map((entry) => {
+        const parts: string[] = [];
+        if (entry.customer) parts.push(`Customer: ${entry.customer}`);
+        if (entry.assistant) parts.push(`Assistant: ${entry.assistant}`);
+        return parts.join("\n");
+      })
+      .filter(Boolean);
+    const conversationHistoryText =
+      conversationHistoryLines.length > 0
+        ? conversationHistoryLines.join("\n\n")
+        : "No previous conversation available.";
+
     const knowledge = await buildKnowledgeContext({
       query: latestComment,
       intentId: matchedIntent?.id ?? undefined,
@@ -915,7 +953,7 @@ export async function POST(req: NextRequest) {
         role: "user",
         content: `Ticket ID: ${ticketId}\nCustomer email: ${requesterEmail}\nTracking context: ${
           trackingContextText || "none available"
-        }\n\nCustomer message:\n"""\n${latestComment}\n"""\n\nWrite a clear, polite email reply in a professional tone. If information is missing, ask for the needed details instead of guessing.`,
+        }\n\nConversation history:\n${conversationHistoryText}\n\nCustomer message:\n"""\n${latestComment}\n"""\n\nWrite a clear, polite email reply in a professional tone. If information is missing, ask for the needed details instead of guessing.`,
       },
     ];
 
