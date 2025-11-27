@@ -27,7 +27,7 @@ type KnowledgeChunk = {
   created_at?: string;
 };
 
-type TabKey = "info" | "data" | "knowledge" | "escalation" | "personality";
+type TabKey = "info" | "data" | "knowledge" | "rules" | "escalation" | "personality";
 
 function InlineInput({
   value,
@@ -735,6 +735,7 @@ export default function SpecialistsPage() {
                 <TabButton keyName="info" label="Info" />
                 <TabButton keyName="data" label="Data Extraction" />
                 <TabButton keyName="knowledge" label="Knowledge Base" />
+                <TabButton keyName="rules" label="Automation Rules" />
                 <TabButton keyName="escalation" label="Escalation Rules" />
                 <TabButton keyName="personality" label="Personality" />
               </div>
@@ -895,6 +896,26 @@ export default function SpecialistsPage() {
                         </div>
                       );
                     })}
+                  </div>
+                </Card>
+              )}
+
+              {tab === "rules" && (
+                <Card title="Automation rules">
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                    <div style={{ fontSize: 13, color: "#374151" }}>
+                      Define structured logic for this specialist (e.g., order status checks before allowing address changes).
+                      Store concise JSON here; backend can evaluate it to call external services and branch replies.
+                    </div>
+                    <InlineTextarea
+                      value={form.knowledgeBaseNotes || ""}
+                      onCommit={(val) => handleFieldChange({ knowledgeBaseNotes: val })}
+                      rows={10}
+                      placeholder='Example: {"requires_order_lookup":true,"address_change":{"if_fulfilled":"deny","if_not_fulfilled":"collect_fields","fields":["order_id","new_address_line1","city","postcode"]}}'
+                    />
+                    <div style={{ fontSize: 12, color: "#6b7280" }}>
+                      Tip: Start simple. When Shopify is connected, these rules can trigger fetches (order status) and decide the path.
+                    </div>
                   </div>
                 </Card>
               )}
