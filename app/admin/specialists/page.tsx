@@ -758,11 +758,11 @@ export default function SpecialistsPage() {
               specialists.map((spec) => {
                 const active = spec.id === selectedId;
                 return (
-                  <button
-                    key={spec.id}
-                    type="button"
-                    onClick={() => setSelectedId(spec.id)}
-                    style={{
+                <button
+                  key={spec.id}
+                  type="button"
+                  onClick={() => setSelectedId(spec.id)}
+                  style={{
                       width: "100%",
                       padding: "10px 12px",
                       borderRadius: 999,
@@ -777,13 +777,10 @@ export default function SpecialistsPage() {
                       fontWeight: active ? 700 : 500,
                     }}
                   >
-                    <span>{spec.name || "Untitled Specialist"}</span>
-                    <span style={{ fontSize: 12, color: "#6b7280" }}>
-                      {spec.docsCount} docs · {spec.rulesCount} rules
-                    </span>
-                  </button>
-                );
-              })}
+                  <span>{spec.name || "Untitled Specialist"}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
