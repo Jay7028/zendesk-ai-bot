@@ -66,7 +66,7 @@ async function tagHandover(
     },
     body: JSON.stringify({
       ticket: {
-        tags: ["bot-handover"],
+        add_tags: ["bot-handover"],
       },
     }),
   });
@@ -796,7 +796,7 @@ export async function POST(req: NextRequest) {
         },
         body: JSON.stringify({
           ticket: {
-            tags: fallbackTags,
+            add_tags: fallbackTags,
           },
         }),
       });
@@ -964,7 +964,7 @@ export async function POST(req: NextRequest) {
           body: aiReply,
           public: replyPublic,
         },
-        ...(firstIntentTag ? { tags: [firstIntentTag] } : {}),
+        ...(firstIntentTag ? { add_tags: [firstIntentTag] } : {}),
       },
     };
 
