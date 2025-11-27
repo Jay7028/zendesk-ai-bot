@@ -95,6 +95,15 @@ function extractTrackingCandidates(text: string): string[] {
   return matches ? Array.from(new Set(matches)) : [];
 }
 
+function sanitizeIntentTag(text: string) {
+  return text
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 50);
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { orgId } = await requireOrgContext(req);
@@ -105,6 +114,7 @@ export async function POST(req: NextRequest) {
       : body.message
       ? [{ role: "user", content: body.message }]
       : [];
+    const isFirstMessage = !body.previousIntentId && !body.previousSpecialistId;
     const previousIntentId: string | undefined = body.previousIntentId || undefined;
     const previousSpecialistId: string | undefined = body.previousSpecialistId || undefined;
 
@@ -223,6 +233,10 @@ export async function POST(req: NextRequest) {
     } else {
       actions.push("No specialist matched (unknown or low confidence)");
       actions.push("Would tag: bot-handover");
+    }
+    if (isFirstMessage && matchedIntent) {
+      const firstTag = `intent_${sanitizeIntentTag(matchedIntent.name || matchedIntent.id)}`;
+      actions.push(`Would tag: ${firstTag}`);
     }
 
     // Optional tracking enrichment
