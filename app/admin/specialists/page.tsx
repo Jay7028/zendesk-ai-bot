@@ -728,6 +728,75 @@ export default function SpecialistsPage() {
             padding: 12,
             display: "flex",
             flexDirection: "column",
+            gap: 8,
+          }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 700 }}>AI Specialists</div>
+              <div style={{ fontSize: 12, color: "#6b7280" }}>Choose a specialist</div>
+            </div>
+            <button
+              onClick={handleCreate}
+              disabled={isSaving}
+              style={{
+                padding: "8px 10px",
+                borderRadius: 10,
+                border: "1px solid #c7d2fe",
+                background: "#eef2ff",
+                color: "#1d4ed8",
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              + New
+            </button>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {isLoading && <div style={{ color: "#6b7280" }}>Loading specialists.</div>}
+            {!isLoading &&
+              specialists.map((spec) => {
+                const active = spec.id === selectedId;
+                return (
+                  <button
+                    key={spec.id}
+                    type="button"
+                    onClick={() => setSelectedId(spec.id)}
+                    style={{
+                      width: "100%",
+                      padding: "10px 12px",
+                      borderRadius: 999,
+                      border: active ? "1px solid #c7d2fe" : "1px solid transparent",
+                      background: active ? "#eef2ff" : "#ffffff",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      cursor: "pointer",
+                      boxShadow: active ? "0 1px 6px rgba(59,130,246,0.25)" : "0 1px 3px rgba(15,23,42,0.06)",
+                      color: "#111827",
+                      fontWeight: active ? 700 : 500,
+                    }}
+                  >
+                    <span>{spec.name || "Untitled Specialist"}</span>
+                    <span style={{ fontSize: 12, color: "#6b7280" }}>
+                      {spec.docsCount} docs · {spec.rulesCount} rules
+                    </span>
+                  </button>
+                );
+              })}
+          </div>
+        </div>
+
+        <div
+          style={{
+            width: 260,
+            border: "1px solid #e5e7eb",
+            borderRadius: 14,
+            background: "#fff",
+            boxShadow: "0 1px 6px rgba(15,23,42,0.06)",
+            padding: 12,
+            display: "none",
+            flexDirection: "column",
             gap: 10,
           }}
         >
