@@ -198,13 +198,17 @@ function normalizeSubdomain(input: string) {
   }
 }
 
-async function getZendeskCredentials(orgId: string) {
-  const { data, error } = await supabaseAdmin
+async function getZendeskCredentials(orgId: string, integrationId?: string | null) {
+  let query = supabaseAdmin
     .from("integrations")
     .select("*")
     .eq("org_id", orgId)
     .eq("type", "zendesk")
-    .eq("enabled", true)
+    .eq("enabled", true);
+  if (integrationId) {
+    query = query.eq("id", integrationId);
+  }
+  const { data, error } = await query
     .order("id", { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -279,19 +283,27 @@ async function resolveOrgForZendeskWebhook(subdomainHint?: string | null) {
 
   if (normalized) {
     const matched = rows.find((r) => normalizeSubdomain(r.base_url || "") === normalized);
-    if (matched) return matched.org_id as string;
+    if (matched) return { orgId: matched.org_id as string, integrationId: matched.id as string };
+    throw new HttpError(404, `No Zendesk integration for subdomain ${normalized}`);
   }
-  // Fallback to first integration if subdomain not provided/matched
-  return rows[0].org_id as string;
+
+  if (rows.length === 1) {
+    return { orgId: rows[0].org_id as string, integrationId: rows[0].id as string };
+  }
+
+  throw new HttpError(400, "Multiple Zendesk integrations configured; subdomain required");
 }
 
 export async function POST(req: NextRequest) {
   let orgId: string | null = null;
+  let integrationId: string | null = null;
   try {
     const body = await req.json();
     const subdomainHint = body?.brand_subdomain || body?.subdomain || null;
     try {
-      orgId = await resolveOrgForZendeskWebhook(subdomainHint);
+      const resolved = await resolveOrgForZendeskWebhook(subdomainHint);
+      orgId = resolved.orgId;
+      integrationId = resolved.integrationId;
     } catch (e) {
       console.error("Zendesk webhook could not resolve org", e);
       throw e;
@@ -323,7 +335,7 @@ export async function POST(req: NextRequest) {
       ticketId: ticketId ?? "unknown",
       eventType: "webhook_received",
       summary: "Zendesk webhook received",
-      detail: JSON.stringify({ subdomainHint, orgId }).slice(0, 400),
+      detail: JSON.stringify({ subdomainHint, orgId, integrationId }).slice(0, 400),
       orgId,
     });
 
@@ -335,7 +347,7 @@ export async function POST(req: NextRequest) {
     }
 
     const openaiKey = process.env.OPENAI_API_KEY;
-    const zendeskCreds = await getZendeskCredentials(orgId);
+    const zendeskCreds = await getZendeskCredentials(orgId, integrationId);
 
     if (!openaiKey || !zendeskCreds?.subdomain || !zendeskCreds.email || !zendeskCreds.token) {
       console.error("Missing Zendesk/OpenAI creds", {
@@ -361,7 +373,7 @@ export async function POST(req: NextRequest) {
       });
       return NextResponse.json({ error: "Zendesk not configured for this org" }, { status: 500 });
     }
-    console.log("Zendesk webhook resolved org", { orgId, ticketId, subdomain: zendeskCreds.subdomain });
+    console.log("Zendesk webhook resolved org", { orgId, integrationId, ticketId, subdomain: zendeskCreds.subdomain });
 
     // Auth sanity check to catch bad tokens early
     const authCheck = await testZendeskAuth(zendeskCreds.subdomain, zendeskCreds.email, zendeskCreds.token);
