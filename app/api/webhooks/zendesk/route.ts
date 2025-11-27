@@ -182,7 +182,12 @@ function extractTrackingCandidates(text: string): string[] {
   const matches = text.match(/\b[A-Z0-9]{10,35}\b/gi) || [];
   const cleaned = matches
     .map((m) => m.replace(/[^A-Z0-9]/gi, "").toUpperCase())
-    .filter((m) => m.length >= 10 && m.length <= 35);
+    .filter((m) => {
+      if (m.length < 10 || m.length > 35) return false;
+      // Require at least 3 digits to avoid matching generic words.
+      const digitCount = (m.match(/\d/g) || []).length;
+      return digitCount >= 3;
+    });
   return Array.from(new Set(cleaned));
 }
 
