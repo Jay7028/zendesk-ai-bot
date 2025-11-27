@@ -108,7 +108,8 @@ export default function SpecialistsPage() {
   const [newKbTitle, setNewKbTitle] = useState("");
   const [newKbContent, setNewKbContent] = useState("");
   const [editingKbId, setEditingKbId] = useState<string | null>(null);
-  const [kbEdits, setKbEdits] = useState<Record<string, { title: string; content: string }>>({});
+  const [editTitle, setEditTitle] = useState("");
+  const [editContent, setEditContent] = useState("");
 
   useEffect(() => {
     loadSpecialists();
@@ -295,11 +296,8 @@ export default function SpecialistsPage() {
       const json = await res.json();
       setKnowledge((prev) => prev.map((k) => (k.id === chunk.id ? json.chunk : k)));
       setEditingKbId(null);
-      setKbEdits((prev) => {
-        const copy = { ...prev };
-        delete copy[chunk.id];
-        return copy;
-      });
+      setEditTitle("");
+      setEditContent("");
     } catch (e: any) {
       setKnowledgeError(e.message ?? "Unexpected error");
     } finally {
@@ -729,7 +727,6 @@ export default function SpecialistsPage() {
 
                     {knowledge.map((chunk) => {
                       const isEditing = editingKbId === chunk.id;
-                      const edit = kbEdits[chunk.id] || { title: chunk.title, content: chunk.content };
 
                       return isEditing ? (
                         <div
@@ -745,10 +742,8 @@ export default function SpecialistsPage() {
                           }}
                         >
                           <input
-                            value={edit.title}
-                            onChange={(e) =>
-                              setKbEdits((prev) => ({ ...prev, [chunk.id]: { ...edit, title: e.target.value } }))
-                            }
+                            value={editTitle}
+                            onChange={(e) => setEditTitle(e.target.value)}
                             style={{
                               width: "100%",
                               padding: "10px 12px",
@@ -758,10 +753,8 @@ export default function SpecialistsPage() {
                             }}
                           />
                           <textarea
-                            value={edit.content}
-                            onChange={(e) =>
-                              setKbEdits((prev) => ({ ...prev, [chunk.id]: { ...edit, content: e.target.value } }))
-                            }
+                            value={editContent}
+                            onChange={(e) => setEditContent(e.target.value)}
                             rows={3}
                             style={{
                               width: "100%",
@@ -775,7 +768,11 @@ export default function SpecialistsPage() {
                           <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
                             <button
                               type="button"
-                              onClick={() => setEditingKbId(null)}
+                              onClick={() => {
+                                setEditingKbId(null);
+                                setEditTitle("");
+                                setEditContent("");
+                              }}
                               style={{
                                 padding: "8px 10px",
                                 borderRadius: 10,
@@ -788,9 +785,9 @@ export default function SpecialistsPage() {
                             </button>
                             <button
                               type="button"
-                              onClick={() =>
-                                handleUpdateKnowledge(chunk, { title: edit.title, content: edit.content })
-                              }
+                              onClick={() => {
+                                handleUpdateKnowledge(chunk, { title: editTitle, content: editContent });
+                              }}
                               style={{
                                 padding: "8px 10px",
                                 borderRadius: 10,
@@ -800,9 +797,9 @@ export default function SpecialistsPage() {
                                 cursor: "pointer",
                                 fontWeight: 700,
                               }}
-                            >
-                              Save
-                            </button>
+                              >
+                                Save
+                              </button>
                           </div>
                         </div>
                       ) : (
@@ -824,13 +821,8 @@ export default function SpecialistsPage() {
                               <button
                                 type="button"
                                 onClick={() => {
-                                  setKbEdits((prev) => ({
-                                    ...prev,
-                                    [chunk.id]: {
-                                      title: chunk.title,
-                                      content: chunk.content,
-                                    },
-                                  }));
+                                  setEditTitle(chunk.title);
+                                  setEditContent(chunk.content);
                                   setEditingKbId(chunk.id);
                                 }}
                                 style={{
