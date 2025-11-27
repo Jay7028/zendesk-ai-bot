@@ -774,6 +774,7 @@ export default function SpecialistsPage() {
                           />
                           <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
                             <button
+                              type="button"
                               onClick={() => setEditingKbId(null)}
                               style={{
                                 padding: "8px 10px",
@@ -786,6 +787,7 @@ export default function SpecialistsPage() {
                               Cancel
                             </button>
                             <button
+                              type="button"
                               onClick={() =>
                                 handleUpdateKnowledge(chunk, { title: edit.title, content: edit.content })
                               }
@@ -820,8 +822,15 @@ export default function SpecialistsPage() {
                             <div style={{ fontWeight: 700 }}>{chunk.title}</div>
                             <div style={{ display: "flex", gap: 8 }}>
                               <button
+                                type="button"
                                 onClick={() => {
-                                  setKbEdits((prev) => ({ ...prev, [chunk.id]: edit }));
+                                  setKbEdits((prev) => ({
+                                    ...prev,
+                                    [chunk.id]: {
+                                      title: chunk.title,
+                                      content: chunk.content,
+                                    },
+                                  }));
                                   setEditingKbId(chunk.id);
                                 }}
                                 style={{
@@ -836,6 +845,7 @@ export default function SpecialistsPage() {
                                 Edit
                               </button>
                               <button
+                                type="button"
                                 onClick={() => handleDeleteKnowledge(chunk.id)}
                                 style={{
                                   padding: "6px 8px",
