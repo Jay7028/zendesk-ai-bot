@@ -36,6 +36,25 @@ async function getTicketEventCount(ticketId: string | number) {
   return (count ?? 0) as number;
 }
 
+async function getLastLoggedIntent(ticketId: string | number, orgId?: string | null) {
+  let query = supabaseAdmin
+    .from("logs")
+    .select("intent_id, specialist_id")
+    .eq("zendesk_ticket_id", ticketId.toString())
+    .order("created_at", { ascending: false })
+    .limit(1);
+  if (orgId) {
+    query = query.eq("org_id", orgId);
+  }
+  const { data } = await query.maybeSingle();
+
+  if (!data || !data.intent_id) return null;
+  return {
+    intent_id: data.intent_id,
+    specialist_id: data.specialist_id,
+  };
+}
+
 function sanitizeIntentTagText(text: string) {
   return text
     .trim()
@@ -572,20 +591,35 @@ export async function POST(req: NextRequest) {
       })() as { intent_id?: string; confidence?: number };
 
     const intentId = parsedClassify.intent_id || intents[0]?.id;
-    const confidence =
+    let confidence =
       typeof parsedClassify.confidence === "number"
         ? parsedClassify.confidence
         : 0;
     const CONFIDENCE_THRESHOLD = 0.6;
 
-    const matchedIntent =
+    let matchedIntent =
       confidence >= CONFIDENCE_THRESHOLD
         ? intents.find((i) => i.id === intentId) ?? intents[0] ?? null
         : null;
-    const matchedSpecialist =
+    let matchedSpecialist =
       matchedIntent && confidence >= CONFIDENCE_THRESHOLD
         ? specialists.find((s) => s.id === matchedIntent.specialist_id) ?? null
         : null;
+
+    const previousIntent = await getLastLoggedIntent(ticketId, orgId);
+    if (!matchedIntent && previousIntent?.intent_id) {
+      const fallbackIntent = intents.find((i) => i.id === previousIntent.intent_id);
+      if (fallbackIntent) {
+        matchedIntent = fallbackIntent;
+        matchedSpecialist =
+          specialists.find((s) => s.id === fallbackIntent.specialist_id) ?? null;
+        confidence = Math.max(confidence, CONFIDENCE_THRESHOLD);
+        console.log("Reusing previous intent for ticket", {
+          ticketId,
+          intent: fallbackIntent.id,
+        });
+      }
+    }
     const firstIntentTag =
       isFirstInteraction && matchedIntent
         ? `intent_${sanitizeIntentTagText(matchedIntent.name || matchedIntent.id)}`
