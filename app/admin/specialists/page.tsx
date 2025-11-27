@@ -758,29 +758,32 @@ export default function SpecialistsPage() {
               specialists.map((spec) => {
                 const active = spec.id === selectedId;
                 return (
-                <button
-                  key={spec.id}
-                  type="button"
-                  onClick={() => setSelectedId(spec.id)}
-                  style={{
+                  <button
+                    key={spec.id}
+                    type="button"
+                    onClick={() => setSelectedId(spec.id)}
+                    style={{
                       width: "100%",
                       padding: "10px 12px",
                       borderRadius: 999,
-                      border: active ? "1px solid #c7d2fe" : "1px solid transparent",
-                      background: active ? "#eef2ff" : "#ffffff",
+                      border: "1px solid transparent",
+                      background: spec.active ? "#dcfce7" : "#fee2e2",
                       display: "flex",
                       justifyContent: "space-between",
                       alignItems: "center",
                       cursor: "pointer",
-                      boxShadow: active ? "0 1px 6px rgba(59,130,246,0.25)" : "0 1px 3px rgba(15,23,42,0.06)",
-                      color: "#111827",
-                      fontWeight: active ? 700 : 500,
+                      boxShadow:
+                        spec.id === selectedId
+                          ? "0 1px 6px rgba(59,130,246,0.25)"
+                          : "0 1px 3px rgba(15,23,42,0.06)",
+                      color: spec.active ? "#065f46" : "#991b1b",
+                      fontWeight: spec.id === selectedId ? 700 : 500,
                     }}
                   >
-                  <span>{spec.name || "Untitled Specialist"}</span>
-                </button>
-              );
-            })}
+                    <span>{spec.name || "Untitled Specialist"}</span>
+                  </button>
+                );
+              })}
           </div>
         </div>
 
