@@ -63,6 +63,68 @@ function parseFieldRules(escalationText: string) {
   return { text: lines.join("\n").trim(), rules };
 }
 
+const ZendeskFieldRuleBuilder = memo(function ZendeskFieldRuleBuilder({
+  onAdd,
+}: {
+  onAdd: (rule: ZendeskFieldRule) => void;
+}) {
+  const [kind, setKind] = useState<ZendeskFieldRule["kind"]>("tag");
+  const [condition, setCondition] = useState<ZendeskFieldRule["condition"]>("contains");
+  const [target, setTarget] = useState("");
+
+  const handleAdd = () => {
+    if (!target.trim()) return;
+    onAdd({ kind, condition, target: target.trim() });
+    setTarget("");
+  };
+
+  return (
+    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+      <select
+        value={kind}
+        onChange={(e) => setKind(e.target.value as ZendeskFieldRule["kind"])}
+        style={{ padding: "6px 8px", borderRadius: 8, border: "1px solid #d1d5db" }}
+      >
+        <option value="tag">Tag</option>
+        <option value="field">Field</option>
+      </select>
+      <select
+        value={condition}
+        onChange={(e) => setCondition(e.target.value as ZendeskFieldRule["condition"])}
+        style={{ padding: "6px 8px", borderRadius: 8, border: "1px solid #d1d5db" }}
+      >
+        <option value="contains">contains</option>
+        <option value="not_contains">does not contain</option>
+      </select>
+      <input
+        value={target}
+        onChange={(e) => setTarget(e.target.value)}
+        placeholder="Tag or field name"
+        style={{
+          flex: 1,
+          padding: "6px 8px",
+          borderRadius: 8,
+          border: "1px solid #d1d5db",
+        }}
+      />
+      <button
+        type="button"
+        onClick={handleAdd}
+        style={{
+          padding: "6px 12px",
+          borderRadius: 8,
+          border: "1px solid #22c55e",
+          background: "#dcfce7",
+          color: "#166534",
+          fontWeight: 600,
+        }}
+      >
+        Save rule
+      </button>
+    </div>
+  );
+});
+
 function InlineInput({
   value,
   onCommit,
@@ -228,9 +290,6 @@ export default function SpecialistsPage() {
   const [knowledgeError, setKnowledgeError] = useState<string | null>(null);
   const [editingKbId, setEditingKbId] = useState<string | null>(null);
   const [zendeskFieldRules, setZendeskFieldRules] = useState<ZendeskFieldRule[]>([]);
-  const [ruleKind, setRuleKind] = useState<ZendeskFieldRule["kind"]>("tag");
-  const [ruleCondition, setRuleCondition] = useState<ZendeskFieldRule["condition"]>("contains");
-  const [ruleTarget, setRuleTarget] = useState("");
 
   useEffect(() => {
     loadSpecialists();
@@ -324,15 +383,8 @@ export default function SpecialistsPage() {
     handleFieldChange({ escalationRules: `${trimmed}${separator}${template}`.trim() });
   };
 
-  const addFieldRule = () => {
-    if (!ruleTarget.trim()) return;
-    const newRule: ZendeskFieldRule = {
-      kind: ruleKind,
-      condition: ruleCondition,
-      target: ruleTarget.trim(),
-    };
-    applyZendeskFieldRules([...zendeskFieldRules, newRule]);
-    setRuleTarget("");
+  const handleAddFieldRule = (rule: ZendeskFieldRule) => {
+    applyZendeskFieldRules([...zendeskFieldRules, rule]);
   };
 
   const removeFieldRule = (index: number) => {
@@ -1017,51 +1069,7 @@ export default function SpecialistsPage() {
                       }}
                     >
                       <div style={{ fontSize: 12, fontWeight: 600 }}>Zendesk field rule builder</div>
-                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                      <select
-                        value={ruleKind}
-                        onChange={(e) => setRuleKind(e.target.value as ZendeskFieldRule["kind"])}
-                        style={{ padding: "6px 8px", borderRadius: 8, border: "1px solid #d1d5db" }}
-                      >
-                        <option value="tag">Tag</option>
-                        <option value="field">Field</option>
-                      </select>
-                      <select
-                        value={ruleCondition}
-                        onChange={(e) =>
-                          setRuleCondition(e.target.value as ZendeskFieldRule["condition"])
-                        }
-                        style={{ padding: "6px 8px", borderRadius: 8, border: "1px solid #d1d5db" }}
-                      >
-                        <option value="contains">contains</option>
-                        <option value="not_contains">does not contain</option>
-                      </select>
-                      <input
-                        value={ruleTarget}
-                        onChange={(e) => setRuleTarget(e.target.value)}
-                        placeholder={ruleKind === "tag" ? "Tag name" : "Field name"}
-                        style={{
-                          flex: 1,
-                          padding: "6px 8px",
-                          borderRadius: 8,
-                          border: "1px solid #d1d5db",
-                        }}
-                      />
-                      <button
-                        type="button"
-                        onClick={addFieldRule}
-                        style={{
-                          padding: "6px 12px",
-                          borderRadius: 8,
-                          border: "1px solid #22c55e",
-                          background: "#dcfce7",
-                          color: "#166534",
-                          fontWeight: 600,
-                        }}
-                      >
-                        Save rule
-                      </button>
-                    </div>
+                    <ZendeskFieldRuleBuilder onAdd={handleAddFieldRule} />
                       <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                         {zendeskFieldRules.length === 0 && (
                           <div style={{ fontSize: 12, color: "#6b7280" }}>No field rules yet.</div>
