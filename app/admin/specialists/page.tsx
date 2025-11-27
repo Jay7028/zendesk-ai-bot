@@ -768,14 +768,6 @@ export default function SpecialistsPage() {
                 <Card title="Extracted Entities">
                   <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                     <div>
-                      <FieldLabel label="Description" />
-                      <InlineInput
-                        value={form.description || ""}
-                        onCommit={(val) => handleFieldChange({ description: val })}
-                        placeholder="e.g. Handles billing disputes and refund requests"
-                      />
-                    </div>
-                    <div>
                       <FieldLabel label="Data extraction prompt" />
                       <InlineTextarea
                         value={form.dataExtractionPrompt || ""}
