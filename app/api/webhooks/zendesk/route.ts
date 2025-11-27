@@ -597,14 +597,15 @@ export async function POST(req: NextRequest) {
         : 0;
     const CONFIDENCE_THRESHOLD = 0.6;
 
-    let matchedIntent =
+    let matchedIntent: IntentRow | null =
       confidence >= CONFIDENCE_THRESHOLD
         ? intents.find((i) => i.id === intentId) ?? intents[0] ?? null
         : null;
-    let matchedSpecialist =
-      matchedIntent && confidence >= CONFIDENCE_THRESHOLD
-        ? specialists.find((s) => s.id === matchedIntent.specialist_id) ?? null
-        : null;
+    let matchedSpecialist: SpecialistRow | null = null;
+    if (matchedIntent && confidence >= CONFIDENCE_THRESHOLD) {
+      matchedSpecialist =
+        specialists.find((s) => s.id === matchedIntent.specialist_id) ?? null;
+    }
 
     const previousIntent = await getLastLoggedIntent(ticketId, orgId);
     if (!matchedIntent && previousIntent?.intent_id) {
