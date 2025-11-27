@@ -117,37 +117,27 @@ export default function HomeContent() {
         </div>
       </div>
 
-      <div
+      <button
+        onClick={async () => {
+          await supabaseBrowser.auth.signOut();
+          router.replace("/login");
+        }}
         style={{
-          position: "absolute",
-          bottom: 16,
+          position: "fixed",
           left: 16,
-          right: 16,
-          display: "flex",
-          justifyContent: "center",
+          bottom: 16,
+          padding: "10px 12px",
+          borderRadius: 10,
+          border: "1px solid #e5e7eb",
+          background: "#ffffff",
+          color: "#111827",
+          boxShadow: "0 4px 12px rgba(0,0,0,0.06)",
+          cursor: "pointer",
+          fontSize: 13,
         }}
       >
-        <button
-          onClick={async () => {
-            await supabaseBrowser.auth.signOut();
-            router.replace("/login");
-          }}
-          style={{
-            padding: "10px 12px",
-            borderRadius: 10,
-            border: "1px solid #e5e7eb",
-            background: "#ffffff",
-            color: "#111827",
-            boxShadow: "0 4px 12px rgba(0,0,0,0.06)",
-            cursor: "pointer",
-            fontSize: 13,
-            width: "calc(100% - 32px)",
-            textAlign: "center",
-          }}
-        >
-          Sign out
-        </button>
-      </div>
+        Sign out
+      </button>
     </div>
   );
 }
