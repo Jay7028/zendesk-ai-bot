@@ -253,6 +253,17 @@ export default function SpecialistsPage() {
     handleFieldChange({ requiredFields: parsed });
   };
 
+  const appendEscalationRule = (type: "prompt" | "zendesk") => {
+    if (!form) return;
+    const trimmed = form.escalationRules?.trim() || "";
+    const separator = trimmed ? "\n" : "";
+    const template =
+      type === "prompt"
+        ? "If the order is fulfilled, explain that we cannot change the delivery address and offer to follow up."
+        : "If the Zendesk ticket field [Field Name] is set to [Value], add the tag and escalate to the field team.";
+    handleFieldChange({ escalationRules: `${trimmed}${separator}${template}`.trim() });
+  };
+
   const handleSave = async () => {
     if (!form) return;
     try {
@@ -914,13 +925,53 @@ export default function SpecialistsPage() {
 
               {tab === "escalation" && (
                 <Card title="Escalation rules">
-                  <FieldLabel label="Rules" />
-                  <InlineTextarea
-                    value={form.escalationRules || ""}
-                    onCommit={(val) => handleFieldChange({ escalationRules: val })}
-                    rows={6}
-                    placeholder="Describe when to hand off to a human."
-                  />
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    <div style={{ fontSize: 13, color: "#374151" }}>
+                      Use the builder below to describe when to escalate. Pick one of the preset rule types and we will help
+                      generate the prompt you can paste directly below.
+                    </div>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      <button
+                        type="button"
+                        onClick={() => appendEscalationRule("prompt")}
+                        style={{
+                          padding: "8px 12px",
+                          borderRadius: 10,
+                          border: "1px solid #c7d2fe",
+                          background: "#eef2ff",
+                          cursor: "pointer",
+                          fontSize: 13,
+                          fontWeight: 600,
+                          color: "#1d4ed8",
+                        }}
+                      >
+                        Add free text prompt rule
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => appendEscalationRule("zendesk")}
+                        style={{
+                          padding: "8px 12px",
+                          borderRadius: 10,
+                          border: "1px solid #e5e7eb",
+                          background: "#ffffff",
+                          cursor: "pointer",
+                          fontSize: 13,
+                          fontWeight: 600,
+                          color: "#111827",
+                        }}
+                      >
+                        Add Zendesk field-based rule
+                      </button>
+                    </div>
+                    <FieldLabel label="Rules" />
+                    <InlineTextarea
+                      value={form.escalationRules || ""}
+                      onCommit={(val) => handleFieldChange({ escalationRules: val })}
+                      rows={6}
+                      placeholder="Describe when to hand off to a human."
+                    />
+                  </div>
                 </Card>
               )}
 
