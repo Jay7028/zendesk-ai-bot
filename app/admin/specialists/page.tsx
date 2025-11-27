@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { memo, useEffect, useMemo, useState, type ReactNode } from "react";
 import { apiFetch } from "../../../lib/api-client";
 import { withOrgPrefix } from "../../../lib/org-path";
 
@@ -93,7 +93,7 @@ function InlineTextarea({
   );
 }
 
-function KnowledgeEditor({
+const KnowledgeEditor = memo(function KnowledgeEditor({
   chunk,
   onCancel,
   onSave,
@@ -104,6 +104,7 @@ function KnowledgeEditor({
 }) {
   const [title, setTitle] = useState(chunk.title);
   const [content, setContent] = useState(chunk.content);
+
   useEffect(() => {
     setTitle(chunk.title);
     setContent(chunk.content);
@@ -177,7 +178,7 @@ function KnowledgeEditor({
       </div>
     </div>
   );
-}
+});
 
 export default function SpecialistsPage() {
   const [specialists, setSpecialists] = useState<Specialist[]>([]);
