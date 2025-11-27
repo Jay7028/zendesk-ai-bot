@@ -27,6 +27,23 @@ type IntentRow = {
   specialist_id: string;
 };
 
+async function getTicketEventCount(ticketId: string | number) {
+  const { count } = await supabaseAdmin
+    .from("ticket_events")
+    .select("id", { head: true, count: "exact" })
+    .eq("ticket_id", ticketId.toString());
+  return (count ?? 0) as number;
+}
+
+function sanitizeIntentTagText(text: string) {
+  return text
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 50);
+}
+
 async function tagHandover(
   ticketId: string | number,
   zendeskSubdomain: string,
@@ -329,6 +346,8 @@ export async function POST(req: NextRequest) {
     const trackingCandidates = extractTrackingCandidates(latestComment);
     let trackingSummary: ParcelSummary | null = null;
     let trackingContextText = "";
+    const eventCount = await getTicketEventCount(ticketId);
+    const isFirstInteraction = eventCount === 0;
     if (trackingCandidates.length) {
       console.log("Zendesk webhook tracking candidates", { ticketId, orgId, trackingCandidates });
     } else {
@@ -340,7 +359,7 @@ export async function POST(req: NextRequest) {
       ticketId: ticketId ?? "unknown",
       eventType: "webhook_received",
       summary: "Zendesk webhook received",
-      detail: JSON.stringify({ subdomainHint, orgId, integrationId }).slice(0, 400),
+      detail: JSON.stringify({ subdomainHint, orgId, integrationId, isFirstInteraction }).slice(0, 400),
       orgId,
     });
 
@@ -566,6 +585,10 @@ export async function POST(req: NextRequest) {
       matchedIntent && confidence >= CONFIDENCE_THRESHOLD
         ? specialists.find((s) => s.id === matchedIntent.specialist_id) ?? null
         : null;
+    const firstIntentTag =
+      isFirstInteraction && matchedIntent
+        ? `intent_${sanitizeIntentTagText(matchedIntent.name || matchedIntent.id)}`
+        : undefined;
     console.log("Zendesk classify result", {
       orgId,
       ticketId,
@@ -573,6 +596,15 @@ export async function POST(req: NextRequest) {
       specialistId: matchedSpecialist?.id,
       confidence,
     });
+    if (firstIntentTag) {
+      await logTicketEvent({
+        ticketId,
+        eventType: "intent_tagged",
+        summary: "Intent tag added",
+        detail: firstIntentTag,
+        orgId,
+      });
+    }
 
     // Knowledge retrieval (intent/specialist scoped)
     const knowledge = await buildKnowledgeContext({
@@ -752,6 +784,9 @@ export async function POST(req: NextRequest) {
 
       const zendeskUrl = `https://${zendeskCreds.subdomain}.zendesk.com/api/v2/tickets/${ticketId}.json`;
 
+      const fallbackTags = ["bot-handover"];
+      if (firstIntentTag) fallbackTags.push(firstIntentTag);
+
       const handoverRes = await fetch(zendeskUrl, {
         method: "PUT",
         headers: {
@@ -760,7 +795,7 @@ export async function POST(req: NextRequest) {
         },
         body: JSON.stringify({
           ticket: {
-            tags: ["bot-handover"],
+            tags: fallbackTags,
           },
         }),
       });
@@ -921,6 +956,16 @@ export async function POST(req: NextRequest) {
       orgId,
     });
 
+    const replyPayload = {
+      ticket: {
+        comment: {
+          body: aiReply,
+          public: true,
+        },
+        ...(firstIntentTag ? { tags: [firstIntentTag] } : {}),
+      },
+    };
+
     const zendeskRes = await fetch(zendeskUrl, {
       method: "PUT",
       headers: {
@@ -928,14 +973,7 @@ export async function POST(req: NextRequest) {
         Accept: "application/json",
         Authorization: `Basic ${authString}`,
       },
-      body: JSON.stringify({
-        ticket: {
-          comment: {
-            body: aiReply,
-            public: true,
-          },
-        },
-      }),
+      body: JSON.stringify(replyPayload),
     });
 
     if (!zendeskRes.ok) {
