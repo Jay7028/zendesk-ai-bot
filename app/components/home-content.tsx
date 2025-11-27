@@ -12,6 +12,8 @@ const NAV_ITEMS = [
   { id: "logs", label: "Logs", href: "/admin/logs" },
   { id: "test-ai", label: "Test AI", href: "/admin/test-ai" },
   { id: "track", label: "Track", href: "/admin/track" },
+  { id: "orgs", label: "Org & Members", href: "/admin/orgs" },
+  { id: "org-settings", label: "Org Settings", href: "/admin/orgs/settings" },
 ];
 
 export default function HomeContent() {
@@ -71,55 +73,18 @@ export default function HomeContent() {
           gap: 16,
         }}
       >
-        <header
-          style={{
-            paddingBottom: 8,
-            borderBottom: "1px solid #e5e7eb",
-            marginBottom: 8,
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <div>
+          <header
+            style={{
+              paddingBottom: 8,
+              borderBottom: "1px solid #e5e7eb",
+              marginBottom: 8,
+            }}
+          >
             <div style={{ fontSize: 26, fontWeight: 700 }}>Welcome</div>
             <div style={{ color: "#6b7280", marginTop: 4 }}>
               Quick links and setup notes for your AI workspace.
             </div>
-          </div>
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <a
-              href="/admin/orgs"
-              style={{
-                fontSize: 12,
-                padding: "6px 10px",
-                borderRadius: 8,
-                border: "1px solid #c7d2fe",
-                background: "#eef2ff",
-                color: "#1d4ed8",
-                textDecoration: "none",
-                fontWeight: 600,
-              }}
-            >
-              Org & Members
-            </a>
-            <a
-              href="/admin/orgs/settings"
-              style={{
-                fontSize: 12,
-                padding: "6px 10px",
-                borderRadius: 8,
-                border: "1px solid #e5e7eb",
-                background: "#ffffff",
-                color: "#111827",
-                textDecoration: "none",
-                fontWeight: 600,
-              }}
-            >
-              Org Settings
-            </a>
-          </div>
-        </header>
+          </header>
 
         <div
           style={{
@@ -152,27 +117,37 @@ export default function HomeContent() {
         </div>
       </div>
 
-      <button
-        onClick={async () => {
-          await supabaseBrowser.auth.signOut();
-          router.replace("/login");
-        }}
+      <div
         style={{
-          position: "fixed",
-          right: 16,
+          position: "absolute",
           bottom: 16,
-          padding: "10px 12px",
-          borderRadius: 10,
-          border: "1px solid #e5e7eb",
-          background: "#ffffff",
-          color: "#111827",
-          boxShadow: "0 4px 12px rgba(0,0,0,0.06)",
-          cursor: "pointer",
-          fontSize: 13,
+          left: 16,
+          right: 16,
+          display: "flex",
+          justifyContent: "center",
         }}
       >
-        Sign out
-      </button>
+        <button
+          onClick={async () => {
+            await supabaseBrowser.auth.signOut();
+            router.replace("/login");
+          }}
+          style={{
+            padding: "10px 12px",
+            borderRadius: 10,
+            border: "1px solid #e5e7eb",
+            background: "#ffffff",
+            color: "#111827",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.06)",
+            cursor: "pointer",
+            fontSize: 13,
+            width: "calc(100% - 32px)",
+            textAlign: "center",
+          }}
+        >
+          Sign out
+        </button>
+      </div>
     </div>
   );
 }
