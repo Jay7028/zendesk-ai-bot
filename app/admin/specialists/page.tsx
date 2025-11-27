@@ -904,17 +904,17 @@ export default function SpecialistsPage() {
                 <Card title="Automation rules">
                   <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                     <div style={{ fontSize: 13, color: "#374151" }}>
-                      Define structured logic for this specialist (e.g., order status checks before allowing address changes).
-                      Store concise JSON here; backend can evaluate it to call external services and branch replies.
+                      Describe the step-by-step logic in plain English (e.g., order status checks before allowing address changes).
+                      Keep it concise so we can map it to integrations later.
                     </div>
                     <InlineTextarea
                       value={form.knowledgeBaseNotes || ""}
                       onCommit={(val) => handleFieldChange({ knowledgeBaseNotes: val })}
                       rows={10}
-                      placeholder='Example: {"requires_order_lookup":true,"address_change":{"if_fulfilled":"deny","if_not_fulfilled":"collect_fields","fields":["order_id","new_address_line1","city","postcode"]}}'
+                      placeholder={`Example:\n- If order is fulfilled: tell the customer we cannot change the address.\n- If order is NOT fulfilled: ask for order ID and new address fields, then update it.\n- Always confirm the change and share the expected processing time.`}
                     />
                     <div style={{ fontSize: 12, color: "#6b7280" }}>
-                      Tip: Start simple. When Shopify is connected, these rules can trigger fetches (order status) and decide the path.
+                      Tip: Use bullets or short sentences. We’ll add structured evaluation and Shopify lookups next.
                     </div>
                   </div>
                 </Card>
