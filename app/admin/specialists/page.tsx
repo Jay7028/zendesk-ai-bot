@@ -1009,40 +1009,6 @@ export default function SpecialistsPage() {
                       Use the builder below to describe when to escalate. Pick one of the preset rule types and we will help
                       generate the prompt you can paste directly below.
                     </div>
-                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                      <button
-                        type="button"
-                        onClick={() => appendEscalationRule("prompt")}
-                        style={{
-                          padding: "8px 12px",
-                          borderRadius: 10,
-                          border: "1px solid #c7d2fe",
-                          background: "#eef2ff",
-                          cursor: "pointer",
-                          fontSize: 13,
-                          fontWeight: 600,
-                          color: "#1d4ed8",
-                        }}
-                      >
-                        Add free text prompt rule
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => appendEscalationRule("zendesk")}
-                        style={{
-                          padding: "8px 12px",
-                          borderRadius: 10,
-                          border: "1px solid #e5e7eb",
-                          background: "#ffffff",
-                          cursor: "pointer",
-                          fontSize: 13,
-                          fontWeight: 600,
-                          color: "#111827",
-                        }}
-                      >
-                        Add Zendesk field-based rule
-                      </button>
-                    </div>
                     <div
                       style={{
                         border: "1px dashed #d1d5db",
