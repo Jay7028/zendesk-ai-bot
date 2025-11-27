@@ -603,8 +603,9 @@ export async function POST(req: NextRequest) {
         : null;
     let matchedSpecialist: SpecialistRow | null = null;
     if (matchedIntent && confidence >= CONFIDENCE_THRESHOLD) {
+      const specialistId = matchedIntent.specialist_id;
       matchedSpecialist =
-        specialists.find((s) => s.id === matchedIntent.specialist_id) ?? null;
+        specialists.find((s) => s.id === specialistId) ?? null;
     }
 
     const previousIntent = await getLastLoggedIntent(ticketId, orgId);
