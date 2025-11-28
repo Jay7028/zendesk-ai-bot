@@ -29,6 +29,18 @@ type IntentRow = {
   specialist_id: string;
 };
 
+type EscalationRule = {
+  id: string;
+  specialist_id: string;
+  trigger_text: string;
+  action_text: string | null;
+  tags_to_add: string[] | null;
+  tags_to_remove: string[] | null;
+  skip_reply: boolean | null;
+  once_per_ticket: boolean | null;
+  enabled: boolean | null;
+};
+
 async function buildConversationHistory(ticketId: string) {
   const { data, error } = await supabaseAdmin
     .from("logs")
@@ -48,6 +60,62 @@ async function buildConversationHistory(ticketId: string) {
 function keywordEscalationCheck(history: string, latest: string, keywords: string[]) {
   const combined = `${history}\n${latest}`.toLowerCase();
   return keywords.every((keyword) => combined.includes(keyword));
+}
+
+async function ruleAlreadyFired(ticketId: string | number, ruleId: string) {
+  const { count } = await supabaseAdmin
+    .from("ticket_events")
+    .select("id", { head: true, count: "exact" })
+    .eq("ticket_id", ticketId.toString())
+    .eq("event_type", "rule_fired")
+    .ilike("detail", `%${ruleId}%`);
+  return (count ?? 0) > 0;
+}
+
+async function evaluateRuleTrigger(triggerText: string, conversation: string, openaiKey: string) {
+  try {
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${openaiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "gpt-4.1-mini",
+        messages: [
+          {
+            role: "system",
+            content:
+              "You check whether a plain-English trigger is satisfied by this conversation. Respond ONLY with JSON: {\"true\":true|false,\"reason\":\"short\"}.",
+          },
+          {
+            role: "user",
+            content: `Trigger: ${triggerText}\n\nConversation:\n${conversation}`,
+          },
+        ],
+        response_format: { type: "json_object" },
+        temperature: 0,
+      }),
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      console.error("Rule trigger eval error:", text);
+      return { match: false, reason: "eval failed" };
+    }
+    const json = await res.json();
+    const parsed =
+      (() => {
+        try {
+          return JSON.parse(json.choices?.[0]?.message?.content || "{}");
+        } catch {
+          return {};
+        }
+      })() as { true?: boolean; reason?: string };
+    return { match: !!parsed.true, reason: parsed.reason || "" };
+  } catch (e) {
+    console.error("Rule trigger exception", e);
+    return { match: false, reason: "exception" };
+  }
 }
 
 type ConversationEntry = {
@@ -481,6 +549,9 @@ async function addZendeskTags(
       });
       return NextResponse.json({ error: "Zendesk not configured for this org" }, { status: 500 });
     }
+    const escalationAuthHeader = `Basic ${Buffer.from(
+      `${zendeskCreds.email}/token:${zendeskCreds.token}`
+    ).toString("base64")}`;
     console.log("Zendesk webhook resolved org", { orgId, integrationId, ticketId, subdomain: zendeskCreds.subdomain });
 
     // Auth sanity check to catch bad tokens early
@@ -793,100 +864,63 @@ async function addZendeskTags(
       confidence,
     });
 
-    // Escalation rules: if triggered, handover and skip bot reply
-    if (matchedSpecialist?.escalation_rules?.trim()) {
-      let escalationTriggered = false;
-      let escalationReason = "";
-      try {
-        const conversationHistory = await buildConversationHistory(ticketId);
-        const escResult = await evaluateEscalationRule({
-          rulesText: matchedSpecialist.escalation_rules,
-          customerMessage: latestComment,
-          conversationHistory,
-          openaiKey,
-        });
-        escalationTriggered = escResult.escalate;
-        escalationReason = escResult.reason;
-        if (!escalationTriggered) {
-          const conversationText = `${conversationHistory}\n${latestComment}`.trim();
-          const detection = await detectEscalationFields({
-            conversation: conversationText,
-            openaiKey,
-          });
-          await logTicketEvent({
-            ticketId,
-            eventType: "escalation_detection",
-            summary: "Semantic field detection",
-            detail: JSON.stringify(detection),
-            orgId,
-          });
-          if (detection.item && detection.quantity && detection.services) {
-            escalationTriggered = true;
-            escalationReason = "Semantic field detection";
-          } else {
-            // Deterministic heuristic fallback for bulk/wholesale flows
-            const lower = conversationText.toLowerCase();
-            const hasService = /(label|fulfil|fulfill|fulfilment|fulfillment|service)/.test(lower);
-            const hasQuantity = /\b\d+(\.\d+)?\b/.test(lower) || /\bper (week|month|day)\b/.test(lower);
-            const hasItem =
-              /\b(bottle|unit|item|product|order|test\b|cyp|mg|ml|bulk)\b/.test(lower) ||
-              /\bpurchase\b/.test(lower);
-            if (hasService && hasQuantity && hasItem) {
-              escalationTriggered = true;
-              escalationReason = "Heuristic escalation (service+quantity+item)";
-            }
-          }
-        }
-      } catch (e) {
-        console.error("Escalation check failed", e);
-      }
+    // Escalation rules: new model with triggers/actions per specialist
+    let overrideReply: string | null = null;
+    let skipReply = false;
+    let escalationReason = "";
+    const { data: ruleRows } =
+      matchedSpecialist?.id
+        ? await supabaseAdmin
+            .from("specialist_escalation_rules")
+            .select("*")
+            .eq("specialist_id", matchedSpecialist.id)
+            .eq("enabled", true)
+        : { data: [] as EscalationRule[] };
 
-      if (escalationTriggered) {
-        const { handoverRes } = await tagHandover(
-          ticketId,
-          zendeskCreds.subdomain,
-          zendeskCreds.email,
-          zendeskCreds.token
+    if (ruleRows?.length) {
+      const conversationHistory = await buildConversationHistory(ticketId);
+      const conversationText = `${conversationHistory}\n${latestComment}`.trim();
+      for (const rule of ruleRows) {
+        if (rule.once_per_ticket && (await ruleAlreadyFired(ticketId, rule.id))) continue;
+        const evalResult = await evaluateRuleTrigger(
+          rule.trigger_text,
+          conversationText,
+          openaiKey
         );
-        if (!handoverRes.ok) {
-          const text = await handoverRes.text();
-          await logTicketEvent({
-            ticketId,
-            eventType: "error",
-            summary: "Failed to tag bot-handover (escalation)",
-            detail: text.slice(0, 400),
-            orgId,
-          });
-        }
-
         await logTicketEvent({
           ticketId,
-          eventType: "handover",
-          summary: "Escalation rule triggered",
-          detail: escalationReason.slice(0, 400),
+          eventType: "escalation_detection",
+          summary: `Rule evaluated: ${rule.id}`,
+          detail: JSON.stringify({ match: evalResult.match, reason: evalResult.reason }),
           orgId,
         });
-
-        await logRun({
-          ticketId,
-          specialistId: matchedSpecialist?.id ?? null,
-          specialistName: matchedSpecialist?.name ?? null,
-          intentId: matchedIntent?.id ?? null,
-          intentName: matchedIntent?.name ?? null,
-          inputSummary: String(latestComment).slice(0, 200),
-          outputSummary: escalationReason.slice(0, 200),
-          status: "escalated",
-        });
-
-        return NextResponse.json({
-          status: "handover",
-          ticketId,
-          intentId: matchedIntent?.id ?? null,
-          specialistId: matchedSpecialist?.id ?? null,
-          reason: escalationReason,
-        });
+          if (evalResult.match) {
+            if (rule.tags_to_add?.length) {
+              await addZendeskTags(
+                ticketId,
+                zendeskCreds.subdomain,
+                escalationAuthHeader,
+                rule.tags_to_add
+              );
+            }
+            await logTicketEvent({
+              ticketId,
+              eventType: "rule_fired",
+              summary: `rule_fired: ${rule.id}`,
+              detail: rule.action_text || evalResult.reason || "",
+              orgId,
+            });
+            if (rule.action_text) {
+              overrideReply = rule.action_text;
+            }
+            if (rule.skip_reply) {
+              skipReply = true;
+            }
+            escalationReason = evalResult.reason || "Rule fired";
+            break;
+          }
+        }
       }
-    }
 
     if (!matchedIntent || !matchedSpecialist || confidence < CONFIDENCE_THRESHOLD) {
       await saveIntentSuggestion(
@@ -1049,9 +1083,12 @@ async function addZendeskTags(
     }
 
     const openaiData = await openaiRes.json();
-    const aiReply: string =
+    let aiReply: string =
       openaiData.choices?.[0]?.message?.content?.trim() ||
       "Sorry, I could not generate a reply.";
+    if (overrideReply) {
+      aiReply = overrideReply;
+    }
     console.log("Zendesk webhook generated reply", {
       orgId,
       ticketId,
@@ -1074,6 +1111,23 @@ async function addZendeskTags(
       detail: `PUT ${zendeskCreds.subdomain}.zendesk.com ticket ${ticketId} email=${zendeskCreds.email} token_last4=${zendeskCreds.tokenLast4}`,
       orgId,
     });
+
+    if (skipReply) {
+      await logTicketEvent({
+        ticketId,
+        eventType: "handover",
+        summary: "Rule triggered (skip reply)",
+        detail: escalationReason || "Rule skip",
+        orgId,
+      });
+      return NextResponse.json({
+        status: "handover",
+        ticketId,
+        intentId: matchedIntent?.id ?? null,
+        specialistId: matchedSpecialist?.id ?? null,
+        reason: escalationReason || "Rule skip",
+      });
+    }
 
     const replyPublic = matchedSpecialist?.public_reply ?? true;
     const replyPayload = {
