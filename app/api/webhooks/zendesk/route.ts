@@ -788,7 +788,7 @@ async function addZendeskTags(
               {
                 role: "system",
                 content:
-                  'You are an escalation checker. Given rules and a customer message, decide if escalation is required. Respond ONLY with JSON {"escalate":true|false,"reason":"short"}.',
+                  "You are an escalation checker. Interpret the plain-English rule text, then evaluate whether the current customer message satisfies it. Always respond with JSON only, like {\"escalate\":true,\"reason\":\"short explanation\"} or {\"escalate\":false,\"reason\":\"short explanation\"}.",
               },
               {
                 role: "user",
