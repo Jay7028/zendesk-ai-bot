@@ -67,6 +67,10 @@ export async function PATCH(req: NextRequest) {
     const content = (body.content || "").toString().trim();
     const intentId = body.intentId ? body.intentId.toString() : null;
     const specialistId = body.specialistId ? body.specialistId.toString() : null;
+    const documentTitle = (body.documentTitle || "").toString().trim() || null;
+    const documentUrl = (body.documentUrl || "").toString().trim() || null;
+    const documentType = (body.documentType || "").toString().trim() || null;
+    const documentSummary = (body.documentSummary || "").toString().trim() || null;
     if (!title || !content) {
       return NextResponse.json({ error: "title and content are required" }, { status: 400 });
     }
@@ -80,6 +84,10 @@ export async function PATCH(req: NextRequest) {
         specialist_id: specialistId,
         embedding,
         org_id: orgId,
+        document_title: documentTitle,
+        document_url: documentUrl,
+        document_type: documentType,
+        document_summary: documentSummary,
       })
       .eq("id", id)
       .eq("org_id", orgId)

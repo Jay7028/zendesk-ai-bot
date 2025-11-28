@@ -88,6 +88,10 @@ export async function POST(req: NextRequest) {
         specialist_id: null,
         org_id: orgId,
         embedding,
+        document_title: null,
+        document_url: null,
+        document_type: null,
+        document_summary: null,
       });
     }
     const { error } = await supabaseAdmin.from("knowledge_chunks").insert(rows);

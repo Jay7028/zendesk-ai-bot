@@ -41,6 +41,11 @@ export async function POST(req: NextRequest) {
     }
 
     const embedding = await embed(content);
+    const documentTitle = (body.documentTitle || "").toString().trim() || null;
+    const documentUrl = (body.documentUrl || "").toString().trim() || null;
+    const documentType = (body.documentType || "").toString().trim() || null;
+    const documentSummary = (body.documentSummary || "").toString().trim() || null;
+
     const { data, error } = await supabaseAdmin
       .from("knowledge_chunks")
       .insert({
@@ -50,6 +55,10 @@ export async function POST(req: NextRequest) {
         specialist_id: specialistId,
         org_id: orgId,
         embedding,
+        document_title: documentTitle,
+        document_url: documentUrl,
+        document_type: documentType,
+        document_summary: documentSummary,
       })
       .select()
       .single();
