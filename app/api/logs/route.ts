@@ -117,16 +117,23 @@ export async function DELETE(request: Request) {
   try {
     const { orgId } = await requireOrgContext(request);
     const { searchParams } = new URL(request.url);
-    const id = searchParams.get("id");
-    if (!id) {
-      return NextResponse.json({ error: "id is required" }, { status: 400 });
+    const all = searchParams.get("all") === "true";
+    const ticketId = searchParams.get("ticketId");
+
+    let query = supabaseAdmin.from("logs").delete().eq("org_id", orgId);
+    if (all) {
+      // delete all logs for org
+    } else if (ticketId) {
+      query = query.eq("zendesk_ticket_id", ticketId);
+    } else {
+      const id = searchParams.get("id");
+      if (!id) {
+        return NextResponse.json({ error: "id, ticketId, or all=true required" }, { status: 400 });
+      }
+      query = query.eq("id", id);
     }
 
-    const { error } = await supabaseAdmin
-      .from("logs")
-      .delete()
-      .eq("id", id)
-      .eq("org_id", orgId);
+    const { error } = await query;
     if (error) {
       console.error("Supabase DELETE /logs error", error);
       return NextResponse.json(

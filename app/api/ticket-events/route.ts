@@ -87,3 +87,44 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
+
+export async function DELETE(request: Request) {
+  try {
+    const { orgId } = await requireOrgContext(request);
+    const { searchParams } = new URL(request.url);
+    const all = searchParams.get("all") === "true";
+    const ticketId = searchParams.get("ticketId");
+    const id = searchParams.get("id");
+
+    let query = supabaseAdmin.from("ticket_events").delete().eq("org_id", orgId);
+    if (all) {
+      // delete entire org events
+    } else if (ticketId) {
+      query = query.eq("ticket_id", ticketId);
+    } else if (id) {
+      query = query.eq("id", id);
+    } else {
+      return NextResponse.json(
+        { error: "id, ticketId, or all=true required" },
+        { status: 400 }
+      );
+    }
+
+    const { error } = await query;
+    if (error) {
+      console.error("Supabase DELETE /ticket-events error", error);
+      return NextResponse.json(
+        { error: "Failed to delete ticket events", details: error.message },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (err: any) {
+    console.error("DELETE /ticket-events error", err);
+    return NextResponse.json(
+      { error: "Failed to delete ticket events", details: String(err) },
+      { status: 500 }
+    );
+  }
+}

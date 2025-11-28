@@ -37,6 +37,8 @@ export default function LogsPage() {
   const [typeFilter, setTypeFilter] = useState<"all" | "tickets" | "admin">("all");
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
+  const [reloadKey, setReloadKey] = useState(0);
+  const [clearing, setClearing] = useState(false);
 
   useEffect(() => {
     async function loadData() {
@@ -60,7 +62,27 @@ export default function LogsPage() {
       }
     }
     loadData();
-  }, []);
+  }, [reloadKey]);
+
+  const clearLogsAndEvents = async () => {
+    if (!window.confirm("Delete all logs and ticket events for this org? This cannot be undone.")) {
+      return;
+    }
+    try {
+      setClearing(true);
+      setIsLoading(true);
+      setError(null);
+      await apiFetch("/api/logs?all=true", { method: "DELETE" });
+      await apiFetch("/api/ticket-events?all=true", { method: "DELETE" });
+      setReloadKey((key) => key + 1);
+      setSelectedTicket(null);
+    } catch (e: any) {
+      setError(e.message ?? "Failed to clear logs");
+    } finally {
+      setIsLoading(false);
+      setClearing(false);
+    }
+  };
 
   const tickets = useMemo(() => {
     const map = new Map<
@@ -304,6 +326,24 @@ export default function LogsPage() {
                   fontSize: "12px",
                 }}
               />
+            </div>
+            <div style={{ marginLeft: "auto" }}>
+              <button
+                onClick={clearLogsAndEvents}
+                disabled={clearing || isLoading}
+                style={{
+                  borderRadius: "8px",
+                  border: "1px solid #ef4444",
+                  background: clearing ? "#fee2e2" : "#fef2f2",
+                  color: "#b91c1c",
+                  padding: "8px 12px",
+                  fontSize: "12px",
+                  cursor: clearing || isLoading ? "not-allowed" : "pointer",
+                  fontWeight: 600,
+                }}
+              >
+                {clearing ? "Clearing…" : "Clear logs & events"}
+              </button>
             </div>
           </div>
 
