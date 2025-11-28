@@ -3,6 +3,7 @@ import { supabaseAdmin } from "../../../lib/supabase";
 import { trackOnce, summarizeParcel, type ParcelSummary } from "../../../lib/parcelsapp";
 import { buildKnowledgeContext } from "../../../lib/knowledge";
 import { requireOrgContext } from "../../../lib/auth";
+import { evaluateEscalationRule } from "../../../lib/escalation";
 
 type SpecialistRow = {
   id: string;
@@ -310,6 +311,23 @@ export async function POST(req: NextRequest) {
       specialistId: matchedSpecialist?.id ?? undefined,
       orgId,
     });
+
+    if (matchedSpecialist?.escalation_rules?.trim()) {
+      const escResult = await evaluateEscalationRule({
+        rulesText: matchedSpecialist.escalation_rules,
+        customerMessage: userMessage,
+        openaiKey: apiKey,
+      });
+      if (escResult.escalate) {
+        actions.push("Escalation rule triggered");
+        actions.push("Would tag: bot-handover");
+        if (escResult.reason) {
+          actions.push(`Escalation reason: ${escResult.reason}`);
+        }
+      } else {
+        actions.push("Escalation rule not triggered");
+      }
+    }
 
     const replyMessages: { role: "system" | "user" | "assistant"; content: string }[] = [
       {

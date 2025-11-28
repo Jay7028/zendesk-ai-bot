@@ -4,6 +4,7 @@ import { trackOnce, summarizeParcel, type ParcelSummary } from "../../../../lib/
 import { buildKnowledgeContext } from "../../../../lib/knowledge";
 import { HttpError } from "../../../../lib/auth";
 import { decryptJSON } from "../../../../lib/credentials";
+import { evaluateEscalationRule } from "../../../../lib/escalation";
 
 // Note: Zendesk webhooks don't send our auth headers; we resolve org by subdomain/integration.
 type SpecialistRow = {
@@ -776,42 +777,13 @@ async function addZendeskTags(
       let escalationTriggered = false;
       let escalationReason = "";
       try {
-        const escRes = await fetch("https://api.openai.com/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${openaiKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model: "gpt-4.1-mini",
-            messages: [
-              {
-                role: "system",
-                content:
-                  "You are an escalation checker. Interpret the plain-English rule text, then evaluate whether the current customer message satisfies it. Always respond with JSON only, like {\"escalate\":true,\"reason\":\"short explanation\"} or {\"escalate\":false,\"reason\":\"short explanation\"}.",
-              },
-              {
-                role: "user",
-                content: `Escalation rules:\n${matchedSpecialist.escalation_rules}\n\nCustomer message:\n${latestComment}`,
-              },
-            ],
-            response_format: { type: "json_object" },
-            temperature: 0,
-          }),
-        });
-        if (escRes.ok) {
-          const escJson = await escRes.json();
-          const parsed =
-            (() => {
-              try {
-                return JSON.parse(escJson.choices?.[0]?.message?.content || "{}");
-              } catch {
-                return {};
-              }
-            })() as { escalate?: boolean; reason?: string };
-          escalationTriggered = !!parsed.escalate;
-          escalationReason = parsed.reason || "Escalation rule triggered";
-        }
+    const escResult = await evaluateEscalationRule({
+      rulesText: matchedSpecialist.escalation_rules,
+      customerMessage: latestComment,
+      openaiKey,
+    });
+    escalationTriggered = escResult.escalate;
+    escalationReason = escResult.reason;
       } catch (e) {
         console.error("Escalation check failed", e);
       }
