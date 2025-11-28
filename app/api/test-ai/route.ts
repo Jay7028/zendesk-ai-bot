@@ -311,6 +311,12 @@ export async function POST(req: NextRequest) {
       specialistId: matchedSpecialist?.id ?? undefined,
       orgId,
     });
+    actions.push(`Knowledge matches: ${knowledge.used.length}`);
+    if (knowledge.summary) {
+      actions.push("Applied retrieved knowledge to guide reply.");
+    } else {
+      actions.push("No knowledge summary available for this specialist/intent.");
+    }
 
     if (matchedSpecialist?.escalation_rules?.trim()) {
       const escResult = await evaluateEscalationRule({
@@ -343,7 +349,6 @@ export async function POST(req: NextRequest) {
         role: "system",
         content: `Relevant policies for this intent:\n${knowledge.summary}`,
       });
-      actions.push("Applied retrieved knowledge to guide reply.");
     }
 
     if (trackingSummary) {
