@@ -149,9 +149,13 @@ export async function evaluateRuleTrigger(triggerText: string, conversation: str
           return {};
         }
       })() as { true?: boolean; reason?: string };
-    return { match: !!parsed.true, reason: parsed.reason || "" };
+    return {
+      match: !!parsed.true,
+      reason: parsed.reason || "",
+      raw: json.choices?.[0]?.message?.content?.trim() || "",
+    };
   } catch (e) {
     console.error("Rule trigger exception", e);
-    return { match: false, reason: "exception" };
+    return { match: false, reason: "exception", raw: "" };
   }
 }
