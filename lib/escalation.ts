@@ -8,7 +8,7 @@ export async function evaluateEscalationRule(options: {
   try {
     const conversationContent =
       options.conversationHistory?.trim() || "No prior history available.";
-    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    const res = await fetch("https://api.openai.com/v1/chat.completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${openaiKey}`,
@@ -30,6 +30,7 @@ export async function evaluateEscalationRule(options: {
         response_format: { type: "json_object" },
         temperature: 0,
       }),
+    });
     if (!res.ok) {
       const text = await res.text();
       console.error("Escalation checker API error:", text);
