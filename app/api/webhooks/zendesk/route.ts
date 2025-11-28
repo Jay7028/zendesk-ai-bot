@@ -45,6 +45,11 @@ async function buildConversationHistory(ticketId: string) {
     .join("\n");
 }
 
+function keywordEscalationCheck(history: string, latest: string, keywords: string[]) {
+  const combined = `${history}\n${latest}`.toLowerCase();
+  return keywords.every((keyword) => combined.includes(keyword));
+}
+
 type ConversationEntry = {
   customer?: string | null;
   assistant?: string | null;
@@ -802,6 +807,18 @@ async function addZendeskTags(
         });
         escalationTriggered = escResult.escalate;
         escalationReason = escResult.reason;
+        if (
+          !escalationTriggered &&
+          keywordEscalationCheck(conversationHistory, latestComment, [
+            "item",
+            "quantity",
+            "labeling",
+            "fulfillment",
+          ])
+        ) {
+          escalationTriggered = true;
+          escalationReason = "Keyword-based escalation";
+        }
       } catch (e) {
         console.error("Escalation check failed", e);
       }
