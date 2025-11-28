@@ -4,7 +4,7 @@ import { trackOnce, summarizeParcel, type ParcelSummary } from "../../../../lib/
 import { buildKnowledgeContext } from "../../../../lib/knowledge";
 import { HttpError } from "../../../../lib/auth";
 import { decryptJSON } from "../../../../lib/credentials";
-import { evaluateEscalationRule, detectEscalationFields } from "../../../../lib/escalation";
+import { evaluateEscalationRule, detectEscalationFields, evaluateRuleTrigger } from "../../../../lib/escalation";
 
 // Note: Zendesk webhooks don't send our auth headers; we resolve org by subdomain/integration.
 type SpecialistRow = {
