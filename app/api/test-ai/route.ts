@@ -311,7 +311,9 @@ export async function POST(req: NextRequest) {
       specialistId: matchedSpecialist?.id ?? undefined,
       orgId,
     });
-    actions.push(`Knowledge matches: ${knowledge.used.length}`);
+    actions.push(
+      `Knowledge matches (raw/filtered): ${knowledge.totalMatches} / ${knowledge.used.length}`
+    );
     if (knowledge.summary) {
       actions.push("Applied retrieved knowledge to guide reply.");
     } else {
