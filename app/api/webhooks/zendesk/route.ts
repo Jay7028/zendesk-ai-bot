@@ -823,6 +823,18 @@ async function addZendeskTags(
           if (detection.item && detection.quantity && detection.services) {
             escalationTriggered = true;
             escalationReason = "Semantic field detection";
+          } else {
+            // Deterministic heuristic fallback for bulk/wholesale flows
+            const lower = conversationText.toLowerCase();
+            const hasService = /(label|fulfil|fulfill|fulfilment|fulfillment|service)/.test(lower);
+            const hasQuantity = /\b\d+(\.\d+)?\b/.test(lower) || /\bper (week|month|day)\b/.test(lower);
+            const hasItem =
+              /\b(bottle|unit|item|product|order|test\b|cyp|mg|ml|bulk)\b/.test(lower) ||
+              /\bpurchase\b/.test(lower);
+            if (hasService && hasQuantity && hasItem) {
+              escalationTriggered = true;
+              escalationReason = "Heuristic escalation (service+quantity+item)";
+            }
           }
         }
       } catch (e) {
