@@ -47,24 +47,11 @@ async function matchChunks(
     const params = {
       query_embedding: embedding,
       match_count: matchCount,
-      intent_id: intentId ?? null,
-      specialist_id: specialistId ?? null,
+      param_intent_id: intentId ?? null,
+      param_specialist_id: specialistId ?? null,
       p_org_id: orgId,
     };
-    let { data, error } = await supabaseAdmin.rpc("match_knowledge_chunks", params);
-    if (error) {
-      const detail = (error?.details || "").toString();
-      const missingSignature =
-        detail.includes("match_knowledge_chunks") &&
-        detail.includes("uuid");
-      if (missingSignature) {
-        const fallbackParams = { ...params };
-        delete (fallbackParams as any).p_org_id;
-        const fallbackResult = await supabaseAdmin.rpc("match_knowledge_chunks", fallbackParams);
-        data = fallbackResult.data;
-        error = fallbackResult.error;
-      }
-    }
+    const { data, error } = await supabaseAdmin.rpc("match_knowledge_chunks", params);
     if (error) throw error;
     return (data || []) as ChunkMatch[];
   } catch (e) {
