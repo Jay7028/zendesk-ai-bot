@@ -55,3 +55,57 @@ export async function evaluateEscalationRule(options: {
     return { escalate: false, reason: "Escalation check failed" };
   }
 }
+
+export async function detectEscalationFields(params: {
+  conversation: string;
+  openaiKey: string;
+}) {
+  const { conversation, openaiKey } = params;
+  try {
+    const res = await fetch("https://api.openai.com/v1/chat.completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${openaiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "gpt-4.1-mini",
+        messages: [
+          {
+            role: "system",
+            content:
+              "You are a semantic extractor. Given a conversation, tell me whether the customer has provided (1) an item description, (2) a quantity or frequency, and (3) interest in labeling or fulfillment services. Respond with JSON {\"item\":true|false,\"quantity\":true|false,\"services\":true|false}.",
+          },
+          {
+            role: "user",
+            content: `Conversation:\n${conversation}`,
+          },
+        ],
+        response_format: { type: "json_object" },
+        temperature: 0,
+      }),
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      console.error("Field detection error:", text);
+      return { item: false, quantity: false, services: false };
+    }
+    const json = await res.json();
+    const parsed =
+      (() => {
+        try {
+          return JSON.parse(json.choices?.[0]?.message?.content || "{}");
+        } catch {
+          return {};
+        }
+      })() as { item?: boolean; quantity?: boolean; services?: boolean };
+    return {
+      item: parsed.item ?? false,
+      quantity: parsed.quantity ?? false,
+      services: parsed.services ?? false,
+    };
+  } catch (err) {
+    console.error("Field detection exception", err);
+    return { item: false, quantity: false, services: false };
+  }
+}

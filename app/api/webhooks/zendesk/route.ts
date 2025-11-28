@@ -4,7 +4,7 @@ import { trackOnce, summarizeParcel, type ParcelSummary } from "../../../../lib/
 import { buildKnowledgeContext } from "../../../../lib/knowledge";
 import { HttpError } from "../../../../lib/auth";
 import { decryptJSON } from "../../../../lib/credentials";
-import { evaluateEscalationRule } from "../../../../lib/escalation";
+import { evaluateEscalationRule, detectEscalationFields } from "../../../../lib/escalation";
 
 // Note: Zendesk webhooks don't send our auth headers; we resolve org by subdomain/integration.
 type SpecialistRow = {
@@ -807,17 +807,15 @@ async function addZendeskTags(
         });
         escalationTriggered = escResult.escalate;
         escalationReason = escResult.reason;
-        if (
-          !escalationTriggered &&
-          keywordEscalationCheck(conversationHistory, latestComment, [
-            "item",
-            "quantity",
-            "labeling",
-            "fulfillment",
-          ])
-        ) {
-          escalationTriggered = true;
-          escalationReason = "Keyword-based escalation";
+        if (!escalationTriggered) {
+          const detection = await detectEscalationFields({
+            conversation: `${conversationHistory}\n${latestComment}`.trim(),
+            openaiKey,
+          });
+          if (detection.item && detection.quantity && detection.services) {
+            escalationTriggered = true;
+            escalationReason = "Semantic field detection";
+          }
         }
       } catch (e) {
         console.error("Escalation check failed", e);
