@@ -14,15 +14,15 @@ export async function evaluateEscalationRule(options: {
       body: JSON.stringify({
         model: "gpt-4.1-mini",
         messages: [
-          {
-            role: "system",
-            content:
-              "You are an escalation checker. Interpret the plain-English rule text, then evaluate whether the current customer message satisfies it. Always respond with JSON only, like {\"escalate\":true,\"reason\":\"short explanation\"} or {\"escalate\":false,\"reason\":\"short explanation\"}.",
-          },
-          {
-            role: "user",
-            content: `Escalation rules:\n${rulesText}\n\nCustomer message:\n${customerMessage}`,
-          },
+      {
+        role: "system",
+        content:
+          "You are an escalation checker. Interpret the plain-English rule text, then evaluate whether the current customer message satisfies it. Always respond with JSON only, like {\"escalate\":true,\"reason\":\"short explanation\"} or {\"escalate\":false,\"reason\":\"short explanation\"}.",
+      },
+      {
+        role: "user",
+        content: `Escalation rules: ${rulesText}\n\nCustomer message:\n${customerMessage}\n\nWhen the rule is satisfied, return {"escalate": true, "reason": "rule satisfied"}; when it isn't, return {"escalate": false, "reason": "not satisfied"}.`,
+      },
         ],
         response_format: { type: "json_object" },
         temperature: 0,
