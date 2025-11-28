@@ -808,9 +808,17 @@ async function addZendeskTags(
         escalationTriggered = escResult.escalate;
         escalationReason = escResult.reason;
         if (!escalationTriggered) {
+          const conversationText = `${conversationHistory}\n${latestComment}`.trim();
           const detection = await detectEscalationFields({
-            conversation: `${conversationHistory}\n${latestComment}`.trim(),
+            conversation: conversationText,
             openaiKey,
+          });
+          await logTicketEvent({
+            ticketId,
+            eventType: "escalation_detection",
+            summary: "Semantic field detection",
+            detail: JSON.stringify(detection),
+            orgId,
           });
           if (detection.item && detection.quantity && detection.services) {
             escalationTriggered = true;
