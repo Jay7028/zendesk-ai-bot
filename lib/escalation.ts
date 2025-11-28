@@ -4,10 +4,11 @@ export async function evaluateEscalationRule(options: {
   openaiKey: string;
   conversationHistory?: string;
 }) {
-  const { rulesText, customerMessage, openaiKey } = options;
+  const { rulesText, customerMessage, openaiKey, conversationHistory } = options;
+  const effectiveMessage = conversationHistory
+    ? `${conversationHistory}\nLatest customer message:\n${customerMessage}`
+    : customerMessage;
   try {
-    const conversationContent =
-      options.conversationHistory?.trim() || "No prior history available.";
     const res = await fetch("https://api.openai.com/v1/chat.completions", {
       method: "POST",
       headers: {
@@ -20,11 +21,11 @@ export async function evaluateEscalationRule(options: {
           {
             role: "system",
             content:
-              "You are an escalation checker. Interpret the plain-English rule text, then evaluate whether the current conversation history and latest customer message satisfy it. Always respond with JSON only, like {\"escalate\":true,\"reason\":\"short explanation\"} or {\"escalate\":false,\"reason\":\"short explanation\"}.",
+              "You are an escalation checker. Interpret the plain-English rule text, then decide whether the provided customer message satisfies it. Always respond with JSON only, like {\"escalate\":true,\"reason\":\"short explanation\"} or {\"escalate\":false,\"reason\":\"short explanation\"}.",
           },
           {
             role: "user",
-            content: `Escalation rules: ${rulesText}\n\nConversation history:\n${conversationContent}\n\nLatest customer message:\n${customerMessage}\n\nReturn {"escalate": true, "reason": "rule satisfied"} when the rule is met; otherwise return {"escalate": false, "reason": "not satisfied"}.`,
+            content: `Escalation rules: ${rulesText}\n\nCustomer message:\n${effectiveMessage}\n\nIf the rule is satisfied, return {"escalate": true, "reason": "rule satisfied"}; otherwise return {"escalate": false, "reason": "not satisfied"}.`,
           },
         ],
         response_format: { type: "json_object" },
