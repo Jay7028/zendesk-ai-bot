@@ -4,7 +4,6 @@ import { trackOnce, summarizeParcel, type ParcelSummary } from "../../../../lib/
 import { buildKnowledgeContext } from "../../../../lib/knowledge";
 import { HttpError } from "../../../../lib/auth";
 import { decryptJSON } from "../../../../lib/credentials";
-import { evaluateEscalationRule, detectEscalationFields, evaluateRuleTrigger } from "../../../../lib/escalation";
 
 // Note: Zendesk webhooks don't send our auth headers; we resolve org by subdomain/integration.
 type SpecialistRow = {
@@ -19,7 +18,6 @@ type SpecialistRow = {
   knowledge_base_notes: string;
   escalation_rules: string;
   personality_notes: string;
-  public_reply?: boolean;
 };
 
 type IntentRow = {
@@ -29,98 +27,12 @@ type IntentRow = {
   specialist_id: string;
 };
 
-type EscalationRule = {
-  id: string;
-  specialist_id: string;
-  trigger_text: string;
-  action_text: string | null;
-  tags_to_add: string[] | null;
-  tags_to_remove: string[] | null;
-  skip_reply: boolean | null;
-  once_per_ticket: boolean | null;
-  enabled: boolean | null;
-};
-
-async function buildConversationHistory(ticketId: string) {
-  const { data, error } = await supabaseAdmin
-    .from("logs")
-    .select("created_at, input_summary")
-    .eq("zendesk_ticket_id", ticketId)
-    .order("created_at", { ascending: true })
-    .limit(6);
-  if (error) {
-    console.error("Failed to load conversation history", error);
-    return "";
-  }
-  return (data ?? [])
-    .map((entry) => `${entry.created_at}: ${entry.input_summary}`)
-    .join("\n");
-}
-
-function keywordEscalationCheck(history: string, latest: string, keywords: string[]) {
-  const combined = `${history}\n${latest}`.toLowerCase();
-  return keywords.every((keyword) => combined.includes(keyword));
-}
-
-async function ruleAlreadyFired(ticketId: string | number, ruleId: string) {
-  const { count } = await supabaseAdmin
-    .from("ticket_events")
-    .select("id", { head: true, count: "exact" })
-    .eq("ticket_id", ticketId.toString())
-    .eq("event_type", "rule_fired")
-    .ilike("detail", `%${ruleId}%`);
-  return (count ?? 0) > 0;
-}
-
-type ConversationEntry = {
-  customer?: string | null;
-  assistant?: string | null;
-};
-
-async function getConversationHistory(ticketId: string | number, orgId?: string | null) {
-  let query = supabaseAdmin
-    .from("logs")
-    .select("input_summary, output_summary")
-    .eq("zendesk_ticket_id", ticketId.toString())
-    .order("created_at", { ascending: true })
-    .limit(12);
-  if (orgId) {
-    query = query.eq("org_id", orgId);
-  }
-  const { data } = await query;
-  return (data ?? [])
-    .map((row: any) => ({
-      customer: (row.input_summary ?? "").toString().trim() || null,
-      assistant: (row.output_summary ?? "").toString().trim() || null,
-    }))
-    .filter((entry) => entry.customer || entry.assistant);
-}
-
 async function getTicketEventCount(ticketId: string | number) {
   const { count } = await supabaseAdmin
     .from("ticket_events")
     .select("id", { head: true, count: "exact" })
     .eq("ticket_id", ticketId.toString());
   return (count ?? 0) as number;
-}
-
-async function getLastLoggedIntent(ticketId: string | number, orgId?: string | null) {
-  let query = supabaseAdmin
-    .from("logs")
-    .select("intent_id, specialist_id")
-    .eq("zendesk_ticket_id", ticketId.toString())
-    .order("created_at", { ascending: false })
-    .limit(1);
-  if (orgId) {
-    query = query.eq("org_id", orgId);
-  }
-  const { data } = await query.maybeSingle();
-
-  if (!data || !data.intent_id) return null;
-  return {
-    intent_id: data.intent_id,
-    specialist_id: data.specialist_id,
-  };
 }
 
 function sanitizeIntentTagText(text: string) {
@@ -153,7 +65,7 @@ async function tagHandover(
     },
     body: JSON.stringify({
       ticket: {
-        add_tags: ["bot-handover"],
+        tags: ["bot-handover"],
       },
     }),
   });
@@ -455,26 +367,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { error: "ticket_id is required in payload" },
         { status: 400 }
-  );
-}
-
-async function addZendeskTags(
-  ticketId: string | number,
-  zendeskSubdomain: string,
-  authHeader: string,
-  tags: string[]
-) {
-  if (!tags.length) return null;
-  const url = `https://${zendeskSubdomain}.zendesk.com/api/v2/tickets/${ticketId}/tags.json`;
-  return await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: authHeader,
-    },
-    body: JSON.stringify({ tags }),
-  });
-}
+      );
+    }
 
     const openaiKey = process.env.OPENAI_API_KEY;
     const zendeskCreds = await getZendeskCredentials(orgId, integrationId);
@@ -503,9 +397,6 @@ async function addZendeskTags(
       });
       return NextResponse.json({ error: "Zendesk not configured for this org" }, { status: 500 });
     }
-    const escalationAuthHeader = `Basic ${Buffer.from(
-      `${zendeskCreds.email}/token:${zendeskCreds.token}`
-    ).toString("base64")}`;
     console.log("Zendesk webhook resolved org", { orgId, integrationId, ticketId, subdomain: zendeskCreds.subdomain });
 
     // Auth sanity check to catch bad tokens early
@@ -680,37 +571,20 @@ async function addZendeskTags(
       })() as { intent_id?: string; confidence?: number };
 
     const intentId = parsedClassify.intent_id || intents[0]?.id;
-    let confidence =
+    const confidence =
       typeof parsedClassify.confidence === "number"
         ? parsedClassify.confidence
         : 0;
     const CONFIDENCE_THRESHOLD = 0.6;
 
-    let matchedIntent: IntentRow | null =
+    const matchedIntent =
       confidence >= CONFIDENCE_THRESHOLD
         ? intents.find((i) => i.id === intentId) ?? intents[0] ?? null
         : null;
-    let matchedSpecialist: SpecialistRow | null = null;
-    if (matchedIntent && confidence >= CONFIDENCE_THRESHOLD) {
-      const specialistId = matchedIntent.specialist_id;
-      matchedSpecialist =
-        specialists.find((s) => s.id === specialistId) ?? null;
-    }
-
-    const previousIntent = await getLastLoggedIntent(ticketId, orgId);
-    if (!matchedIntent && previousIntent?.intent_id) {
-      const fallbackIntent = intents.find((i) => i.id === previousIntent.intent_id);
-      if (fallbackIntent) {
-        matchedIntent = fallbackIntent;
-        matchedSpecialist =
-          specialists.find((s) => s.id === fallbackIntent.specialist_id) ?? null;
-        confidence = Math.max(confidence, CONFIDENCE_THRESHOLD);
-        console.log("Reusing previous intent for ticket", {
-          ticketId,
-          intent: fallbackIntent.id,
-        });
-      }
-    }
+    const matchedSpecialist =
+      matchedIntent && confidence >= CONFIDENCE_THRESHOLD
+        ? specialists.find((s) => s.id === matchedIntent.specialist_id) ?? null
+        : null;
     const firstIntentTag =
       isFirstInteraction && matchedIntent
         ? `intent_${sanitizeIntentTagText(matchedIntent.name || matchedIntent.id)}`
@@ -733,20 +607,6 @@ async function addZendeskTags(
     }
 
     // Knowledge retrieval (intent/specialist scoped)
-    const conversationHistoryEntries = await getConversationHistory(ticketId, orgId);
-    const conversationHistoryLines = conversationHistoryEntries
-      .map((entry) => {
-        const parts: string[] = [];
-        if (entry.customer) parts.push(`Customer: ${entry.customer}`);
-        if (entry.assistant) parts.push(`Assistant: ${entry.assistant}`);
-        return parts.join("\n");
-      })
-      .filter(Boolean);
-    const conversationHistoryText =
-      conversationHistoryLines.length > 0
-        ? conversationHistoryLines.join("\n\n")
-        : "No previous conversation available.";
-
     const knowledge = await buildKnowledgeContext({
       query: latestComment,
       intentId: matchedIntent?.id ?? undefined,
@@ -818,63 +678,97 @@ async function addZendeskTags(
       confidence,
     });
 
-    // Escalation rules: new model with triggers/actions per specialist
-    let overrideReply: string | null = null;
-    let skipReply = false;
-    let escalationReason = "";
-    const { data: ruleRows } =
-      matchedSpecialist?.id
-        ? await supabaseAdmin
-            .from("specialist_escalation_rules")
-            .select("*")
-            .eq("specialist_id", matchedSpecialist.id)
-            .eq("enabled", true)
-        : { data: [] as EscalationRule[] };
+    // Escalation rules: if triggered, handover and skip bot reply
+    if (matchedSpecialist?.escalation_rules?.trim()) {
+      let escalationTriggered = false;
+      let escalationReason = "";
+      try {
+        const escRes = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${openaiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "gpt-4.1-mini",
+            messages: [
+              {
+                role: "system",
+                content:
+                  'You are an escalation checker. Given rules and a customer message, decide if escalation is required. Respond ONLY with JSON {"escalate":true|false,"reason":"short"}.',
+              },
+              {
+                role: "user",
+                content: `Escalation rules:\n${matchedSpecialist.escalation_rules}\n\nCustomer message:\n${latestComment}`,
+              },
+            ],
+            response_format: { type: "json_object" },
+            temperature: 0,
+          }),
+        });
+        if (escRes.ok) {
+          const escJson = await escRes.json();
+          const parsed =
+            (() => {
+              try {
+                return JSON.parse(escJson.choices?.[0]?.message?.content || "{}");
+              } catch {
+                return {};
+              }
+            })() as { escalate?: boolean; reason?: string };
+          escalationTriggered = !!parsed.escalate;
+          escalationReason = parsed.reason || "Escalation rule triggered";
+        }
+      } catch (e) {
+        console.error("Escalation check failed", e);
+      }
 
-    if (ruleRows?.length) {
-      const conversationHistory = await buildConversationHistory(ticketId);
-      const conversationText = `${conversationHistory}\n${latestComment}`.trim();
-      for (const rule of ruleRows) {
-        if (rule.once_per_ticket && (await ruleAlreadyFired(ticketId, rule.id))) continue;
-        const evalResult = await evaluateRuleTrigger(
-          rule.trigger_text,
-          conversationText,
-          openaiKey
+      if (escalationTriggered) {
+        const { handoverRes } = await tagHandover(
+          ticketId,
+          zendeskCreds.subdomain,
+          zendeskCreds.email,
+          zendeskCreds.token
         );
+        if (!handoverRes.ok) {
+          const text = await handoverRes.text();
+          await logTicketEvent({
+            ticketId,
+            eventType: "error",
+            summary: "Failed to tag bot-handover (escalation)",
+            detail: text.slice(0, 400),
+            orgId,
+          });
+        }
+
         await logTicketEvent({
           ticketId,
-          eventType: "escalation_detection",
-          summary: `Rule evaluated: ${rule.id}`,
-          detail: JSON.stringify({ match: evalResult.match, reason: evalResult.reason }),
+          eventType: "handover",
+          summary: "Escalation rule triggered",
+          detail: escalationReason.slice(0, 400),
           orgId,
         });
-          if (evalResult.match) {
-            if (rule.tags_to_add?.length) {
-              await addZendeskTags(
-                ticketId,
-                zendeskCreds.subdomain,
-                escalationAuthHeader,
-                rule.tags_to_add
-              );
-            }
-            await logTicketEvent({
-              ticketId,
-              eventType: "rule_fired",
-              summary: `rule_fired: ${rule.id}`,
-              detail: rule.action_text || evalResult.reason || "",
-              orgId,
-            });
-            if (rule.action_text) {
-              overrideReply = rule.action_text;
-            }
-            if (rule.skip_reply) {
-              skipReply = true;
-            }
-            escalationReason = evalResult.reason || "Rule fired";
-            break;
-          }
-        }
+
+        await logRun({
+          ticketId,
+          specialistId: matchedSpecialist?.id ?? null,
+          specialistName: matchedSpecialist?.name ?? null,
+          intentId: matchedIntent?.id ?? null,
+          intentName: matchedIntent?.name ?? null,
+          inputSummary: String(latestComment).slice(0, 200),
+          outputSummary: escalationReason.slice(0, 200),
+          status: "escalated",
+        });
+
+        return NextResponse.json({
+          status: "handover",
+          ticketId,
+          intentId: matchedIntent?.id ?? null,
+          specialistId: matchedSpecialist?.id ?? null,
+          reason: escalationReason,
+        });
       }
+    }
 
     if (!matchedIntent || !matchedSpecialist || confidence < CONFIDENCE_THRESHOLD) {
       await saveIntentSuggestion(
@@ -901,7 +795,7 @@ async function addZendeskTags(
         },
         body: JSON.stringify({
           ticket: {
-            add_tags: fallbackTags,
+            tags: fallbackTags,
           },
         }),
       });
@@ -984,7 +878,7 @@ async function addZendeskTags(
         role: "user",
         content: `Ticket ID: ${ticketId}\nCustomer email: ${requesterEmail}\nTracking context: ${
           trackingContextText || "none available"
-        }\n\nConversation history:\n${conversationHistoryText}\n\nCustomer message:\n"""\n${latestComment}\n"""\n\nWrite a clear, polite email reply in a professional tone. If information is missing, ask for the needed details instead of guessing.`,
+        }\n\nCustomer message:\n"""\n${latestComment}\n"""\n\nWrite a clear, polite email reply in a professional tone. If information is missing, ask for the needed details instead of guessing.`,
       },
     ];
 
@@ -1037,12 +931,9 @@ async function addZendeskTags(
     }
 
     const openaiData = await openaiRes.json();
-    let aiReply: string =
+    const aiReply: string =
       openaiData.choices?.[0]?.message?.content?.trim() ||
       "Sorry, I could not generate a reply.";
-    if (overrideReply) {
-      aiReply = overrideReply;
-    }
     console.log("Zendesk webhook generated reply", {
       orgId,
       ticketId,
@@ -1054,7 +945,6 @@ async function addZendeskTags(
     const authString = Buffer.from(
       `${zendeskCreds.email}/token:${zendeskCreds.token}`
     ).toString("base64");
-    const authHeader = `Basic ${authString}`;
 
     const zendeskUrl = `https://${zendeskCreds.subdomain}.zendesk.com/api/v2/tickets/${ticketId}.json`;
 
@@ -1066,30 +956,13 @@ async function addZendeskTags(
       orgId,
     });
 
-    if (skipReply) {
-      await logTicketEvent({
-        ticketId,
-        eventType: "handover",
-        summary: "Rule triggered (skip reply)",
-        detail: escalationReason || "Rule skip",
-        orgId,
-      });
-      return NextResponse.json({
-        status: "handover",
-        ticketId,
-        intentId: matchedIntent?.id ?? null,
-        specialistId: matchedSpecialist?.id ?? null,
-        reason: escalationReason || "Rule skip",
-      });
-    }
-
-    const replyPublic = matchedSpecialist?.public_reply ?? true;
     const replyPayload = {
       ticket: {
         comment: {
           body: aiReply,
-          public: replyPublic,
+          public: true,
         },
+        ...(firstIntentTag ? { tags: [firstIntentTag] } : {}),
       },
     };
 
@@ -1098,7 +971,7 @@ async function addZendeskTags(
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
-        Authorization: authHeader,
+        Authorization: `Basic ${authString}`,
       },
       body: JSON.stringify(replyPayload),
     });
@@ -1167,43 +1040,6 @@ async function addZendeskTags(
       detail: aiReply.slice(0, 240),
       orgId,
     });
-    if (firstIntentTag) {
-      const tagRes = await addZendeskTags(
-        ticketId,
-        zendeskCreds.subdomain,
-        authHeader,
-        [firstIntentTag]
-      );
-      if (tagRes) {
-        if (!tagRes.ok) {
-          const text = await tagRes.text();
-          await logTicketEvent({
-            ticketId,
-            eventType: "error",
-            summary: "Failed to add intent tag",
-            detail: text.slice(0, 400),
-            orgId,
-          });
-        } else {
-          let tagDetail = firstIntentTag;
-          try {
-            const parsed = await tagRes.json();
-            if (Array.isArray(parsed?.tags)) {
-              tagDetail = parsed.tags.join(", ");
-            }
-          } catch {
-            // ignore parse errors
-          }
-          await logTicketEvent({
-            ticketId,
-            eventType: "zendesk_update",
-            summary: "Intent tag added",
-            detail: tagDetail,
-            orgId,
-          });
-        }
-      }
-    }
     console.log("Zendesk webhook completed", {
       orgId,
       ticketId,
