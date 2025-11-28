@@ -4,6 +4,7 @@ import { trackOnce, summarizeParcel, type ParcelSummary } from "../../../lib/par
 import { buildKnowledgeContext } from "../../../lib/knowledge";
 import { requireOrgContext } from "../../../lib/auth";
 import { evaluateEscalationRule } from "../../../lib/escalation";
+import { supabaseAdmin } from "../../../lib/supabase";
 
 type SpecialistRow = {
   id: string;
@@ -62,23 +63,17 @@ async function logRun(
   }
 ) {
   try {
-    await fetch(new URL("/api/logs", origin), {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(payload.authHeader ? { Authorization: payload.authHeader } : {}),
-      },
-      body: JSON.stringify({
-        zendeskTicketId: payload.ticketId,
-        specialistId: payload.specialistId ?? "unknown",
-        specialistName: payload.specialistName ?? "unknown",
-        intentId: payload.intentId,
-        intentName: payload.intentName,
-        inputSummary: payload.inputSummary,
-        knowledgeSources: payload.knowledgeSources ?? [],
-        outputSummary: payload.outputSummary,
-        status: payload.status,
-      }),
+    await supabaseAdmin.from("logs").insert({
+      zendesk_ticket_id: payload.ticketId,
+      specialist_id: payload.specialistId ?? "unknown",
+      specialist_name: payload.specialistName ?? "unknown",
+      intent_id: payload.intentId,
+      intent_name: payload.intentName,
+      input_summary: payload.inputSummary,
+      knowledge_sources: payload.knowledgeSources ?? [],
+      output_summary: payload.outputSummary,
+      status: payload.status,
+      org_id: payload.orgId || null,
     });
   } catch (e) {
     console.error("Failed to log test run", e);
@@ -90,18 +85,11 @@ async function logTicketEvent(
   payload: { ticketId: string; eventType: string; summary: string; detail?: string; authHeader?: string | null }
 ) {
   try {
-    await fetch(new URL("/api/ticket-events", origin), {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(payload.authHeader ? { Authorization: payload.authHeader } : {}),
-      },
-      body: JSON.stringify({
-        ticketId: payload.ticketId,
-        eventType: payload.eventType,
-        summary: payload.summary,
-        detail: payload.detail ?? "",
-      }),
+    await supabaseAdmin.from("ticket_events").insert({
+      ticket_id: payload.ticketId,
+      event_type: payload.eventType,
+      summary: payload.summary,
+      detail: payload.detail ?? "",
     });
   } catch (e) {
     console.error("Failed to log test ticket event", e);
