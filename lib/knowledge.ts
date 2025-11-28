@@ -132,9 +132,7 @@ export async function buildKnowledgeContext(opts: {
 }) {
   const matches = await matchChunks(opts.query, opts.intentId, opts.specialistId, opts.orgId);
     const filtered = (matches || []).filter((c) => {
-      const specialistOk = opts.specialistId
-        ? !c.specialist_id || c.specialist_id === opts.specialistId
-        : true;
+      const specialistOk = opts.specialistId ? c.specialist_id === opts.specialistId : true;
       const intentOk = opts.intentId ? (!c.intent_id || c.intent_id === opts.intentId) : true;
       return specialistOk && intentOk;
     });
