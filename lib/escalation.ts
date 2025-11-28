@@ -9,7 +9,7 @@ export async function evaluateEscalationRule(options: {
     ? `${conversationHistory}\nLatest customer message:\n${customerMessage}`
     : customerMessage;
   try {
-    const res = await fetch("https://api.openai.com/v1/chat.completions", {
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${openaiKey}`,
@@ -62,7 +62,7 @@ export async function detectEscalationFields(params: {
 }) {
   const { conversation, openaiKey } = params;
   try {
-    const res = await fetch("https://api.openai.com/v1/chat.completions", {
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${openaiKey}`,
