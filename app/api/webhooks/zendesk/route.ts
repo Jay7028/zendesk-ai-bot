@@ -411,8 +411,26 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { error: "ticket_id is required in payload" },
         { status: 400 }
-      );
-    }
+  );
+}
+
+async function addZendeskTags(
+  ticketId: string | number,
+  zendeskSubdomain: string,
+  authHeader: string,
+  tags: string[]
+) {
+  if (!tags.length) return null;
+  const url = `https://${zendeskSubdomain}.zendesk.com/api/v2/tickets/${ticketId}/tags.json`;
+  return await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: authHeader,
+    },
+    body: JSON.stringify({ tags }),
+  });
+}
 
     const openaiKey = process.env.OPENAI_API_KEY;
     const zendeskCreds = await getZendeskCredentials(orgId, integrationId);
@@ -1020,6 +1038,7 @@ export async function POST(req: NextRequest) {
     const authString = Buffer.from(
       `${zendeskCreds.email}/token:${zendeskCreds.token}`
     ).toString("base64");
+    const authHeader = `Basic ${authString}`;
 
     const zendeskUrl = `https://${zendeskCreds.subdomain}.zendesk.com/api/v2/tickets/${ticketId}.json`;
 
@@ -1038,7 +1057,6 @@ export async function POST(req: NextRequest) {
           body: aiReply,
           public: replyPublic,
         },
-        ...(firstIntentTag ? { add_tags: [firstIntentTag] } : {}),
       },
     };
 
@@ -1047,7 +1065,7 @@ export async function POST(req: NextRequest) {
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
-        Authorization: `Basic ${authString}`,
+        Authorization: authHeader,
       },
       body: JSON.stringify(replyPayload),
     });
@@ -1116,6 +1134,43 @@ export async function POST(req: NextRequest) {
       detail: aiReply.slice(0, 240),
       orgId,
     });
+    if (firstIntentTag) {
+      const tagRes = await addZendeskTags(
+        ticketId,
+        zendeskCreds.subdomain,
+        authHeader,
+        [firstIntentTag]
+      );
+      if (tagRes) {
+        if (!tagRes.ok) {
+          const text = await tagRes.text();
+          await logTicketEvent({
+            ticketId,
+            eventType: "error",
+            summary: "Failed to add intent tag",
+            detail: text.slice(0, 400),
+            orgId,
+          });
+        } else {
+          let tagDetail = firstIntentTag;
+          try {
+            const parsed = await tagRes.json();
+            if (Array.isArray(parsed?.tags)) {
+              tagDetail = parsed.tags.join(", ");
+            }
+          } catch {
+            // ignore parse errors
+          }
+          await logTicketEvent({
+            ticketId,
+            eventType: "zendesk_update",
+            summary: "Intent tag added",
+            detail: tagDetail,
+            orgId,
+          });
+        }
+      }
+    }
     console.log("Zendesk webhook completed", {
       orgId,
       ticketId,
