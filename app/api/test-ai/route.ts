@@ -4,6 +4,7 @@ import { buildKnowledgeContext } from "../../../lib/knowledge";
 import { requireOrgContext } from "../../../lib/auth";
 import { evaluateEscalationRule } from "../../../lib/escalation";
 import { supabaseAdmin } from "../../../lib/supabase";
+// tiny note: test helper adjusted for tracing escalations
 
 type SpecialistRow = {
   id: string;
