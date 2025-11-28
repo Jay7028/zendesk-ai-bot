@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseAdmin } from "../../../lib/supabase";
 import { trackOnce, summarizeParcel, type ParcelSummary } from "../../../lib/parcelsapp";
 import { buildKnowledgeContext } from "../../../lib/knowledge";
 import { requireOrgContext } from "../../../lib/auth";
