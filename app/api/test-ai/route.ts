@@ -57,8 +57,9 @@ async function logRun(
     inputSummary: string;
     outputSummary: string;
     status: "success" | "fallback" | "escalated";
-    knowledgeSources?: string[];
-    authHeader?: string | null;
+  knowledgeSources?: string[];
+  authHeader?: string | null;
+  orgId?: string | null;
   }
 ) {
   try {
@@ -411,6 +412,7 @@ export async function POST(req: NextRequest) {
       status: "success",
       knowledgeSources,
       authHeader,
+      orgId,
     });
     await logTicketEvent(origin, {
       ticketId,
