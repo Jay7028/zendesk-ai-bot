@@ -72,52 +72,6 @@ async function ruleAlreadyFired(ticketId: string | number, ruleId: string) {
   return (count ?? 0) > 0;
 }
 
-async function evaluateRuleTrigger(triggerText: string, conversation: string, openaiKey: string) {
-  try {
-    const res = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${openaiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "gpt-4.1-mini",
-        messages: [
-          {
-            role: "system",
-            content:
-              "You check whether a plain-English trigger is satisfied by this conversation. Respond ONLY with JSON: {\"true\":true|false,\"reason\":\"short\"}.",
-          },
-          {
-            role: "user",
-            content: `Trigger: ${triggerText}\n\nConversation:\n${conversation}`,
-          },
-        ],
-        response_format: { type: "json_object" },
-        temperature: 0,
-      }),
-    });
-    if (!res.ok) {
-      const text = await res.text();
-      console.error("Rule trigger eval error:", text);
-      return { match: false, reason: "eval failed" };
-    }
-    const json = await res.json();
-    const parsed =
-      (() => {
-        try {
-          return JSON.parse(json.choices?.[0]?.message?.content || "{}");
-        } catch {
-          return {};
-        }
-      })() as { true?: boolean; reason?: string };
-    return { match: !!parsed.true, reason: parsed.reason || "" };
-  } catch (e) {
-    console.error("Rule trigger exception", e);
-    return { match: false, reason: "exception" };
-  }
-}
-
 type ConversationEntry = {
   customer?: string | null;
   assistant?: string | null;
