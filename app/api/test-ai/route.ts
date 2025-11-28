@@ -25,6 +25,24 @@ type IntentRow = {
   specialist_id: string | null;
 };
 
+function isTrackingRequest(message: string, intentName?: string | null) {
+  if (!message) return false;
+  const lowerMessage = message.toLowerCase();
+  const keywords = [
+    "track",
+    "where is",
+    "delivery status",
+    "order status",
+    "parcel",
+    "shipping status",
+    "tracking",
+  ];
+  if (intentName && intentName.toLowerCase().includes("track")) {
+    return true;
+  }
+  return keywords.some((keyword) => lowerMessage.includes(keyword));
+}
+
 type Message = { role: "user" | "assistant"; content: string };
 
 async function logRun(
@@ -245,8 +263,9 @@ export async function POST(req: NextRequest) {
       requestedTrackingNumber ||
       extractTrackingCandidates(userMessage).find((n) => n.length >= 10);
     const hasTrackingKey = process.env.PARCELSAPP_API_KEY;
+    const shouldTrack = isTrackingRequest(userMessage, matchedIntent?.name ?? null);
 
-    if (trackingNumber && hasTrackingKey) {
+    if (shouldTrack && trackingNumber && hasTrackingKey) {
       try {
         const info = await trackOnce({
           trackingId: trackingNumber,
@@ -271,6 +290,9 @@ export async function POST(req: NextRequest) {
       } catch (err: any) {
         actions.push(`Tracking lookup failed for ${trackingNumber}: ${err?.message || err}`);
       }
+    }
+    else if (shouldTrack && trackingNumber && !hasTrackingKey) {
+      actions.push("Tracking lookup skipped: Parcelsapp API key missing");
     }
 
     await logTicketEvent(origin, {
