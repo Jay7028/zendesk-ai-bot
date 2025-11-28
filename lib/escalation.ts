@@ -2,9 +2,12 @@ export async function evaluateEscalationRule(options: {
   rulesText: string;
   customerMessage: string;
   openaiKey: string;
+  conversationHistory?: string;
 }) {
   const { rulesText, customerMessage, openaiKey } = options;
   try {
+    const conversationContent =
+      options.conversationHistory?.trim() || "No prior history available.";
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -14,20 +17,19 @@ export async function evaluateEscalationRule(options: {
       body: JSON.stringify({
         model: "gpt-4.1-mini",
         messages: [
-      {
-        role: "system",
-        content:
-          "You are an escalation checker. Interpret the plain-English rule text, then evaluate whether the current customer message satisfies it. Always respond with JSON only, like {\"escalate\":true,\"reason\":\"short explanation\"} or {\"escalate\":false,\"reason\":\"short explanation\"}.",
-      },
-      {
-        role: "user",
-        content: `Escalation rules: ${rulesText}\n\nCustomer message:\n${customerMessage}\n\nWhen the rule is satisfied, return {"escalate": true, "reason": "rule satisfied"}; when it isn't, return {"escalate": false, "reason": "not satisfied"}.`,
-      },
+          {
+            role: "system",
+            content:
+              "You are an escalation checker. Interpret the plain-English rule text, then evaluate whether the current conversation history and latest customer message satisfy it. Always respond with JSON only, like {\"escalate\":true,\"reason\":\"short explanation\"} or {\"escalate\":false,\"reason\":\"short explanation\"}.",
+          },
+          {
+            role: "user",
+            content: `Escalation rules: ${rulesText}\n\nConversation history:\n${conversationContent}\n\nLatest customer message:\n${customerMessage}\n\nReturn {"escalate": true, "reason": "rule satisfied"} when the rule is met; otherwise return {"escalate": false, "reason": "not satisfied"}.`,
+          },
         ],
         response_format: { type: "json_object" },
         temperature: 0,
       }),
-    });
     if (!res.ok) {
       const text = await res.text();
       console.error("Escalation checker API error:", text);

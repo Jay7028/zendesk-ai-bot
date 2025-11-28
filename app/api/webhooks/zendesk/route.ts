@@ -29,6 +29,22 @@ type IntentRow = {
   specialist_id: string;
 };
 
+async function buildConversationHistory(ticketId: string) {
+  const { data, error } = await supabaseAdmin
+    .from("logs")
+    .select("created_at, input_summary")
+    .eq("zendesk_ticket_id", ticketId)
+    .order("created_at", { ascending: true })
+    .limit(6);
+  if (error) {
+    console.error("Failed to load conversation history", error);
+    return "";
+  }
+  return (data ?? [])
+    .map((entry) => `${entry.created_at}: ${entry.input_summary}`)
+    .join("\n");
+}
+
 type ConversationEntry = {
   customer?: string | null;
   assistant?: string | null;
@@ -777,13 +793,15 @@ async function addZendeskTags(
       let escalationTriggered = false;
       let escalationReason = "";
       try {
-    const escResult = await evaluateEscalationRule({
-      rulesText: matchedSpecialist.escalation_rules,
-      customerMessage: latestComment,
-      openaiKey,
-    });
-    escalationTriggered = escResult.escalate;
-    escalationReason = escResult.reason;
+        const conversationHistory = await buildConversationHistory(ticketId);
+        const escResult = await evaluateEscalationRule({
+          rulesText: matchedSpecialist.escalation_rules,
+          customerMessage: latestComment,
+          conversationHistory,
+          openaiKey,
+        });
+        escalationTriggered = escResult.escalate;
+        escalationReason = escResult.reason;
       } catch (e) {
         console.error("Escalation check failed", e);
       }
