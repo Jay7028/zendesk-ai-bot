@@ -314,12 +314,31 @@ export async function POST(req: NextRequest) {
         customerMessage: userMessage,
         openaiKey: apiKey,
       });
-      if (escResult.escalate) {
+      let escalationTriggered = escResult.escalate;
+      let escalationReason = escResult.reason;
+
+      // Semantic detection fallback (reuse evaluator with an explicit instruction)
+      if (!escalationTriggered) {
+        const conversationText = messages
+          .map((m) => `${m.role === "user" ? "Customer" : "Assistant"}: ${m.content}`)
+          .concat([`Customer: ${userMessage}`])
+          .join("\n");
+        const detection = await evaluateEscalationRule({
+          rulesText:
+            'You are a semantic checker. Return {"escalate":true,"reason":"fields captured"} only if the conversation contains an item description, a quantity/frequency, AND interest in labeling or fulfillment services; otherwise return {"escalate":false,"reason":"missing fields"}.',
+          customerMessage: conversationText,
+          openaiKey: apiKey,
+        });
+        if (detection.escalate) {
+          escalationTriggered = true;
+          escalationReason = detection.reason || "Semantic field detection";
+        }
+      }
+
+      if (escalationTriggered) {
         actions.push("Escalation rule triggered");
         actions.push("Would tag: bot-handover");
-        if (escResult.reason) {
-          actions.push(`Escalation reason: ${escResult.reason}`);
-        }
+        if (escalationReason) actions.push(`Escalation reason: ${escalationReason}`);
       } else {
         actions.push("Escalation rule not triggered");
       }
