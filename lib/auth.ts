@@ -79,21 +79,6 @@ export async function requireOrgContext(req: Request) {
     }
   })();
 
-  const orgIdHeader = req.headers.get("x-org-id");
-  if (orgIdHeader) {
-    const member = memberships.find((m) => m.org_id === orgIdHeader);
-    if (member) {
-      const { data: orgRow } = await supabaseAdmin
-        .from("organizations")
-        .select("id, slug")
-        .eq("id", orgIdHeader)
-        .maybeSingle();
-      if (orgRow) {
-        return { orgId: orgRow.id, userId, role: member.role, slug: orgRow.slug || null };
-      }
-    }
-  }
-
   let slugCandidate = headerSlug || pathSlug;
   const reservedSlugs = new Set(["admin", "api", "login", "logout"]);
   if (slugCandidate && reservedSlugs.has(slugCandidate.toLowerCase())) {

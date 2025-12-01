@@ -16,11 +16,6 @@ function currentSlug() {
   return maybeSlug || getCookie("org_slug");
 }
 
-function currentOrgId() {
-  if (typeof window === "undefined") return null;
-  return getCookie("org_id");
-}
-
 export async function apiFetch(input: FetchArgs[0], init: FetchArgs[1] = {}) {
   const token = await getAccessToken();
   if (!token) throw new Error("Not authenticated");
@@ -28,8 +23,6 @@ export async function apiFetch(input: FetchArgs[0], init: FetchArgs[1] = {}) {
   headers.set("Authorization", `Bearer ${token}`);
   const slug = currentSlug();
   if (slug) headers.set("x-org-slug", slug);
-  const orgId = currentOrgId();
-  if (orgId) headers.set("x-org-id", orgId);
   if (!headers.has("Content-Type") && init.body) {
     headers.set("Content-Type", "application/json");
   }
