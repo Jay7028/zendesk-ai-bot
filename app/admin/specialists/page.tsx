@@ -195,10 +195,19 @@ const KnowledgeEditor = memo(function KnowledgeEditor({
   chunk,
   onCancel,
   onSave,
+  onUploadDocument,
 }: {
   chunk: KnowledgeChunk;
   onCancel: () => void;
-  onSave: (payload: { title: string; content: string }) => void;
+  onSave: (payload: {
+    title: string;
+    content: string;
+    documentTitle?: string | null;
+    documentUrl?: string | null;
+    documentType?: string | null;
+    documentSummary?: string | null;
+  }) => void;
+  onUploadDocument: (file: File) => Promise<{ url: string; type: string; title: string }>;
 }) {
   const [title, setTitle] = useState(chunk.title);
   const [content, setContent] = useState(chunk.content);
