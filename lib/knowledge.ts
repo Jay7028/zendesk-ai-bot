@@ -10,6 +10,10 @@ type ChunkMatch = {
   specialist_id: string | null;
   intent_id: string | null;
   similarity: number | null;
+  document_title: string | null;
+  document_url: string | null;
+  document_type: string | null;
+  document_summary: string | null;
 };
 
 async function embed(text: string): Promise<number[]> {
@@ -78,7 +82,12 @@ async function summarizeChunks(chunks: ChunkMatch[], query: string) {
     {
       role: "user",
       content: `User query: ${query}\n\nSnippets:\n${trimmed
-        .map((c, i) => `${i + 1}. ${c.title || "snippet"}: ${c.content}`)
+        .map(
+          (c, i) =>
+            `${i + 1}. ${c.title || "snippet"}: ${c.content}${
+              c.document_title ? ` [doc: ${c.document_title}${c.document_url ? ` ${c.document_url}` : ""}]` : ""
+            }`
+        )
         .join("\n")}\n\nReturn bullet rules.`,
     },
   ];

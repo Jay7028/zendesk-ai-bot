@@ -548,19 +548,61 @@ export default function SpecialistsPage() {
 
   const NewKnowledgeEditor = memo(function NewKnowledgeEditor({
     onCommit,
+    onUploadDocument,
     disabled,
   }: {
-    onCommit: (payload: { title: string; content: string }) => void;
+    onCommit: (payload: {
+      title: string;
+      content: string;
+      documentTitle?: string | null;
+      documentUrl?: string | null;
+      documentType?: string | null;
+      documentSummary?: string | null;
+    }) => void;
+    onUploadDocument: (file: File) => Promise<{ url: string; type: string; title: string }>;
     disabled: boolean;
   }) {
     const [title, setTitle] = useState("");
     const [content, setContent] = useState("");
+    const [documentTitle, setDocumentTitle] = useState("");
+    const [documentUrl, setDocumentUrl] = useState("");
+    const [documentType, setDocumentType] = useState("");
+    const [documentSummary, setDocumentSummary] = useState("");
+    const [uploading, setUploading] = useState(false);
+    const [uploadError, setUploadError] = useState<string | null>(null);
+
+    const handleUpload = async (file?: File | null) => {
+      if (!file) return;
+      try {
+        setUploading(true);
+        setUploadError(null);
+        const uploaded = await onUploadDocument(file);
+        setDocumentUrl(uploaded.url);
+        setDocumentType(uploaded.type);
+        if (!documentTitle) setDocumentTitle(uploaded.title);
+      } catch (e: any) {
+        setUploadError(e.message ?? "Upload failed");
+      } finally {
+        setUploading(false);
+      }
+    };
 
     const handleAdd = () => {
       if (!title.trim() || !content.trim()) return;
-      onCommit({ title: title.trim(), content: content.trim() });
+      onCommit({
+        title: title.trim(),
+        content: content.trim(),
+        documentTitle: documentTitle.trim() || null,
+        documentUrl: documentUrl.trim() || null,
+        documentType: documentType.trim() || null,
+        documentSummary: documentSummary.trim() || null,
+      });
       setTitle("");
       setContent("");
+      setDocumentTitle("");
+      setDocumentUrl("");
+      setDocumentType("");
+      setDocumentSummary("");
     };
 
     return (
@@ -593,6 +635,87 @@ export default function SpecialistsPage() {
             fontFamily: "inherit",
           }}
         />
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8 }}>
+          <div style={{ fontWeight: 600 }}>Document (optional)</div>
+          <input
+            value={documentTitle}
+            onChange={(e) => setDocumentTitle(e.target.value)}
+            placeholder="Document title"
+            style={{
+              width: "100%",
+              padding: "10px 12px",
+              borderRadius: 10,
+              border: "1px solid #e5e7eb",
+              fontSize: 14,
+            }}
+          />
+          <input
+            value={documentUrl}
+            onChange={(e) => setDocumentUrl(e.target.value)}
+            placeholder="Document URL (or upload below)"
+            style={{
+              width: "100%",
+              padding: "10px 12px",
+              borderRadius: 10,
+              border: "1px solid #e5e7eb",
+              fontSize: 14,
+            }}
+          />
+          <input
+            value={documentType}
+            onChange={(e) => setDocumentType(e.target.value)}
+            placeholder="Type (e.g., pdf)"
+            style={{
+              width: "100%",
+              padding: "10px 12px",
+              borderRadius: 10,
+              border: "1px solid #e5e7eb",
+              fontSize: 14,
+            }}
+          />
+          <textarea
+            value={documentSummary}
+            onChange={(e) => setDocumentSummary(e.target.value)}
+            rows={2}
+            placeholder="Short summary of the document"
+            style={{
+              width: "100%",
+              padding: "10px 12px",
+              borderRadius: 10,
+              border: "1px solid #e5e7eb",
+              fontSize: 14,
+              fontFamily: "inherit",
+            }}
+          />
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <label
+              style={{
+                padding: "8px 10px",
+                borderRadius: 8,
+                border: "1px solid #c7d2fe",
+                background: "#eef2ff",
+                color: "#1d4ed8",
+                fontWeight: 700,
+                cursor: uploading ? "not-allowed" : "pointer",
+              }}
+            >
+              {uploading ? "Uploading..." : "Upload PDF"}
+              <input
+                type="file"
+                accept="application/pdf"
+                style={{ display: "none" }}
+                onChange={(e) => handleUpload(e.target.files?.[0])}
+                disabled={uploading}
+              />
+            </label>
+            {documentUrl && (
+              <a href={documentUrl} target="_blank" rel="noreferrer" style={{ fontSize: 12 }}>
+                View document
+              </a>
+            )}
+            {uploadError && <span style={{ color: "#b91c1c", fontSize: 12 }}>{uploadError}</span>}
+          </div>
+        </div>
         <div style={{ display: "flex", justifyContent: "flex-end" }}>
           <button
             type="button"
@@ -1028,7 +1151,11 @@ export default function SpecialistsPage() {
                         gap: 8,
                       }}
                     >
-                      <NewKnowledgeEditor onCommit={handleAddKnowledge} disabled={knowledgeLoading} />
+                      <NewKnowledgeEditor
+                        onCommit={handleAddKnowledge}
+                        onUploadDocument={handleUploadDocument}
+                        disabled={knowledgeLoading}
+                      />
                     </div>
 
                     {knowledgeLoading && knowledge.length === 0 && (
@@ -1049,6 +1176,7 @@ export default function SpecialistsPage() {
                           chunk={chunk}
                           onCancel={() => setEditingKbId(null)}
                           onSave={(payload) => handleUpdateKnowledge(chunk, payload)}
+                          onUploadDocument={handleUploadDocument}
                         />
                       ) : (
                         <div
@@ -1102,6 +1230,30 @@ export default function SpecialistsPage() {
                           <div style={{ fontSize: 13, color: "#374151", whiteSpace: "pre-wrap" }}>
                             {chunk.content}
                           </div>
+                          {(chunk.document_title || chunk.document_url || chunk.document_type || chunk.document_summary) && (
+                            <div
+                              style={{
+                                marginTop: 8,
+                                padding: 10,
+                                borderRadius: 10,
+                                background: "#f8fafc",
+                                border: "1px solid #e5e7eb",
+                                display: "flex",
+                                flexDirection: "column",
+                                gap: 4,
+                              }}
+                            >
+                              <div style={{ fontWeight: 600, fontSize: 13 }}>Document</div>
+                              {chunk.document_title && <div style={{ fontSize: 13 }}>{chunk.document_title}</div>}
+                              {chunk.document_type && <div style={{ fontSize: 12, color: "#6b7280" }}>{chunk.document_type}</div>}
+                              {chunk.document_summary && <div style={{ fontSize: 12, color: "#374151" }}>{chunk.document_summary}</div>}
+                              {chunk.document_url && (
+                                <a href={chunk.document_url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: "#2563eb" }}>
+                                  View document
+                                </a>
+                              )}
+                            </div>
+                          )}
                         </div>
                       );
                     })}

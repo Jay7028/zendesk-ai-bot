@@ -303,10 +303,21 @@ export async function POST(req: NextRequest) {
     actions.push(
       `Knowledge matches (raw/filtered): ${knowledge.totalMatches} / ${knowledge.used.length}`
     );
+    const sharedDocs: string[] = [];
     if (knowledge.summary) {
       actions.push("Applied retrieved knowledge to guide reply.");
     } else {
       actions.push("No knowledge summary available for this specialist/intent.");
+    }
+    if (knowledge.used?.length) {
+      sharedDocs.push(
+        ...knowledge.used
+          .filter((c) => c.document_url)
+          .map((c) => `${c.document_title || "Document"} — ${c.document_url}`)
+      );
+    }
+    if (sharedDocs.length) {
+      sharedDocs.forEach((d) => actions.push(`Would share document: ${d}`));
     }
 
     if (matchedSpecialist?.escalation_rules?.trim()) {

@@ -613,6 +613,14 @@ export async function POST(req: NextRequest) {
       specialistId: matchedSpecialist?.id ?? undefined,
       orgId,
     });
+    const docShares =
+      knowledge.used
+        ?.filter((c) => c.document_url)
+        .map((c) => ({
+          title: c.document_title || "Document",
+          url: c.document_url!,
+          type: c.document_type || "",
+        })) || [];
 
     // Optional tracking enrichment
     if (trackingCandidates.length) {
@@ -931,9 +939,14 @@ export async function POST(req: NextRequest) {
     }
 
     const openaiData = await openaiRes.json();
-    const aiReply: string =
-      openaiData.choices?.[0]?.message?.content?.trim() ||
-      "Sorry, I could not generate a reply.";
+    let aiReply: string =
+      openaiData.choices?.[0]?.message?.content?.trim() || "Sorry, I could not generate a reply.";
+    if (docShares.length) {
+      const docText = docShares
+        .map((d) => `${d.title}${d.type ? ` (${d.type})` : ""} — ${d.url}`)
+        .join("\n");
+      aiReply = `${aiReply}\n\nDocuments:\n${docText}`;
+    }
     console.log("Zendesk webhook generated reply", {
       orgId,
       ticketId,
@@ -1020,6 +1033,7 @@ export async function POST(req: NextRequest) {
       outputSummary: [
         aiReply.slice(0, 160),
         trackingContextText ? `Tracking: ${trackingContextText.slice(0, 200)}` : null,
+        docShares.length ? `Documents shared: ${docShares.map((d) => d.title).join(", ")}` : null,
       ]
         .filter(Boolean)
         .join(" | "),
@@ -1040,6 +1054,15 @@ export async function POST(req: NextRequest) {
       detail: aiReply.slice(0, 240),
       orgId,
     });
+    if (docShares.length) {
+      await logTicketEvent({
+        ticketId,
+        eventType: "document_shared",
+        summary: `Shared documents: ${docShares.map((d) => d.title).join(", ")}`,
+        detail: docShares.map((d) => `${d.title}: ${d.url}`).join(" | "),
+        orgId,
+      });
+    }
     console.log("Zendesk webhook completed", {
       orgId,
       ticketId,
