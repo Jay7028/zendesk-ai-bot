@@ -67,7 +67,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         const cookieOrgId = getCookie("org_id");
         const cookieOrgSlug = getCookie("org_slug");
         const fallback = data[0];
+        const pathSlug = pathname?.split("/").filter(Boolean)?.[0] || null;
         const chosen =
+          data.find((o) => o.slug && pathSlug && o.slug.toLowerCase() === pathSlug.toLowerCase()) ||
           data.find((o) => o.orgId === cookieOrgId) ||
           data.find((o) => o.role === "owner") ||
           fallback;
