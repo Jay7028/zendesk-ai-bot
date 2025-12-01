@@ -27,6 +27,10 @@ type KnowledgeChunk = {
   intent_id?: string | null;
   specialist_id?: string | null;
   created_at?: string;
+  document_title?: string | null;
+  document_url?: string | null;
+  document_type?: string | null;
+  document_summary?: string | null;
 };
 
 type TabKey = "info" | "data" | "knowledge" | "rules" | "escalation" | "personality";
