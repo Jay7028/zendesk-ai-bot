@@ -79,7 +79,11 @@ export async function requireOrgContext(req: Request) {
     }
   })();
 
-  const slugCandidate = headerSlug || pathSlug;
+  let slugCandidate = headerSlug || pathSlug;
+  const reservedSlugs = new Set(["admin", "api", "login", "logout"]);
+  if (slugCandidate && reservedSlugs.has(slugCandidate.toLowerCase())) {
+    slugCandidate = null;
+  }
 
   if (slugCandidate) {
     const { data: orgRow } = await supabaseAdmin
