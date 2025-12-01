@@ -82,6 +82,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     if (hasSession) loadOrgs();
   }, [hasSession, pathname]);
 
+  // Persist chosen org in cookies so API calls carry org context
+  useEffect(() => {
+    if (!currentOrgId) return;
+    try {
+      document.cookie = `org_id=${encodeURIComponent(currentOrgId)}; path=/; SameSite=Lax`;
+      if (currentOrgSlug) {
+        document.cookie = `org_slug=${encodeURIComponent(currentOrgSlug)}; path=/; SameSite=Lax`;
+      }
+    } catch {
+      // ignore cookie errors
+    }
+  }, [currentOrgId, currentOrgSlug]);
+
   // Redirect to slugged URL if available
   if (checking || hasSession === null) {
     return (
