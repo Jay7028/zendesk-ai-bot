@@ -815,6 +815,7 @@ export default function SpecialistsPage() {
 
   const leftNavItems = [
     { id: "home", label: "Home", href: "/", active: false },
+    { id: "dashboard", label: "Dashboard", href: "/admin/dashboard" },
     { id: "specialists", label: "AI Specialists", href: "/admin/specialists", active: true },
     { id: "intents", label: "Intents", href: "/admin/intents" },
     { id: "data-extraction", label: "Data Extraction", href: "/admin/data-extraction" },
