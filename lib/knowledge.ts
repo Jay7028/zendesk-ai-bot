@@ -127,12 +127,42 @@ export async function buildKnowledgeContext(opts: {
   orgId: string;
 }) {
   const matches = await matchChunks(opts.query, opts.intentId, opts.specialistId, opts.orgId);
-  const totalMatches = matches?.length ?? 0;
-  const filtered = (matches || []).filter((c) => {
+  let totalMatches = matches?.length ?? 0;
+  let filtered = (matches || []).filter((c) => {
     const specialistOk = opts.specialistId ? c.specialist_id === opts.specialistId : true;
     const intentOk = opts.intentId ? (!c.intent_id || c.intent_id === opts.intentId) : true;
     return specialistOk && intentOk;
   });
+
+  // Fallback: if nothing matched, pull a few snippets for this specialist/org to avoid empty results
+  if (filtered.length === 0 && opts.specialistId) {
+    try {
+      const { data, error } = await supabaseAdmin
+        .from("knowledge_chunks")
+        .select("id, title, content, specialist_id, intent_id, document_title, document_url, document_type, document_summary")
+        .eq("org_id", opts.orgId)
+        .eq("specialist_id", opts.specialistId)
+        .limit(5);
+      if (!error && data) {
+        filtered = data.map((row) => ({
+          id: row.id,
+          title: row.title,
+          content: row.content,
+          specialist_id: row.specialist_id,
+          intent_id: row.intent_id,
+          similarity: null,
+          document_title: (row as any).document_title ?? null,
+          document_url: (row as any).document_url ?? null,
+          document_type: (row as any).document_type ?? null,
+          document_summary: (row as any).document_summary ?? null,
+        }));
+        totalMatches = filtered.length;
+      }
+    } catch (e) {
+      console.error("knowledge fallback error", e);
+    }
+  }
+
   const { summary, used } = await summarizeChunks(filtered, opts.query);
   return {
     summary,
