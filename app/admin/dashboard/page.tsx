@@ -89,7 +89,15 @@ export default function DashboardPage() {
     const docShares = filtered.events.filter((e) => e.eventType === "document_shared").length;
     const handovers = filtered.events.filter((e) => e.eventType === "zendesk_update" && e.summary?.includes("handover")).length;
 
-    return { totals, sentPerEnquiry, topIntents, topSpecialists, docShares, handovers };
+    const uncaptured = filtered.logs
+      .filter((l) => !l.intentName || l.intentName.toLowerCase() === "unknown")
+      .map((l) => ({
+        ticketId: l.zendeskTicketId,
+        when: l.timestamp,
+        status: l.status,
+      }));
+
+    return { totals, sentPerEnquiry, topIntents, topSpecialists, docShares, handovers, uncaptured };
   }, [filtered]);
 
   const Card = ({ title, children }: { title: string; children: React.ReactNode }) => (
@@ -249,6 +257,61 @@ export default function DashboardPage() {
               <div key={name} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, padding: "6px 0" }}>
                 <span>{name}</span>
                 <span style={{ color: "#6b7280" }}>{count}</span>
+              </div>
+            ))}
+          </Card>
+        </div>
+
+        <div style={{ marginTop: 14 }}>
+          <Card title="Uncaptured intents">
+            {stats.uncaptured.length === 0 && (
+              <div style={{ color: "#6b7280", fontSize: 13 }}>No uncaptured tickets in this range.</div>
+            )}
+            {stats.uncaptured.length > 0 && (
+              <div style={{ display: "grid", gridTemplateColumns: "140px 1fr 140px", gap: 8, fontSize: 12, color: "#6b7280", marginBottom: 6 }}>
+                <div>Ticket</div>
+                <div>When</div>
+                <div>Status</div>
+              </div>
+            )}
+            {stats.uncaptured.slice(0, 10).map((row) => (
+              <div
+                key={`${row.ticketId}-${row.when}`}
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "140px 1fr 140px",
+                  gap: 8,
+                  padding: "8px 0",
+                  borderBottom: "1px solid #f1f5f9",
+                  fontSize: 13,
+                }}
+              >
+                <div>{row.ticketId}</div>
+                <div style={{ color: "#374151" }}>{new Date(row.when).toLocaleString()}</div>
+                <div>
+                  <span
+                    style={{
+                      padding: "4px 8px",
+                      borderRadius: 999,
+                      background:
+                        row.status === "success"
+                          ? "#dcfce7"
+                          : row.status === "escalated"
+                          ? "#fef9c3"
+                          : "#fee2e2",
+                      color:
+                        row.status === "success"
+                          ? "#166534"
+                          : row.status === "escalated"
+                          ? "#854d0e"
+                          : "#991b1b",
+                      border: "1px solid #e5e7eb",
+                      fontWeight: 700,
+                    }}
+                  >
+                    {row.status}
+                  </span>
+                </div>
               </div>
             ))}
           </Card>
