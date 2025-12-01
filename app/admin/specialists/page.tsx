@@ -542,6 +542,19 @@ export default function SpecialistsPage() {
     }
   };
 
+  const handleUploadDocument = async (file: File) => {
+    const ext = file.name.split(".").pop() || "pdf";
+    const path = `documents/${selectedId || "general"}/${Date.now()}-${Math.random()
+      .toString(36)
+      .slice(2)}.${ext}`;
+    const { data, error } = await supabaseBrowser.storage.from("documents").upload(path, file, {
+      upsert: true,
+    });
+    if (error) throw new Error(error.message);
+    const { data: publicUrl } = supabaseBrowser.storage.from("documents").getPublicUrl(data.path);
+    return { url: publicUrl.publicUrl, type: file.type || "application/pdf", title: file.name };
+  };
+
   const FieldLabel = ({ label }: { label: string }) => (
     <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 6 }}>{label}</div>
   );
