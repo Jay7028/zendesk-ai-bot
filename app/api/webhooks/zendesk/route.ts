@@ -56,6 +56,9 @@ async function tagHandover(
 
   const zendeskUrl = `https://${zendeskSubdomain}.zendesk.com/api/v2/tickets/${ticketId}.json`;
 
+  const existingTags = await fetchZendeskTags(zendeskUrl, authString);
+  const merged = mergeTags(existingTags, ["bot-handover"]);
+
   const handoverRes = await fetch(zendeskUrl, {
     method: "PUT",
     headers: {
@@ -65,7 +68,7 @@ async function tagHandover(
     },
     body: JSON.stringify({
       ticket: {
-        tags: ["bot-handover"],
+        tags: merged,
       },
     }),
   });
@@ -124,6 +127,33 @@ async function logTicketEvent(
   } catch (e) {
     console.error("Failed to log ticket event", e);
   }
+}
+
+async function fetchZendeskTags(zendeskUrl: string, authString: string): Promise<string[]> {
+  try {
+    const res = await fetch(zendeskUrl, {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        Authorization: `Basic ${authString}`,
+      },
+    });
+    if (!res.ok) return [];
+    const json = await res.json();
+    const tags = json?.ticket?.tags;
+    return Array.isArray(tags) ? tags : [];
+  } catch {
+    return [];
+  }
+}
+
+function mergeTags(existing: string[], extras: string[]): string[] {
+  const set = new Set<string>();
+  existing.forEach((t) => set.add(t));
+  extras.forEach((t) => {
+    if (t) set.add(t);
+  });
+  return Array.from(set);
 }
 
 async function saveIntentSuggestion(
@@ -792,18 +822,21 @@ export async function POST(req: NextRequest) {
 
       const zendeskUrl = `https://${zendeskCreds.subdomain}.zendesk.com/api/v2/tickets/${ticketId}.json`;
 
+      const existingTags = await fetchZendeskTags(zendeskUrl, authString);
       const fallbackTags = ["bot-handover"];
       if (firstIntentTag) fallbackTags.push(firstIntentTag);
+      const mergedFallbackTags = mergeTags(existingTags, fallbackTags);
 
       const handoverRes = await fetch(zendeskUrl, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
+          Accept: "application/json",
           Authorization: `Basic ${authString}`,
         },
         body: JSON.stringify({
           ticket: {
-            tags: fallbackTags,
+            tags: mergedFallbackTags,
           },
         }),
       });
@@ -960,6 +993,7 @@ export async function POST(req: NextRequest) {
     ).toString("base64");
 
     const zendeskUrl = `https://${zendeskCreds.subdomain}.zendesk.com/api/v2/tickets/${ticketId}.json`;
+    const existingTags = await fetchZendeskTags(zendeskUrl, authString);
 
     await logTicketEvent({
       ticketId,
@@ -975,7 +1009,7 @@ export async function POST(req: NextRequest) {
           body: aiReply,
           public: true,
         },
-        ...(firstIntentTag ? { tags: [firstIntentTag] } : {}),
+        tags: mergeTags(existingTags, firstIntentTag ? [firstIntentTag] : []),
       },
     };
 
